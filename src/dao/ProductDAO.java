@@ -1,0 +1,164 @@
+package dao;
+
+import config.DBConnection;
+import model.Product;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ProductDAO {
+
+    public List<Product> getAllProducts() throws SQLException {
+        List<Product> list = new ArrayList<>();
+        String sql = "SELECT p.*, c.name AS category_name FROM products p " +
+                     "LEFT JOIN categories c ON p.category_id = c.id " +
+                     "ORDER BY p.name ASC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(mapProduct(rs));
+            }
+        }
+        return list;
+    }
+
+    public List<Product> searchProducts(String keyword) throws SQLException {
+        List<Product> list = new ArrayList<>();
+        String sql = "SELECT p.*, c.name AS category_name FROM products p " +
+                     "LEFT JOIN categories c ON p.category_id = c.id " +
+                     "WHERE p.code LIKE ? OR p.name LIKE ? OR c.name LIKE ? " +
+                     "ORDER BY p.name ASC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            String pattern = "%" + keyword + "%";
+            ps.setString(1, pattern);
+            ps.setString(2, pattern);
+            ps.setString(3, pattern);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapProduct(rs));
+                }
+            }
+        }
+        return list;
+    }
+
+    public List<Product> getLowStockProducts() throws SQLException {
+        List<Product> list = new ArrayList<>();
+        String sql = "SELECT p.*, c.name AS category_name FROM products p " +
+                     "LEFT JOIN categories c ON p.category_id = c.id " +
+                     "WHERE p.quantity <= p.min_stock_level " +
+                     "ORDER BY p.quantity ASC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(mapProduct(rs));
+            }
+        }
+        return list;
+    }
+
+    public Product getProductByCode(String code) throws SQLException {
+        String sql = "SELECT p.*, c.name AS category_name FROM products p " +
+                     "LEFT JOIN categories c ON p.category_id = c.id " +
+                     "WHERE p.code = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, code);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapProduct(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean addProduct(Product p) throws SQLException {
+        String sql = "INSERT INTO products (code, name, category_id, purchase_price, selling_price, quantity, min_stock_level) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, p.getCode());
+            ps.setString(2, p.getName());
+            if (p.getCategoryId() > 0) {
+                ps.setInt(3, p.getCategoryId());
+            } else {
+                ps.setNull(3, Types.INTEGER);
+            }
+            ps.setDouble(4, p.getPurchasePrice());
+            ps.setDouble(5, p.getSellingPrice());
+            ps.setInt(6, p.getQuantity());
+            ps.setInt(7, p.getMinStockLevel());
+            int affected = ps.executeUpdate();
+            if (affected > 0) {
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        p.setId(rs.getInt(1));
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean updateProduct(Product p) throws SQLException {
+        String sql = "UPDATE products SET code = ?, name = ?, category_id = ?, purchase_price = ?, selling_price = ?, " +
+                     "quantity = ?, min_stock_level = ? WHERE id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, p.getCode());
+            ps.setString(2, p.getName());
+            if (p.getCategoryId() > 0) {
+                ps.setInt(3, p.getCategoryId());
+            } else {
+                ps.setNull(3, Types.INTEGER);
+            }
+            ps.setDouble(4, p.getPurchasePrice());
+            ps.setDouble(5, p.getSellingPrice());
+            ps.setInt(6, p.getQuantity());
+            ps.setInt(7, p.getMinStockLevel());
+            ps.setInt(8, p.getId());
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public boolean deleteProduct(int id) throws SQLException {
+        String sql = "DELETE FROM products WHERE id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    public boolean updateStock(int productId, int quantityDiff) throws SQLException {
+        String sql = "UPDATE products SET quantity = quantity + ? WHERE id = ? AND (quantity + ?) >= 0";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, quantityDiff);
+            ps.setInt(2, productId);
+            ps.setInt(3, quantityDiff);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    private Product mapProduct(ResultSet rs) throws SQLException {
+        Product p = new Product();
+        p.setId(rs.getInt("id"));
+        p.setCode(rs.getString("code"));
+        p.setName(rs.getString("name"));
+        p.setCategoryId(rs.getInt("category_id"));
+        p.setCategoryName(rs.getString("category_name"));
+        p.setPurchasePrice(rs.getDouble("purchase_price"));
+        p.setSellingPrice(rs.getDouble("selling_price"));
+        p.setQuantity(rs.getInt("quantity"));
+        p.setMinStockLevel(rs.getInt("min_stock_level"));
+        return p;
+    }
+}
+
