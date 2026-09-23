@@ -94,6 +94,9 @@ public class InvoiceDialog extends JDialog {
 
         sb.append("----------------------------------------------------\n");
         sb.append(String.format("%38s: %10.2f\n", "Subtotal (₹)", sale.getSubtotal()));
+        if (sale.getDiscountAmount() > 0) {
+            sb.append(String.format("%38s: %10.2f\n", "Discount (" + sale.getDiscountType() + ")", -sale.getDiscountAmount()));
+        }
         sb.append(String.format("%38s: %10.2f\n", "GST (" + sale.getGstRate() + "%)", sale.getGstAmount()));
         sb.append("====================================================\n");
         sb.append(String.format("%38s: %10.2f\n", "GRAND TOTAL (₹)", sale.getTotalAmount()));

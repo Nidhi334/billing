@@ -13,6 +13,8 @@ public class Sale {
     private double subtotal;
     private double gstRate;
     private double gstAmount;
+    private double discountAmount = 0.0;
+    private String discountType = "FLAT"; // FLAT or PERCENT
     private double totalAmount;
     private String paymentMode;
     private Integer createdBy;
@@ -44,6 +46,12 @@ public class Sale {
 
     public double getGstAmount() { return gstAmount; }
     public void setGstAmount(double gstAmount) { this.gstAmount = gstAmount; }
+
+    public double getDiscountAmount() { return discountAmount; }
+    public void setDiscountAmount(double discountAmount) { this.discountAmount = discountAmount; }
+
+    public String getDiscountType() { return discountType; }
+    public void setDiscountType(String discountType) { this.discountType = discountType; }
 
     public double getTotalAmount() { return totalAmount; }
     public void setTotalAmount(double totalAmount) { this.totalAmount = totalAmount; }

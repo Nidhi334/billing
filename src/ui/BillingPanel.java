@@ -4,6 +4,7 @@ import dao.BillingDAO;
 import dao.CustomerDAO;
 import dao.ProductDAO;
 import model.Customer;
+import model.HeldBill;
 import model.Product;
 import model.Sale;
 import model.SaleItem;
@@ -11,8 +12,10 @@ import model.User;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,210 +25,548 @@ public class BillingPanel extends JPanel {
     private BillingDAO billingDAO = new BillingDAO();
     private User currentUser;
 
-    private JComboBox<Customer> cmbCustomer;
-    private JComboBox<Product> cmbProduct;
-    private JTextField txtQty, txtUnitPrice, txtStockAvail, txtInvoiceNo;
-    private JComboBox<String> cmbPaymentMode;
-    private JTextField txtGstRate;
-    private JLabel lblSubtotal, lblGstAmount, lblGrandTotal;
+    // Fast Product Cache for instant barcode & search lookup
+    private List<Product> cachedProducts = new ArrayList<>();
 
+    // Multi-bill (Held Bills) Storage
+    private List<HeldBill> heldBills = new ArrayList<>();
+
+    // Form fields
+    private JTextField txtBarcode;
+    private JComboBox<Customer> cmbCustomer;
+    private JTextField txtCustPhone;
+    private JTextField txtInvoiceNo;
+    private JComboBox<String> cmbPaymentMode;
+
+    // Cart table
     private DefaultTableModel cartModel;
     private JTable cartTable;
     private List<SaleItem> cartItems = new ArrayList<>();
 
+    // Calculations
     private double subtotal = 0.0;
     private double gstRate = 18.0;
     private double gstAmount = 0.0;
+    private double discountValue = 0.0;
+    private String discountType = "FLAT"; // FLAT or PERCENT
     private double grandTotal = 0.0;
+    private double cashTendered = 0.0;
+
+    // Summary labels
+    private JLabel lblSubtotal;
+    private JLabel lblGstAmount;
+    private JLabel lblDiscount;
+    private JLabel lblGrandTotal;
+    private JLabel lblChangeDue;
+    private JLabel lblItemsCount;
+    private JLabel lblTotalQty;
+    private JTextField txtCashPaid;
+
+    // Held bill tab selector
+    private JComboBox<String> cmbHeldBills;
 
     public BillingPanel(User user) {
         this.currentUser = user;
-        setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(248, 250, 252));
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        setLayout(new BorderLayout(10, 10));
+        setBackground(new Color(241, 245, 249));
+        setBorder(new EmptyBorder(10, 12, 10, 12));
+
         initComponents();
+        setupGlobalKeyShortcuts();
         loadCustomers();
-        loadProducts();
+        loadProductCache();
         resetBillingDesk();
     }
 
     private void initComponents() {
-        // TOP: Billing Header Info
-        JPanel topPanel = new JPanel(new GridLayout(1, 4, 15, 5));
-        topPanel.setBackground(Color.WHITE);
-        topPanel.setBorder(BorderFactory.createCompoundBorder(
+        // TOP 1: Mall POS Header Bar (Store info, shortcuts banner, held bill bar)
+        JPanel topContainer = new JPanel(new BorderLayout(8, 8));
+        topContainer.setOpaque(false);
+
+        // Header Strip
+        JPanel headerStrip = new JPanel(new BorderLayout(10, 5));
+        headerStrip.setBackground(new Color(15, 23, 42));
+        headerStrip.setBorder(new EmptyBorder(8, 12, 8, 12));
+
+        JPanel headerLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        headerLeft.setOpaque(false);
+        JLabel lblTerminal = new JLabel("⚡ POS TERMINAL - DESK #1");
+        lblTerminal.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblTerminal.setForeground(Color.WHITE);
+        headerLeft.add(lblTerminal);
+
+        JLabel lblShortcuts = new JLabel("[F1: Barcode | F2: Hold Bill | F3: Customer | F4: Cash | F6: UPI QR | Ctrl+D: Discount | Ctrl+Enter: Pay]");
+        lblShortcuts.setFont(new Font("Monospaced", Font.PLAIN, 11));
+        lblShortcuts.setForeground(new Color(148, 163, 184));
+        headerLeft.add(lblShortcuts);
+        headerStrip.add(headerLeft, BorderLayout.WEST);
+
+        // Held Bills Toolbar
+        JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        headerRight.setOpaque(false);
+        headerRight.add(new JLabel("Held Bills:"));
+        ((JLabel) headerRight.getComponent(0)).setForeground(new Color(203, 213, 225));
+        ((JLabel) headerRight.getComponent(0)).setFont(new Font("Segoe UI", Font.BOLD, 11));
+
+        cmbHeldBills = new JComboBox<>(new String[]{"-- Active Bill --"});
+        cmbHeldBills.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        cmbHeldBills.setPreferredSize(new Dimension(170, 26));
+        headerRight.add(cmbHeldBills);
+
+        JButton btnResumeBill = new JButton("Recall");
+        btnResumeBill.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnResumeBill.setBackground(new Color(37, 99, 235));
+        btnResumeBill.setForeground(Color.WHITE);
+        btnResumeBill.setMargin(new Insets(2, 6, 2, 6));
+        headerRight.add(btnResumeBill);
+
+        JButton btnHoldBill = new JButton("Hold (F2)");
+        btnHoldBill.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnHoldBill.setBackground(new Color(217, 119, 6));
+        btnHoldBill.setForeground(Color.WHITE);
+        btnHoldBill.setMargin(new Insets(2, 6, 2, 6));
+        headerRight.add(btnHoldBill);
+
+        headerStrip.add(headerRight, BorderLayout.EAST);
+        topContainer.add(headerStrip, BorderLayout.NORTH);
+
+        // Sub-header controls (Invoice #, Customer, Payment Mode, Cashier)
+        JPanel metaPanel = new JPanel(new GridLayout(1, 4, 10, 0));
+        metaPanel.setBackground(Color.WHITE);
+        metaPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240)),
-                new EmptyBorder(12, 15, 12, 15)
+                new EmptyBorder(8, 10, 8, 10)
         ));
 
-        // Invoice No
-        JPanel p1 = new JPanel(new BorderLayout(5, 5));
-        p1.setBackground(Color.WHITE);
-        p1.add(new JLabel("Invoice No:"), BorderLayout.NORTH);
+        // 1. Invoice No
+        JPanel pInv = new JPanel(new BorderLayout(4, 2));
+        pInv.setBackground(Color.WHITE);
+        pInv.add(new JLabel("Invoice No:"), BorderLayout.NORTH);
         txtInvoiceNo = new JTextField();
         txtInvoiceNo.setEditable(false);
-        txtInvoiceNo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        txtInvoiceNo.setFont(new Font("Segoe UI", Font.BOLD, 13));
         txtInvoiceNo.setForeground(new Color(37, 99, 235));
-        p1.add(txtInvoiceNo, BorderLayout.CENTER);
-        topPanel.add(p1);
+        pInv.add(txtInvoiceNo, BorderLayout.CENTER);
+        metaPanel.add(pInv);
 
-        // Customer selection
-        JPanel p2 = new JPanel(new BorderLayout(5, 5));
-        p2.setBackground(Color.WHITE);
-        p2.add(new JLabel("Customer:"), BorderLayout.NORTH);
+        // 2. Customer
+        JPanel pCust = new JPanel(new BorderLayout(4, 2));
+        pCust.setBackground(Color.WHITE);
+        pCust.add(new JLabel("Customer (F3):"), BorderLayout.NORTH);
         cmbCustomer = new JComboBox<>();
-        p2.add(cmbCustomer, BorderLayout.CENTER);
-        topPanel.add(p2);
+        pCust.add(cmbCustomer, BorderLayout.CENTER);
+        metaPanel.add(pCust);
 
-        // Payment Mode
-        JPanel p3 = new JPanel(new BorderLayout(5, 5));
-        p3.setBackground(Color.WHITE);
-        p3.add(new JLabel("Payment Mode:"), BorderLayout.NORTH);
-        cmbPaymentMode = new JComboBox<>(new String[]{"CASH", "ONLINE", "CARD", "CREDIT"});
-        p3.add(cmbPaymentMode, BorderLayout.CENTER);
-        topPanel.add(p3);
+        // 3. Customer Mobile Quick Search
+        JPanel pPhone = new JPanel(new BorderLayout(4, 2));
+        pPhone.setBackground(Color.WHITE);
+        pPhone.add(new JLabel("Mobile / Search:"), BorderLayout.NORTH);
+        txtCustPhone = new JTextField();
+        txtCustPhone.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        pPhone.add(txtCustPhone, BorderLayout.CENTER);
+        metaPanel.add(pPhone);
 
-        // Cashier
-        JPanel p4 = new JPanel(new BorderLayout(5, 5));
-        p4.setBackground(Color.WHITE);
-        p4.add(new JLabel("Cashier / User:"), BorderLayout.NORTH);
-        JLabel lblCashier = new JLabel(currentUser != null ? currentUser.getFullName() + " (" + currentUser.getRole() + ")" : "Admin");
-        lblCashier.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        p4.add(lblCashier, BorderLayout.CENTER);
-        topPanel.add(p4);
+        // 4. Payment Mode
+        JPanel pMode = new JPanel(new BorderLayout(4, 2));
+        pMode.setBackground(Color.WHITE);
+        pMode.add(new JLabel("Payment Mode:"), BorderLayout.NORTH);
+        cmbPaymentMode = new JComboBox<>(new String[]{"CASH", "UPI", "CARD", "CREDIT"});
+        pMode.add(cmbPaymentMode, BorderLayout.CENTER);
+        metaPanel.add(pMode);
 
-        add(topPanel, BorderLayout.NORTH);
+        topContainer.add(metaPanel, BorderLayout.CENTER);
+        add(topContainer, BorderLayout.NORTH);
 
-        // CENTER: Item Entry Form + Cart Table
-        JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
-        centerPanel.setBackground(new Color(248, 250, 252));
+        // CENTER: Left Barcode & Cart Table (POS Desk)
+        JPanel leftCenter = new JPanel(new BorderLayout(8, 8));
+        leftCenter.setOpaque(false);
 
-        // Item Add Toolbar
-        JPanel itemBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 10));
-        itemBar.setBackground(Color.WHITE);
-        itemBar.setBorder(BorderFactory.createTitledBorder("Add Item to Bill"));
+        // Fast Barcode Scanner input box
+        JPanel scanBar = new JPanel(new BorderLayout(8, 0));
+        scanBar.setBackground(Color.WHITE);
+        scanBar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(37, 99, 235), 2, true),
+                new EmptyBorder(8, 12, 8, 12)
+        ));
 
-        itemBar.add(new JLabel("Select Product:"));
-        cmbProduct = new JComboBox<>();
-        cmbProduct.setPreferredSize(new Dimension(220, 30));
-        itemBar.add(cmbProduct);
+        JLabel lblScanIcon = new JLabel("🔍 SCAN / SEARCH (F1): ");
+        lblScanIcon.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblScanIcon.setForeground(new Color(30, 41, 59));
+        scanBar.add(lblScanIcon, BorderLayout.WEST);
 
-        itemBar.add(new JLabel("Stock Available:"));
-        txtStockAvail = new JTextField(4);
-        txtStockAvail.setEditable(false);
-        txtStockAvail.setHorizontalAlignment(JTextField.CENTER);
-        itemBar.add(txtStockAvail);
+        txtBarcode = new JTextField();
+        txtBarcode.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        txtBarcode.setToolTipText("Scan barcode or type product name/code and press Enter");
+        scanBar.add(txtBarcode, BorderLayout.CENTER);
 
-        itemBar.add(new JLabel("Unit Price (₹):"));
-        txtUnitPrice = new JTextField(7);
-        txtUnitPrice.setEditable(false);
-        itemBar.add(txtUnitPrice);
+        JButton btnScanAdd = new JButton("Add Item ↵");
+        btnScanAdd.setBackground(new Color(16, 185, 129));
+        btnScanAdd.setForeground(Color.WHITE);
+        btnScanAdd.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        scanBar.add(btnScanAdd, BorderLayout.EAST);
 
-        itemBar.add(new JLabel("Quantity:"));
-        txtQty = new JTextField("1", 4);
-        txtQty.setHorizontalAlignment(JTextField.CENTER);
-        itemBar.add(txtQty);
-
-        JButton btnAddItem = new JButton("➕ Add to Cart");
-        btnAddItem.setBackground(new Color(16, 185, 129));
-        btnAddItem.setForeground(Color.WHITE);
-        btnAddItem.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        itemBar.add(btnAddItem);
-
-        JButton btnRemoveItem = new JButton("❌ Remove Item");
-        btnRemoveItem.setBackground(new Color(239, 68, 68));
-        btnRemoveItem.setForeground(Color.WHITE);
-        itemBar.add(btnRemoveItem);
-
-        centerPanel.add(itemBar, BorderLayout.NORTH);
+        leftCenter.add(scanBar, BorderLayout.NORTH);
 
         // Cart Table
-        String[] cartCols = {"#", "Product Code", "Product Name", "Unit Price (₹)", "Quantity", "Total (₹)"};
+        String[] cartCols = {"#", "Code / Barcode", "Product Name", "Rate (₹)", "Qty", "Total (₹)", "Action"};
         cartModel = new DefaultTableModel(cartCols, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            public boolean isCellEditable(int r, int c) {
+                return c == 4; // allow direct inline quantity editing
+            }
         };
         cartTable = new JTable(cartModel);
-        cartTable.setRowHeight(26);
+        cartTable.setRowHeight(32);
+        cartTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        cartTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
         cartTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        centerPanel.add(new JScrollPane(cartTable), BorderLayout.CENTER);
 
-        add(centerPanel, BorderLayout.CENTER);
+        // Column widths
+        cartTable.getColumnModel().getColumn(0).setPreferredWidth(35);
+        cartTable.getColumnModel().getColumn(1).setPreferredWidth(110);
+        cartTable.getColumnModel().getColumn(2).setPreferredWidth(260);
+        cartTable.getColumnModel().getColumn(3).setPreferredWidth(80);
+        cartTable.getColumnModel().getColumn(4).setPreferredWidth(60);
+        cartTable.getColumnModel().getColumn(5).setPreferredWidth(100);
+        cartTable.getColumnModel().getColumn(6).setPreferredWidth(70);
 
-        // RIGHT / SOUTH: Summary Totals & Checkout
-        JPanel bottomPanel = new JPanel(new BorderLayout(15, 15));
-        bottomPanel.setBackground(new Color(248, 250, 252));
+        // Center align Qty and Price
+        DefaultTableCellRenderer centerRender = new DefaultTableCellRenderer();
+        centerRender.setHorizontalAlignment(SwingConstants.CENTER);
+        cartTable.getColumnModel().getColumn(0).setCellRenderer(centerRender);
+        cartTable.getColumnModel().getColumn(4).setCellRenderer(centerRender);
 
-        // Bill Summary Card
-        JPanel summaryCard = new JPanel(new GridLayout(4, 2, 10, 8));
-        summaryCard.setBackground(Color.WHITE);
-        summaryCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(203, 213, 225)),
-                new EmptyBorder(15, 20, 15, 20)
-        ));
-        summaryCard.setPreferredSize(new Dimension(360, 150));
+        DefaultTableCellRenderer rightRender = new DefaultTableCellRenderer();
+        rightRender.setHorizontalAlignment(SwingConstants.RIGHT);
+        cartTable.getColumnModel().getColumn(3).setCellRenderer(rightRender);
+        cartTable.getColumnModel().getColumn(5).setCellRenderer(rightRender);
 
-        summaryCard.add(new JLabel("Subtotal:"));
-        lblSubtotal = new JLabel("₹0.00", SwingConstants.RIGHT);
-        lblSubtotal.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        summaryCard.add(lblSubtotal);
+        JScrollPane tableScroll = new JScrollPane(cartTable);
+        tableScroll.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240)));
+        leftCenter.add(tableScroll, BorderLayout.CENTER);
 
-        JPanel gstLabelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        gstLabelPanel.setBackground(Color.WHITE);
-        gstLabelPanel.add(new JLabel("GST Rate (%): "));
-        txtGstRate = new JTextField("18.0", 3);
-        gstLabelPanel.add(txtGstRate);
-        summaryCard.add(gstLabelPanel);
+        // Cart status footer (Total items, units, delete button)
+        JPanel cartFooter = new JPanel(new BorderLayout(10, 0));
+        cartFooter.setBackground(Color.WHITE);
+        cartFooter.setBorder(new EmptyBorder(6, 12, 6, 12));
 
-        lblGstAmount = new JLabel("₹0.00", SwingConstants.RIGHT);
-        lblGstAmount.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        summaryCard.add(lblGstAmount);
+        JPanel statsLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
+        statsLeft.setOpaque(false);
+        lblItemsCount = new JLabel("Items: 0");
+        lblItemsCount.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblItemsCount.setForeground(new Color(71, 85, 105));
+        statsLeft.add(lblItemsCount);
 
-        JLabel lblGrandTitle = new JLabel("GRAND TOTAL:");
-        lblGrandTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        lblGrandTitle.setForeground(new Color(30, 41, 59));
-        summaryCard.add(lblGrandTitle);
+        lblTotalQty = new JLabel("Total Qty: 0");
+        lblTotalQty.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblTotalQty.setForeground(new Color(71, 85, 105));
+        statsLeft.add(lblTotalQty);
+        cartFooter.add(statsLeft, BorderLayout.WEST);
 
-        lblGrandTotal = new JLabel("₹0.00", SwingConstants.RIGHT);
-        lblGrandTotal.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblGrandTotal.setForeground(new Color(37, 99, 235));
-        summaryCard.add(lblGrandTotal);
+        JPanel cartActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        cartActions.setOpaque(false);
 
-        JButton btnCheckout = new JButton("✅ COMPLETE SALE & PRINT BILL");
-        btnCheckout.setBackground(new Color(37, 99, 235));
-        btnCheckout.setForeground(Color.WHITE);
-        btnCheckout.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        btnCheckout.setPreferredSize(new Dimension(0, 42));
+        JButton btnIncQty = new JButton("➕ Qty +1");
+        btnIncQty.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        cartActions.add(btnIncQty);
 
-        JButton btnCancel = new JButton("Clear Cart / New Bill");
+        JButton btnDecQty = new JButton("➖ Qty -1");
+        btnDecQty.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        cartActions.add(btnDecQty);
 
-        JPanel checkoutButtons = new JPanel(new GridLayout(1, 2, 10, 0));
-        checkoutButtons.setBackground(Color.WHITE);
-        checkoutButtons.add(btnCancel);
-        checkoutButtons.add(btnCheckout);
+        JButton btnRemove = new JButton("🗑 Remove");
+        btnRemove.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnRemove.setBackground(new Color(239, 68, 68));
+        btnRemove.setForeground(Color.WHITE);
+        cartActions.add(btnRemove);
 
-        JPanel rightBox = new JPanel(new BorderLayout(8, 8));
-        rightBox.setBackground(new Color(248, 250, 252));
-        rightBox.add(summaryCard, BorderLayout.CENTER);
-        rightBox.add(checkoutButtons, BorderLayout.SOUTH);
+        JButton btnClear = new JButton("Clear All");
+        btnClear.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        cartActions.add(btnClear);
 
-        bottomPanel.add(rightBox, BorderLayout.EAST);
-        add(bottomPanel, BorderLayout.SOUTH);
+        cartFooter.add(cartActions, BorderLayout.EAST);
+        leftCenter.add(cartFooter, BorderLayout.SOUTH);
 
-        // Listeners
-        cmbProduct.addActionListener(e -> onProductSelected());
-        btnAddItem.addActionListener(e -> addItemToCart());
-        btnRemoveItem.addActionListener(e -> removeItemFromCart());
-        btnCheckout.addActionListener(e -> completeSale());
-        btnCancel.addActionListener(e -> resetBillingDesk());
-        txtGstRate.addActionListener(e -> calculateTotals());
+        add(leftCenter, BorderLayout.CENTER);
+
+        // RIGHT: Mall POS Checkout Hub (Totals, Discount, Numpad, Quick Cash, UPI, Checkout)
+        JPanel rightHub = new JPanel(new BorderLayout(10, 10));
+        rightHub.setPreferredSize(new Dimension(360, 0));
+        rightHub.setOpaque(false);
+
+        // 1. Total Bill Display Card
+        JPanel totalDisplayCard = new JPanel(new BorderLayout(5, 5));
+        totalDisplayCard.setBackground(new Color(15, 23, 42));
+        totalDisplayCard.setBorder(new EmptyBorder(12, 16, 12, 16));
+
+        JLabel lblPayableTitle = new JLabel("TOTAL PAYABLE");
+        lblPayableTitle.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblPayableTitle.setForeground(new Color(148, 163, 184));
+        totalDisplayCard.add(lblPayableTitle, BorderLayout.NORTH);
+
+        lblGrandTotal = new JLabel("₹0.00");
+        lblGrandTotal.setFont(new Font("Segoe UI", Font.BOLD, 30));
+        lblGrandTotal.setForeground(new Color(56, 189, 248));
+        totalDisplayCard.add(lblGrandTotal, BorderLayout.CENTER);
+
+        JPanel subBreakdown = new JPanel(new GridLayout(3, 2, 4, 2));
+        subBreakdown.setOpaque(false);
+
+        subBreakdown.add(createWhiteLabel("Subtotal:"));
+        lblSubtotal = createWhiteLabel("₹0.00", SwingConstants.RIGHT);
+        subBreakdown.add(lblSubtotal);
+
+        subBreakdown.add(createWhiteLabel("Discount:"));
+        lblDiscount = createWhiteLabel("₹0.00", SwingConstants.RIGHT);
+        lblDiscount.setForeground(new Color(248, 113, 113));
+        subBreakdown.add(lblDiscount);
+
+        subBreakdown.add(createWhiteLabel("GST (18%):"));
+        lblGstAmount = createWhiteLabel("₹0.00", SwingConstants.RIGHT);
+        subBreakdown.add(lblGstAmount);
+
+        totalDisplayCard.add(subBreakdown, BorderLayout.SOUTH);
+        rightHub.add(totalDisplayCard, BorderLayout.NORTH);
+
+        // 2. Middle: Quick Cash / Tendered & Discount Controls
+        JPanel midPanel = new JPanel();
+        midPanel.setLayout(new BoxLayout(midPanel, BoxLayout.Y_AXIS));
+        midPanel.setOpaque(false);
+
+        // Discount Toolbar
+        JPanel discountBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
+        discountBar.setBackground(Color.WHITE);
+        discountBar.setBorder(BorderFactory.createTitledBorder("🏷️ Bill Discount (Ctrl+D)"));
+
+        JButton btnAddDiscount = new JButton("Apply Discount");
+        btnAddDiscount.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnAddDiscount.setBackground(new Color(241, 245, 249));
+        discountBar.add(btnAddDiscount);
+
+        JButton btnRemoveDiscount = new JButton("Remove");
+        btnRemoveDiscount.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        discountBar.add(btnRemoveDiscount);
+
+        JButton btnOpenUpi = new JButton("📱 UPI QR (F6)");
+        btnOpenUpi.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnOpenUpi.setBackground(new Color(139, 92, 246));
+        btnOpenUpi.setForeground(Color.WHITE);
+        discountBar.add(btnOpenUpi);
+
+        midPanel.add(discountBar);
+        midPanel.add(Box.createVerticalStrut(6));
+
+        // Quick Cash Chips (₹100, ₹200, ₹500, ₹2000, Exact)
+        JPanel quickCashPanel = new JPanel(new GridLayout(2, 3, 5, 5));
+        quickCashPanel.setBackground(Color.WHITE);
+        quickCashPanel.setBorder(BorderFactory.createTitledBorder("💵 Quick Cash Tendered"));
+
+        int[] cashPresets = {100, 200, 500, 1000, 2000};
+        for (int p : cashPresets) {
+            JButton btnChip = new JButton("₹" + p);
+            btnChip.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            btnChip.setBackground(new Color(248, 250, 252));
+            btnChip.addActionListener(e -> setTenderedCash(p));
+            quickCashPanel.add(btnChip);
+        }
+        JButton btnExact = new JButton("EXACT");
+        btnExact.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnExact.setBackground(new Color(220, 252, 231));
+        btnExact.setForeground(new Color(22, 101, 52));
+        btnExact.addActionListener(e -> setTenderedCash(grandTotal));
+        quickCashPanel.add(btnExact);
+
+        midPanel.add(quickCashPanel);
+        midPanel.add(Box.createVerticalStrut(6));
+
+        // Cash Paid & Change Due Banner
+        JPanel tenderCard = new JPanel(new GridLayout(2, 2, 8, 4));
+        tenderCard.setBackground(Color.WHITE);
+        tenderCard.setBorder(new EmptyBorder(8, 10, 8, 10));
+
+        JLabel lblCashTitle = new JLabel("Cash Paid (₹):");
+        lblCashTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        tenderCard.add(lblCashTitle);
+
+        txtCashPaid = new JTextField("0.00");
+        txtCashPaid.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        txtCashPaid.setHorizontalAlignment(JTextField.RIGHT);
+        tenderCard.add(txtCashPaid);
+
+        JLabel lblChangeTitle = new JLabel("Change Return:");
+        lblChangeTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblChangeTitle.setForeground(new Color(220, 38, 38));
+        tenderCard.add(lblChangeTitle);
+
+        lblChangeDue = new JLabel("₹0.00", SwingConstants.RIGHT);
+        lblChangeDue.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        lblChangeDue.setForeground(new Color(22, 163, 74));
+        tenderCard.add(lblChangeDue);
+
+        midPanel.add(tenderCard);
+        midPanel.add(Box.createVerticalStrut(6));
+
+        // Touch Numpad (7-8-9, 4-5-6, 1-2-3, 0-.-C)
+        JPanel numpad = new JPanel(new GridLayout(4, 3, 4, 4));
+        numpad.setBackground(Color.WHITE);
+        numpad.setBorder(BorderFactory.createTitledBorder("🔢 POS Numpad"));
+
+        String[] keys = {"7", "8", "9", "4", "5", "6", "1", "2", "3", "C", "0", "."};
+        for (String k : keys) {
+            JButton btnKey = new JButton(k);
+            btnKey.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            btnKey.setBackground(new Color(248, 250, 252));
+            btnKey.setFocusPainted(false);
+            btnKey.addActionListener(e -> handleNumpadKey(k));
+            numpad.add(btnKey);
+        }
+        midPanel.add(numpad);
+
+        rightHub.add(midPanel, BorderLayout.CENTER);
+
+        // 3. Bottom Big Checkout Button
+        JPanel bottomCheckout = new JPanel(new GridLayout(1, 1));
+        bottomCheckout.setOpaque(false);
+        JButton btnPayPrint = new JButton("💳 PAY & PRINT BILL (Ctrl+Enter)");
+        btnPayPrint.setBackground(new Color(16, 185, 129));
+        btnPayPrint.setForeground(Color.WHITE);
+        btnPayPrint.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnPayPrint.setPreferredSize(new Dimension(0, 48));
+        btnPayPrint.setFocusPainted(false);
+        btnPayPrint.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        bottomCheckout.add(btnPayPrint);
+
+        rightHub.add(bottomCheckout, BorderLayout.SOUTH);
+        add(rightHub, BorderLayout.EAST);
+
+        // LISTENERS
+        btnScanAdd.addActionListener(e -> handleBarcodeScan());
+        txtBarcode.addActionListener(e -> handleBarcodeScan());
+
+        btnIncQty.addActionListener(e -> adjustSelectedQuantity(1));
+        btnDecQty.addActionListener(e -> adjustSelectedQuantity(-1));
+        btnRemove.addActionListener(e -> removeSelectedItem());
+        btnClear.addActionListener(e -> resetBillingDesk());
+
+        btnAddDiscount.addActionListener(e -> promptDiscountDialog());
+        btnRemoveDiscount.addActionListener(e -> {
+            discountValue = 0.0;
+            calculateTotals();
+        });
+
+        btnOpenUpi.addActionListener(e -> openUpiDialog());
+
+        btnHoldBill.addActionListener(e -> holdCurrentBill());
+        btnResumeBill.addActionListener(e -> resumeSelectedBill());
+
+        txtCashPaid.addActionListener(e -> updateCashCalculations());
+        txtCashPaid.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                updateCashCalculations();
+            }
+        });
+
+        btnPayPrint.addActionListener(e -> completeSale());
+
+        // Table inline quantity edit listener
+        cartModel.addTableModelListener(e -> {
+            if (e.getColumn() == 4) {
+                int r = e.getFirstRow();
+                try {
+                    int qty = Integer.parseInt(cartModel.getValueAt(r, 4).toString().trim());
+                    if (qty <= 0) {
+                        removeItemFromCart(r);
+                    } else {
+                        SaleItem it = cartItems.get(r);
+                        it.setQuantity(qty);
+                        it.setSubtotal(qty * it.getUnitPrice());
+                        cartModel.setValueAt(String.format("₹%.2f", it.getSubtotal()), r, 5);
+                        calculateTotals();
+                    }
+                } catch (Exception ignored) {}
+            }
+        });
+
+        // Quick phone search auto-select customer
+        txtCustPhone.addActionListener(e -> quickSearchCustomer(txtCustPhone.getText().trim()));
     }
 
-    private void onProductSelected() {
-        Product p = (Product) cmbProduct.getSelectedItem();
-        if (p != null) {
-            txtStockAvail.setText(String.valueOf(p.getQuantity()));
-            txtUnitPrice.setText(String.format("%.2f", p.getSellingPrice()));
+    private JLabel createWhiteLabel(String text) {
+        return createWhiteLabel(text, SwingConstants.LEFT);
+    }
+
+    private JLabel createWhiteLabel(String text, int align) {
+        JLabel lbl = new JLabel(text, align);
+        lbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lbl.setForeground(new Color(226, 232, 240));
+        return lbl;
+    }
+
+    private void setupGlobalKeyShortcuts() {
+        InputMap im = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap am = getActionMap();
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0), "focusBarcode");
+        am.put("focusBarcode", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                txtBarcode.requestFocus();
+                txtBarcode.selectAll();
+            }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0), "holdBill");
+        am.put("holdBill", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                holdCurrentBill();
+            }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F3, 0), "focusCustomer");
+        am.put("focusCustomer", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                txtCustPhone.requestFocus();
+                txtCustPhone.selectAll();
+            }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0), "cashMode");
+        am.put("cashMode", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                cmbPaymentMode.setSelectedItem("CASH");
+                txtCashPaid.requestFocus();
+                txtCashPaid.selectAll();
+            }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F6, 0), "upiMode");
+        am.put("upiMode", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                cmbPaymentMode.setSelectedItem("UPI");
+                openUpiDialog();
+            }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_D, KeyEvent.CTRL_DOWN_MASK), "discountDialog");
+        am.put("discountDialog", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                promptDiscountDialog();
+            }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, KeyEvent.CTRL_DOWN_MASK), "payAndPrint");
+        am.put("payAndPrint", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                completeSale();
+            }
+        });
+    }
+
+    private void loadProductCache() {
+        try {
+            cachedProducts = productDAO.getAllProducts();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -242,64 +583,85 @@ public class BillingPanel extends JPanel {
         }
     }
 
-    public void loadProducts() {
+    private void quickSearchCustomer(String query) {
+        if (query.isEmpty()) return;
         try {
-            cmbProduct.removeAllItems();
-            List<Product> products = productDAO.getAllProducts();
-            for (Product p : products) {
-                cmbProduct.addItem(p);
+            List<Customer> list = customerDAO.searchCustomers(query);
+            if (!list.isEmpty()) {
+                Customer matched = list.get(0);
+                for (int i = 0; i < cmbCustomer.getItemCount(); i++) {
+                    Customer item = cmbCustomer.getItemAt(i);
+                    if (item.getId() == matched.getId()) {
+                        cmbCustomer.setSelectedIndex(i);
+                        break;
+                    }
+                }
+                txtCustPhone.setText(matched.getPhone() != null ? matched.getPhone() : matched.getName());
+                txtBarcode.requestFocus();
+            } else {
+                JOptionPane.showMessageDialog(this, "No customer found for '" + query + "'");
             }
-            onProductSelected();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void resetBillingDesk() {
-        try {
-            txtInvoiceNo.setText(billingDAO.generateNextInvoiceNo());
-        } catch (Exception e) {
-            txtInvoiceNo.setText("INV-0001");
+    private void handleBarcodeScan() {
+        String code = txtBarcode.getText().trim();
+        if (code.isEmpty()) return;
+
+        // Instant local lookup from cache
+        Product match = null;
+        for (Product p : cachedProducts) {
+            if (code.equalsIgnoreCase(p.getCode()) || code.equalsIgnoreCase(p.getName())) {
+                match = p;
+                break;
+            }
         }
-        cartItems.clear();
-        cartModel.setRowCount(0);
-        calculateTotals();
-        loadProducts();
+
+        // DB Fallback if not found in cache
+        if (match == null) {
+            try {
+                match = productDAO.getProductByCode(code);
+                if (match == null) {
+                    List<Product> search = productDAO.searchProducts(code);
+                    if (!search.isEmpty()) {
+                        match = search.get(0);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (match == null) {
+            Toolkit.getDefaultToolkit().beep();
+            JOptionPane.showMessageDialog(this, "Item not found for barcode: " + code, "Barcode Scan", JOptionPane.WARNING_MESSAGE);
+            txtBarcode.selectAll();
+            return;
+        }
+
+        addProductToCart(match, 1);
+        txtBarcode.setText("");
+        txtBarcode.requestFocus();
     }
 
-    private void addItemToCart() {
-        Product p = (Product) cmbProduct.getSelectedItem();
-        if (p == null) return;
-
-        int qty;
-        try {
-            qty = Integer.parseInt(txtQty.getText().trim());
-            if (qty <= 0) {
-                JOptionPane.showMessageDialog(this, "Quantity must be greater than 0.", "Warning", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Please enter a valid quantity.", "Warning", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        // Check stock availability (including what's already in cart)
-        int existingInCart = 0;
+    private void addProductToCart(Product p, int qty) {
+        // Stock check
+        int inCart = 0;
         for (SaleItem it : cartItems) {
-            if (it.getProductId() == p.getId()) {
-                existingInCart += it.getQuantity();
-            }
+            if (it.getProductId() == p.getId()) inCart += it.getQuantity();
         }
 
-        if (existingInCart + qty > p.getQuantity()) {
+        if (inCart + qty > p.getQuantity()) {
+            Toolkit.getDefaultToolkit().beep();
             JOptionPane.showMessageDialog(this,
-                    "Not enough stock! Available in stock: " + p.getQuantity() +
-                    ", already in cart: " + existingInCart,
-                    "Insufficient Stock", JOptionPane.WARNING_MESSAGE);
+                    "Insufficient stock! Available: " + p.getQuantity() + ", in cart: " + inCart,
+                    "Stock Warning", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Add or update existing item in cart
+        // Update existing or add new
         boolean found = false;
         for (int i = 0; i < cartItems.size(); i++) {
             SaleItem it = cartItems.get(i);
@@ -314,32 +676,56 @@ public class BillingPanel extends JPanel {
         }
 
         if (!found) {
-            double itemSubtotal = qty * p.getSellingPrice();
-            SaleItem item = new SaleItem(p.getId(), p.getCode(), p.getName(), qty, p.getSellingPrice(), itemSubtotal);
-            cartItems.add(item);
+            double itemSub = qty * p.getSellingPrice();
+            SaleItem it = new SaleItem(p.getId(), p.getCode(), p.getName(), qty, p.getSellingPrice(), itemSub);
+            cartItems.add(it);
             cartModel.addRow(new Object[]{
                     cartItems.size(),
-                    item.getProductCode(),
-                    item.getProductName(),
-                    String.format("₹%.2f", item.getUnitPrice()),
-                    item.getQuantity(),
-                    String.format("₹%.2f", item.getSubtotal())
+                    it.getProductCode(),
+                    it.getProductName(),
+                    String.format("₹%.2f", it.getUnitPrice()),
+                    it.getQuantity(),
+                    String.format("₹%.2f", it.getSubtotal()),
+                    "Delete"
             });
         }
 
-        txtQty.setText("1");
+        Toolkit.getDefaultToolkit().beep(); // cashier beep
         calculateTotals();
     }
 
-    private void removeItemFromCart() {
+    private void adjustSelectedQuantity(int delta) {
         int r = cartTable.getSelectedRow();
         if (r == -1) {
-            JOptionPane.showMessageDialog(this, "Please select an item in the cart table to remove.");
+            if (!cartItems.isEmpty()) r = cartItems.size() - 1; // default to last item
+            else return;
+        }
+
+        SaleItem it = cartItems.get(r);
+        int newQty = it.getQuantity() + delta;
+        if (newQty <= 0) {
+            removeItemFromCart(r);
+        } else {
+            it.setQuantity(newQty);
+            it.setSubtotal(newQty * it.getUnitPrice());
+            cartModel.setValueAt(newQty, r, 4);
+            cartModel.setValueAt(String.format("₹%.2f", it.getSubtotal()), r, 5);
+            calculateTotals();
+        }
+    }
+
+    private void removeSelectedItem() {
+        int r = cartTable.getSelectedRow();
+        if (r == -1) {
+            JOptionPane.showMessageDialog(this, "Select an item to remove.");
             return;
         }
+        removeItemFromCart(r);
+    }
+
+    private void removeItemFromCart(int r) {
         cartItems.remove(r);
         cartModel.removeRow(r);
-        // re-index
         for (int i = 0; i < cartModel.getRowCount(); i++) {
             cartModel.setValueAt(i + 1, i, 0);
         }
@@ -348,27 +734,193 @@ public class BillingPanel extends JPanel {
 
     private void calculateTotals() {
         subtotal = 0.0;
-        for (SaleItem item : cartItems) {
-            subtotal += item.getSubtotal();
+        int totalUnits = 0;
+        for (SaleItem it : cartItems) {
+            subtotal += it.getSubtotal();
+            totalUnits += it.getQuantity();
         }
 
-        try {
-            gstRate = Double.parseDouble(txtGstRate.getText().trim());
-        } catch (Exception e) {
-            gstRate = 18.0;
+        // Compute discount
+        double discAmt = 0.0;
+        if ("PERCENT".equalsIgnoreCase(discountType)) {
+            discAmt = (subtotal * discountValue) / 100.0;
+        } else {
+            discAmt = Math.min(discountValue, subtotal);
         }
 
-        gstAmount = (subtotal * gstRate) / 100.0;
-        grandTotal = subtotal + gstAmount;
+        double discountedSubtotal = Math.max(0, subtotal - discAmt);
+        gstAmount = (discountedSubtotal * gstRate) / 100.0;
+        grandTotal = discountedSubtotal + gstAmount;
+
+        lblItemsCount.setText("Items: " + cartItems.size());
+        lblTotalQty.setText("Total Qty: " + totalUnits);
 
         lblSubtotal.setText(String.format("₹%.2f", subtotal));
+        lblDiscount.setText(String.format("-₹%.2f", discAmt));
         lblGstAmount.setText(String.format("₹%.2f", gstAmount));
         lblGrandTotal.setText(String.format("₹%.2f", grandTotal));
+
+        updateCashCalculations();
+    }
+
+    private void setTenderedCash(double amt) {
+        cashTendered = amt;
+        txtCashPaid.setText(String.format("%.2f", cashTendered));
+        updateCashCalculations();
+    }
+
+    private void handleNumpadKey(String key) {
+        String cur = txtCashPaid.getText().trim();
+        if ("C".equalsIgnoreCase(key)) {
+            txtCashPaid.setText("0.00");
+        } else {
+            if ("0.00".equals(cur) || "0".equals(cur)) cur = "";
+            if (".".equals(key) && cur.contains(".")) return;
+            cur += key;
+            txtCashPaid.setText(cur);
+        }
+        updateCashCalculations();
+    }
+
+    private void updateCashCalculations() {
+        try {
+            cashTendered = Double.parseDouble(txtCashPaid.getText().trim());
+        } catch (Exception e) {
+            cashTendered = 0.0;
+        }
+        double change = Math.max(0, cashTendered - grandTotal);
+        lblChangeDue.setText(String.format("₹%.2f", change));
+    }
+
+    private void promptDiscountDialog() {
+        JPanel p = new JPanel(new GridLayout(2, 2, 8, 8));
+        JComboBox<String> cmbType = new JComboBox<>(new String[]{"Flat Amount (₹)", "Percentage (%)"});
+        JTextField txtVal = new JTextField(String.valueOf(discountValue));
+        p.add(new JLabel("Discount Type:"));
+        p.add(cmbType);
+        p.add(new JLabel("Discount Value:"));
+        p.add(txtVal);
+
+        int res = JOptionPane.showConfirmDialog(this, p, "Bill Discount (Ctrl+D)", JOptionPane.OK_CANCEL_OPTION);
+        if (res == JOptionPane.OK_OPTION) {
+            try {
+                discountValue = Double.parseDouble(txtVal.getText().trim());
+                discountType = cmbType.getSelectedIndex() == 1 ? "PERCENT" : "FLAT";
+                calculateTotals();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Invalid discount value!");
+            }
+        }
+    }
+
+    private void openUpiDialog() {
+        Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+        UpiQrDialog upiDialog = new UpiQrDialog(owner, "bazaarpoint@upi", "SmartBilling Pro", grandTotal, txtInvoiceNo.getText().trim());
+        upiDialog.setVisible(true);
+        cmbPaymentMode.setSelectedItem("UPI");
+        setTenderedCash(grandTotal);
+    }
+
+    private void holdCurrentBill() {
+        if (cartItems.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Cart is empty, cannot hold bill.");
+            return;
+        }
+
+        String ref = JOptionPane.showInputDialog(this, "Enter Hold Reference (e.g. Table 2 or Customer Name):", "Hold Bill (F2)", JOptionPane.PLAIN_MESSAGE);
+        if (ref == null || ref.trim().isEmpty()) {
+            ref = "Bill #" + (heldBills.size() + 1);
+        }
+
+        Customer cust = (Customer) cmbCustomer.getSelectedItem();
+        HeldBill hb = new HeldBill(
+                "HOLD-" + System.currentTimeMillis(),
+                ref.trim(),
+                cust,
+                new ArrayList<>(cartItems),
+                discountValue,
+                discountType,
+                (String) cmbPaymentMode.getSelectedItem()
+        );
+
+        heldBills.add(hb);
+        updateHeldBillsDropdown();
+        resetBillingDesk();
+        JOptionPane.showMessageDialog(this, "Bill held successfully as: " + ref);
+    }
+
+    private void resumeSelectedBill() {
+        int idx = cmbHeldBills.getSelectedIndex();
+        if (idx <= 0 || heldBills.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select a held bill from dropdown first.");
+            return;
+        }
+
+        HeldBill hb = heldBills.remove(idx - 1);
+        updateHeldBillsDropdown();
+
+        // Restore
+        cartItems = new ArrayList<>(hb.getItems());
+        cartModel.setRowCount(0);
+        for (int i = 0; i < cartItems.size(); i++) {
+            SaleItem it = cartItems.get(i);
+            cartModel.addRow(new Object[]{
+                    i + 1,
+                    it.getProductCode(),
+                    it.getProductName(),
+                    String.format("₹%.2f", it.getUnitPrice()),
+                    it.getQuantity(),
+                    String.format("₹%.2f", it.getSubtotal()),
+                    "Delete"
+            });
+        }
+
+        discountValue = hb.getDiscountValue();
+        discountType = hb.getDiscountType();
+        cmbPaymentMode.setSelectedItem(hb.getPaymentMode());
+        if (hb.getCustomer() != null) {
+            for (int i = 0; i < cmbCustomer.getItemCount(); i++) {
+                if (cmbCustomer.getItemAt(i).getId() == hb.getCustomer().getId()) {
+                    cmbCustomer.setSelectedIndex(i);
+                    break;
+                }
+            }
+        }
+
+        calculateTotals();
+        JOptionPane.showMessageDialog(this, "Recalled held bill: " + hb.getReference());
+    }
+
+    private void updateHeldBillsDropdown() {
+        cmbHeldBills.removeAllItems();
+        cmbHeldBills.addItem("-- Active Bill --");
+        for (HeldBill hb : heldBills) {
+            cmbHeldBills.addItem(hb.toString());
+        }
+    }
+
+    public void resetBillingDesk() {
+        try {
+            txtInvoiceNo.setText(billingDAO.generateNextInvoiceNo());
+        } catch (Exception e) {
+            txtInvoiceNo.setText("INV-0001");
+        }
+        cartItems.clear();
+        cartModel.setRowCount(0);
+        discountValue = 0.0;
+        discountType = "FLAT";
+        cashTendered = 0.0;
+        txtCashPaid.setText("0.00");
+        txtBarcode.setText("");
+        calculateTotals();
+        loadProductCache();
+        txtBarcode.requestFocus();
     }
 
     private void completeSale() {
         if (cartItems.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Cart is empty! Add products before checking out.", "Empty Cart", JOptionPane.WARNING_MESSAGE);
+            txtBarcode.requestFocus();
             return;
         }
 
@@ -383,6 +935,8 @@ public class BillingPanel extends JPanel {
         sale.setSubtotal(subtotal);
         sale.setGstRate(gstRate);
         sale.setGstAmount(gstAmount);
+        sale.setDiscountAmount(subtotal - (grandTotal - gstAmount));
+        sale.setDiscountType(discountType);
         sale.setTotalAmount(grandTotal);
         sale.setPaymentMode((String) cmbPaymentMode.getSelectedItem());
         if (currentUser != null) {
@@ -394,12 +948,10 @@ public class BillingPanel extends JPanel {
         try {
             boolean ok = billingDAO.processSale(sale);
             if (ok) {
-                // Show Invoice preview
                 Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
                 InvoiceDialog dialog = new InvoiceDialog(owner, sale);
                 dialog.setVisible(true);
 
-                // Reset desk
                 resetBillingDesk();
             }
         } catch (Exception ex) {
@@ -407,4 +959,3 @@ public class BillingPanel extends JPanel {
         }
     }
 }
-
