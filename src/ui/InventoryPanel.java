@@ -37,7 +37,7 @@ public class InventoryPanel extends JPanel {
     }
 
     private void initComponents() {
-        // Top Banner
+
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBackground(new Color(248, 250, 252));
 

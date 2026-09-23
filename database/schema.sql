@@ -133,7 +133,7 @@ INSERT IGNORE INTO categories (id, name, description) VALUES
 (1, 'Electronics', 'Laptops, Monitors, Gadgets'),
 (2, 'Accessories', 'Mice, Keyboards, Cables'),
 (3, 'Stationery', 'Office supplies, paper, notebooks');
-
+`
 -- Suppliers
 INSERT IGNORE INTO suppliers (id, name, company_name, phone, email, address) VALUES
 (1, 'Tech Wholesale Ltd', 'Tech Distributors Co.', '9876543210', 'sales@techwholesale.com', 'Plot 42, Industrial Area, Delhi'),
