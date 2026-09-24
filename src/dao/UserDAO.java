@@ -13,6 +13,9 @@ import java.util.List;
 public class UserDAO {
 
     public User authenticate(String username, String password) throws SQLException {
+        // Ensure default users exist if table is empty
+        ensureDefaultUsersExist();
+
         String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -32,6 +35,24 @@ public class UserDAO {
             }
         }
         return null;
+    }
+
+    private void ensureDefaultUsersExist() {
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement check = conn.prepareStatement("SELECT COUNT(*) FROM users");
+             ResultSet rs = check.executeQuery()) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                // Seed default admin and staff
+                try (PreparedStatement insert = conn.prepareStatement(
+                        "INSERT INTO users (username, password, full_name, role) VALUES " +
+                        "('admin', 'admin123', 'System Administrator', 'ADMIN'), " +
+                        "('staff', 'staff123', 'Cashier Desk', 'STAFF')")) {
+                    insert.executeUpdate();
+                }
+            }
+        } catch (Exception ex) {
+            System.err.println("Could not auto-seed users: " + ex.getMessage());
+        }
     }
 
     public List<User> getAllUsers() throws SQLException {
