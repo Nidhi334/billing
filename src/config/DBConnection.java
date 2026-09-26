@@ -23,21 +23,46 @@ public class DBConnection {
             try (FileInputStream fis = new FileInputStream(file)) {
                 properties.load(fis);
             } catch (IOException e) {
-                System.err.println("Failed to read db_config.properties, using defaults: " + e.getMessage());
+                System.err.println("Failed to read db_config.properties: " + e.getMessage());
             }
         } else {
-            // Default configuration
-            properties.setProperty("db.host", "localhost");
-            properties.setProperty("db.port", "3306");
-            properties.setProperty("db.name", "billing_system");
-            properties.setProperty("db.user", "root");
-            properties.setProperty("db.password", "");
-            try (FileOutputStream fos = new FileOutputStream(file)) {
-                properties.store(fos, "Database Configuration Settings");
-            } catch (IOException e) {
-                System.err.println("Could not create default config: " + e.getMessage());
+            // Load from .env if present
+            File envFile = new File(".env");
+            if (envFile.exists()) {
+                try (FileInputStream fis = new FileInputStream(envFile)) {
+                    Properties envProps = new Properties();
+                    envProps.load(fis);
+                    if (envProps.containsKey("DB_HOST")) properties.setProperty("db.host", envProps.getProperty("DB_HOST"));
+                    if (envProps.containsKey("DB_PORT")) properties.setProperty("db.port", envProps.getProperty("DB_PORT"));
+                    if (envProps.containsKey("DB_DATABASE")) properties.setProperty("db.name", envProps.getProperty("DB_DATABASE"));
+                    if (envProps.containsKey("DB_USERNAME")) properties.setProperty("db.user", envProps.getProperty("DB_USERNAME"));
+                    if (envProps.containsKey("DB_PASSWORD")) properties.setProperty("db.password", envProps.getProperty("DB_PASSWORD"));
+                } catch (Exception ex) {
+                    System.err.println("Notice: Could not load from .env: " + ex.getMessage());
+                }
             }
         }
+
+        // Environment variables override
+        String envHost = System.getenv("DB_HOST");
+        if (envHost != null && !envHost.trim().isEmpty()) properties.setProperty("db.host", envHost.trim());
+        String envPort = System.getenv("DB_PORT");
+        if (envPort != null && !envPort.trim().isEmpty()) properties.setProperty("db.port", envPort.trim());
+        String envName = System.getenv("DB_NAME");
+        if (envName == null) envName = System.getenv("DB_DATABASE");
+        if (envName != null && !envName.trim().isEmpty()) properties.setProperty("db.name", envName.trim());
+        String envUser = System.getenv("DB_USER");
+        if (envUser == null) envUser = System.getenv("DB_USERNAME");
+        if (envUser != null && !envUser.trim().isEmpty()) properties.setProperty("db.user", envUser.trim());
+        String envPass = System.getenv("DB_PASSWORD");
+        if (envPass != null) properties.setProperty("db.password", envPass);
+
+        // Ensure defaults if not set anywhere
+        if (!properties.containsKey("db.host")) properties.setProperty("db.host", "localhost");
+        if (!properties.containsKey("db.port")) properties.setProperty("db.port", "3306");
+        if (!properties.containsKey("db.name")) properties.setProperty("db.name", "billing_system");
+        if (!properties.containsKey("db.user")) properties.setProperty("db.user", "root");
+        if (!properties.containsKey("db.password")) properties.setProperty("db.password", "");
     }
 
     public static Connection getConnection() throws SQLException {

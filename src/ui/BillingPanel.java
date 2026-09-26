@@ -8,6 +8,7 @@ import model.HeldBill;
 import model.Product;
 import model.Sale;
 import model.SaleItem;
+import config.AppSettings;
 import model.User;
 
 import javax.swing.*;
@@ -64,6 +65,20 @@ public class BillingPanel extends JPanel {
 
     // Held bill tab selector
     private JComboBox<String> cmbHeldBills;
+    private JPanel heldBillsPanel;
+
+    // Configurable UI Containers & Buttons
+    private JPanel scanBar;
+    private JPanel cartActionsPanel;
+    private JPanel discountBar;
+    private JButton btnAddDiscount;
+    private JButton btnRemoveDiscount;
+    private JButton btnOpenUpi;
+    private JPanel quickCashPanel;
+    private JPanel numpadPanel;
+
+    // Touch vs Non-Touch UI Mode indicator
+    private JLabel lblTouchBadge;
 
     public BillingPanel(User user) {
         this.currentUser = user;
@@ -75,7 +90,54 @@ public class BillingPanel extends JPanel {
         setupGlobalKeyShortcuts();
         loadCustomers();
         loadProductCache();
+        applySettingsVisibility();
         resetBillingDesk();
+    }
+
+
+    public void applySettingsVisibility() {
+        boolean isTouch = AppSettings.isTouchMode();
+        boolean showNumpad = AppSettings.getBoolean(AppSettings.KEY_SHOW_NUMPAD, true);
+        boolean showHeldBills = AppSettings.getBoolean(AppSettings.KEY_SHOW_HELD_BILLS, true);
+        boolean showQuickCash = AppSettings.getBoolean(AppSettings.KEY_SHOW_QUICK_CASH, true);
+        boolean showDiscount = AppSettings.getBoolean(AppSettings.KEY_SHOW_DISCOUNT, true);
+        boolean showUpiQr = AppSettings.getBoolean(AppSettings.KEY_SHOW_UPI_QR, true);
+        boolean showBarcode = AppSettings.getBoolean(AppSettings.KEY_SHOW_BARCODE_SEARCH, true);
+        boolean showCartActions = AppSettings.getBoolean(AppSettings.KEY_SHOW_CART_ACTIONS, true);
+
+        if (lblTouchBadge != null) {
+            if (isTouch) {
+                lblTouchBadge.setText(" 📱 TOUCH SCREEN MODE ");
+                lblTouchBadge.setBackground(new Color(16, 185, 129));
+            } else {
+                lblTouchBadge.setText(" 💻 NON-TOUCH KEYBOARD MODE (F1-F6) ");
+                lblTouchBadge.setBackground(new Color(37, 99, 235));
+            }
+        }
+
+        // On-screen Numpad / NUPED visibility
+        if (numpadPanel != null) numpadPanel.setVisible(showNumpad);
+
+        // Bed / Table / Held Bills visibility
+        if (heldBillsPanel != null) heldBillsPanel.setVisible(showHeldBills);
+
+        // Quick Cash tendered chips visibility
+        if (quickCashPanel != null) quickCashPanel.setVisible(showQuickCash);
+
+        // Barcode / Fast search input visibility
+        if (scanBar != null) scanBar.setVisible(showBarcode);
+
+        // Cart Action buttons visibility
+        if (cartActionsPanel != null) cartActionsPanel.setVisible(showCartActions);
+
+        // Discount & UPI buttons visibility
+        if (btnAddDiscount != null) btnAddDiscount.setVisible(showDiscount);
+        if (btnRemoveDiscount != null) btnRemoveDiscount.setVisible(showDiscount);
+        if (btnOpenUpi != null) btnOpenUpi.setVisible(showUpiQr);
+        if (discountBar != null) discountBar.setVisible(showDiscount || showUpiQr);
+
+        revalidate();
+        repaint();
     }
 
     private void initComponents() {
@@ -91,9 +153,16 @@ public class BillingPanel extends JPanel {
         JPanel headerLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         headerLeft.setOpaque(false);
         JLabel lblTerminal = new JLabel("⚡ POS TERMINAL - DESK #1");
+        lblTouchBadge = new JLabel(" 📱 TOUCH MODE ");
+        lblTouchBadge.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        lblTouchBadge.setOpaque(true);
+        lblTouchBadge.setBackground(new Color(16, 185, 129));
+        lblTouchBadge.setForeground(Color.WHITE);
+        lblTouchBadge.setBorder(new EmptyBorder(2, 6, 2, 6));
         lblTerminal.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblTerminal.setForeground(Color.WHITE);
         headerLeft.add(lblTerminal);
+        headerLeft.add(lblTouchBadge);
 
         JLabel lblShortcuts = new JLabel("[F1: Barcode | F2: Hold Bill | F3: Customer | F4: Cash | F6: UPI QR | Ctrl+D: Discount | Ctrl+Enter: Pay]");
         lblShortcuts.setFont(new Font("Monospaced", Font.PLAIN, 11));
@@ -102,32 +171,35 @@ public class BillingPanel extends JPanel {
         headerStrip.add(headerLeft, BorderLayout.WEST);
 
         // Held Bills Toolbar
-        JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        headerRight.setOpaque(false);
-        headerRight.add(new JLabel("Held Bills:"));
-        ((JLabel) headerRight.getComponent(0)).setForeground(new Color(203, 213, 225));
-        ((JLabel) headerRight.getComponent(0)).setFont(new Font("Segoe UI", Font.BOLD, 11));
+        heldBillsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        heldBillsPanel.setOpaque(false);
+        JLabel lblHeld = new JLabel("Held Bills (Bed/Table):");
+        lblHeld.setForeground(new Color(203, 213, 225));
+        lblHeld.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        heldBillsPanel.add(lblHeld);
+        // set style
+        // set style
 
         cmbHeldBills = new JComboBox<>(new String[]{"-- Active Bill --"});
         cmbHeldBills.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         cmbHeldBills.setPreferredSize(new Dimension(170, 26));
-        headerRight.add(cmbHeldBills);
+        heldBillsPanel.add(cmbHeldBills);
 
         JButton btnResumeBill = new JButton("Recall");
         btnResumeBill.setFont(new Font("Segoe UI", Font.BOLD, 11));
         btnResumeBill.setBackground(new Color(37, 99, 235));
         btnResumeBill.setForeground(Color.WHITE);
         btnResumeBill.setMargin(new Insets(2, 6, 2, 6));
-        headerRight.add(btnResumeBill);
+        heldBillsPanel.add(btnResumeBill);
 
         JButton btnHoldBill = new JButton("Hold (F2)");
         btnHoldBill.setFont(new Font("Segoe UI", Font.BOLD, 11));
         btnHoldBill.setBackground(new Color(217, 119, 6));
         btnHoldBill.setForeground(Color.WHITE);
         btnHoldBill.setMargin(new Insets(2, 6, 2, 6));
-        headerRight.add(btnHoldBill);
+        heldBillsPanel.add(btnHoldBill);
 
-        headerStrip.add(headerRight, BorderLayout.EAST);
+        headerStrip.add(heldBillsPanel, BorderLayout.EAST);
         topContainer.add(headerStrip, BorderLayout.NORTH);
 
         // Sub-header controls (Invoice #, Customer, Payment Mode, Cashier)
@@ -182,7 +254,7 @@ public class BillingPanel extends JPanel {
         leftCenter.setOpaque(false);
 
         // Fast Barcode Scanner input box
-        JPanel scanBar = new JPanel(new BorderLayout(8, 0));
+        scanBar = new JPanel(new BorderLayout(8, 0));
         scanBar.setBackground(Color.WHITE);
         scanBar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(37, 99, 235), 2, true),
@@ -263,28 +335,28 @@ public class BillingPanel extends JPanel {
         statsLeft.add(lblTotalQty);
         cartFooter.add(statsLeft, BorderLayout.WEST);
 
-        JPanel cartActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        cartActions.setOpaque(false);
+        cartActionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        cartActionsPanel.setOpaque(false);
 
         JButton btnIncQty = new JButton("➕ Qty +1");
         btnIncQty.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        cartActions.add(btnIncQty);
+        cartActionsPanel.add(btnIncQty);
 
         JButton btnDecQty = new JButton("➖ Qty -1");
         btnDecQty.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        cartActions.add(btnDecQty);
+        cartActionsPanel.add(btnDecQty);
 
         JButton btnRemove = new JButton("🗑 Remove");
         btnRemove.setFont(new Font("Segoe UI", Font.BOLD, 11));
         btnRemove.setBackground(new Color(239, 68, 68));
         btnRemove.setForeground(Color.WHITE);
-        cartActions.add(btnRemove);
+        cartActionsPanel.add(btnRemove);
 
         JButton btnClear = new JButton("Clear All");
         btnClear.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        cartActions.add(btnClear);
+        cartActionsPanel.add(btnClear);
 
-        cartFooter.add(cartActions, BorderLayout.EAST);
+        cartFooter.add(cartActionsPanel, BorderLayout.EAST);
         leftCenter.add(cartFooter, BorderLayout.SOUTH);
 
         add(leftCenter, BorderLayout.CENTER);
@@ -334,20 +406,20 @@ public class BillingPanel extends JPanel {
         midPanel.setOpaque(false);
 
         // Discount Toolbar
-        JPanel discountBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
+        discountBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
         discountBar.setBackground(Color.WHITE);
         discountBar.setBorder(BorderFactory.createTitledBorder("🏷️ Bill Discount (Ctrl+D)"));
 
-        JButton btnAddDiscount = new JButton("Apply Discount");
+        btnAddDiscount = new JButton("Apply Discount");
         btnAddDiscount.setFont(new Font("Segoe UI", Font.BOLD, 11));
         btnAddDiscount.setBackground(new Color(241, 245, 249));
         discountBar.add(btnAddDiscount);
 
-        JButton btnRemoveDiscount = new JButton("Remove");
+        btnRemoveDiscount = new JButton("Remove");
         btnRemoveDiscount.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         discountBar.add(btnRemoveDiscount);
 
-        JButton btnOpenUpi = new JButton("📱 UPI QR (F6)");
+        btnOpenUpi = new JButton("📱 UPI QR (F6)");
         btnOpenUpi.setFont(new Font("Segoe UI", Font.BOLD, 11));
         btnOpenUpi.setBackground(new Color(139, 92, 246));
         btnOpenUpi.setForeground(Color.WHITE);
@@ -357,7 +429,7 @@ public class BillingPanel extends JPanel {
         midPanel.add(Box.createVerticalStrut(6));
 
         // Quick Cash Chips (₹100, ₹200, ₹500, ₹2000, Exact)
-        JPanel quickCashPanel = new JPanel(new GridLayout(2, 3, 5, 5));
+        quickCashPanel = new JPanel(new GridLayout(2, 3, 5, 5));
         quickCashPanel.setBackground(Color.WHITE);
         quickCashPanel.setBorder(BorderFactory.createTitledBorder("💵 Quick Cash Tendered"));
 
@@ -407,9 +479,9 @@ public class BillingPanel extends JPanel {
         midPanel.add(Box.createVerticalStrut(6));
 
         // Touch Numpad (7-8-9, 4-5-6, 1-2-3, 0-.-C)
-        JPanel numpad = new JPanel(new GridLayout(4, 3, 4, 4));
-        numpad.setBackground(Color.WHITE);
-        numpad.setBorder(BorderFactory.createTitledBorder("🔢 POS Numpad"));
+        numpadPanel = new JPanel(new GridLayout(4, 3, 4, 4));
+        numpadPanel.setBackground(Color.WHITE);
+        numpadPanel.setBorder(BorderFactory.createTitledBorder("🔢 POS Numpad / NUPED Buttons"));
 
         String[] keys = {"7", "8", "9", "4", "5", "6", "1", "2", "3", "C", "0", "."};
         for (String k : keys) {
@@ -418,9 +490,9 @@ public class BillingPanel extends JPanel {
             btnKey.setBackground(new Color(248, 250, 252));
             btnKey.setFocusPainted(false);
             btnKey.addActionListener(e -> handleNumpadKey(k));
-            numpad.add(btnKey);
+            numpadPanel.add(btnKey);
         }
-        midPanel.add(numpad);
+        midPanel.add(numpadPanel);
 
         rightHub.add(midPanel, BorderLayout.CENTER);
 

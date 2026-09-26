@@ -1,6 +1,7 @@
 package ui;
 
 import dao.ReportDAO;
+import config.AppSettings;
 import model.User;
 
 import javax.swing.*;
@@ -21,6 +22,20 @@ public class DashboardFrame extends JFrame {
     private SupplierPanel supplierPanel;
     private BillingPanel billingPanel;
     private ReportsPanel reportsPanel;
+    private SettingsPanel settingsPanel;
+
+    // Sidebar Navigation Buttons
+    private JButton btnNavHome;
+    private JButton btnNavBilling;
+    private JButton btnNavProducts;
+    private JButton btnNavInventory;
+    private JButton btnNavCustomers;
+    private JButton btnNavSuppliers;
+    private JButton btnNavReports;
+    private JButton btnNavSettings;
+
+    // Header badge for Touch vs Desktop
+    private JLabel lblModeBadge;
 
     // Stat card labels
     private JLabel lblTotalProducts, lblTotalStock, lblTotalCustomers, lblTotalSuppliers;
@@ -37,6 +52,7 @@ public class DashboardFrame extends JFrame {
         setLocationRelativeTo(null);
         initComponents();
         loadDashboardStats();
+        updateUIVisibilityFromSettings();
     }
 
     private void initComponents() {
@@ -49,9 +65,20 @@ public class DashboardFrame extends JFrame {
         topBar.setBorder(new EmptyBorder(10, 20, 10, 20));
 
         JLabel brandLabel = new JLabel("⚡ SmartBilling & Inventory Management");
+        lblModeBadge = new JLabel(" [TOUCH MODE] ");
+        lblModeBadge.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblModeBadge.setOpaque(true);
+        lblModeBadge.setBackground(new Color(16, 185, 129));
+        lblModeBadge.setForeground(Color.WHITE);
+        lblModeBadge.setBorder(new EmptyBorder(3, 8, 3, 8));
+
+        JPanel brandBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        brandBox.setOpaque(false);
+        brandBox.add(brandLabel);
+        brandBox.add(lblModeBadge);
         brandLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         brandLabel.setForeground(Color.WHITE);
-        topBar.add(brandLabel, BorderLayout.WEST);
+        topBar.add(brandBox, BorderLayout.WEST);
 
         JPanel userSection = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 2));
         userSection.setOpaque(false);
@@ -81,13 +108,14 @@ public class DashboardFrame extends JFrame {
         sidebar.setPreferredSize(new Dimension(220, 0));
         sidebar.setBorder(new EmptyBorder(15, 10, 15, 10));
 
-        JButton btnNavHome = createSidebarButton("🏠  Dashboard");
-        JButton btnNavBilling = createSidebarButton("🧾  New Sale / Billing");
-        JButton btnNavProducts = createSidebarButton("📦  Products");
-        JButton btnNavInventory = createSidebarButton("📊  Inventory / Stock");
-        JButton btnNavCustomers = createSidebarButton("👨‍💼  Customers");
-        JButton btnNavSuppliers = createSidebarButton("🛒  Suppliers");
-        JButton btnNavReports = createSidebarButton("📈  Reports & P/L");
+        btnNavHome = createSidebarButton("🏠  Dashboard");
+        btnNavBilling = createSidebarButton("🧾  New Sale / Billing");
+        btnNavProducts = createSidebarButton("📦  Products");
+        btnNavInventory = createSidebarButton("📊  Inventory / Stock");
+        btnNavCustomers = createSidebarButton("👨‍💼  Customers");
+        btnNavSuppliers = createSidebarButton("🛒  Suppliers");
+        btnNavReports = createSidebarButton("📈  Reports & P/L");
+        btnNavSettings = createSidebarButton("⚙️  Settings");
 
         sidebar.add(btnNavHome);
         sidebar.add(Box.createVerticalStrut(6));
@@ -102,11 +130,15 @@ public class DashboardFrame extends JFrame {
         sidebar.add(btnNavSuppliers);
         sidebar.add(Box.createVerticalStrut(6));
         sidebar.add(btnNavReports);
+        sidebar.add(Box.createVerticalStrut(6));
+        sidebar.add(btnNavSettings);
 
-        // Role based restriction: If staff, disable reports
+        // Role based restriction: If staff, disable reports & settings
         if (!currentUser.isAdmin()) {
             btnNavReports.setEnabled(false);
             btnNavReports.setToolTipText("Admin only");
+            btnNavSettings.setEnabled(false);
+            btnNavSettings.setToolTipText("Admin only");
         }
 
         root.add(sidebar, BorderLayout.WEST);
@@ -123,6 +155,7 @@ public class DashboardFrame extends JFrame {
         supplierPanel = new SupplierPanel();
         billingPanel = new BillingPanel(currentUser);
         reportsPanel = new ReportsPanel();
+        settingsPanel = new SettingsPanel(this::updateUIVisibilityFromSettings);
 
         contentPanel.add(homeStatsPanel, "HOME");
         contentPanel.add(billingPanel, "BILLING");
@@ -131,12 +164,14 @@ public class DashboardFrame extends JFrame {
         contentPanel.add(customerPanel, "CUSTOMERS");
         contentPanel.add(supplierPanel, "SUPPLIERS");
         contentPanel.add(reportsPanel, "REPORTS");
+        contentPanel.add(settingsPanel, "SETTINGS");
 
         root.add(contentPanel, BorderLayout.CENTER);
 
         // Navigation button actions
         btnNavHome.addActionListener(e -> {
             loadDashboardStats();
+        updateUIVisibilityFromSettings();
             cardLayout.show(contentPanel, "HOME");
         });
         btnNavBilling.addActionListener(e -> {
@@ -165,8 +200,47 @@ public class DashboardFrame extends JFrame {
             reportsPanel.loadReports();
             cardLayout.show(contentPanel, "REPORTS");
         });
+        btnNavSettings.addActionListener(e -> {
+            settingsPanel.loadCurrentSettings();
+            cardLayout.show(contentPanel, "SETTINGS");
+        });
 
         add(root);
+    }
+
+
+    public void updateUIVisibilityFromSettings() {
+        boolean isTouch = AppSettings.isTouchMode();
+        if (lblModeBadge != null) {
+            if (isTouch) {
+                lblModeBadge.setText(" 📱 TOUCH SCREEN MODE ");
+                lblModeBadge.setBackground(new Color(16, 185, 129));
+            } else {
+                lblModeBadge.setText(" 💻 NON-TOUCH DESKTOP MODE ");
+                lblModeBadge.setBackground(new Color(37, 99, 235));
+            }
+        }
+
+        boolean showPos = AppSettings.getBoolean(AppSettings.KEY_SHOW_POS_NAV, true);
+        boolean showPrd = AppSettings.getBoolean(AppSettings.KEY_NAV_PRODUCTS, true);
+        boolean showInv = AppSettings.getBoolean(AppSettings.KEY_NAV_INVENTORY, true);
+        boolean showCust = AppSettings.getBoolean(AppSettings.KEY_NAV_CUSTOMERS, true);
+        boolean showSupp = AppSettings.getBoolean(AppSettings.KEY_NAV_SUPPLIERS, true);
+        boolean showRep = AppSettings.getBoolean(AppSettings.KEY_NAV_REPORTS, true);
+
+        if (btnNavBilling != null) btnNavBilling.setVisible(showPos);
+        if (btnNavProducts != null) btnNavProducts.setVisible(showPrd);
+        if (btnNavInventory != null) btnNavInventory.setVisible(showInv);
+        if (btnNavCustomers != null) btnNavCustomers.setVisible(showCust);
+        if (btnNavSuppliers != null) btnNavSuppliers.setVisible(showSupp);
+        if (btnNavReports != null) btnNavReports.setVisible(showRep && currentUser.isAdmin());
+
+        if (billingPanel != null) {
+            billingPanel.applySettingsVisibility();
+        }
+
+        revalidate();
+        repaint();
     }
 
     private JButton createSidebarButton(String text) {
