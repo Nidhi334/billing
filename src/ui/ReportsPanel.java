@@ -15,6 +15,8 @@ public class ReportsPanel extends JPanel {
     private DefaultTableModel salesModel, profitModel;
     private JTextField txtFromDate, txtToDate;
     private JButton btnFilterSales, btnRefreshAll;
+    private DailySalesBarChartPanel reportBarChart;
+    private CategoryPieChartPanel reportPieChart;
 
     public ReportsPanel() {
         setLayout(new BorderLayout(15, 15));
@@ -94,6 +96,19 @@ public class ReportsPanel extends JPanel {
 
         tabs.addTab("💰 Product Profit & Loss Analysis", profitPanel);
 
+        // TAB 3: Visual Revenue Analytics
+        JPanel analyticsPanel = new JPanel(new GridLayout(1, 2, 15, 15));
+        analyticsPanel.setBackground(new Color(248, 250, 252));
+        analyticsPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        reportBarChart = new DailySalesBarChartPanel();
+        reportPieChart = new CategoryPieChartPanel();
+
+        analyticsPanel.add(reportBarChart);
+        analyticsPanel.add(reportPieChart);
+
+        tabs.addTab("📊 Revenue Visual Charts & Trends", analyticsPanel);
+
         add(tabs, BorderLayout.CENTER);
 
         // Actions
@@ -109,6 +124,12 @@ public class ReportsPanel extends JPanel {
     public void loadReports() {
         loadSalesReport();
         loadProfitReport();
+        try {
+            if (reportBarChart != null) reportBarChart.setData(reportDAO.getDailySalesTrend(7));
+            if (reportPieChart != null) reportPieChart.setData(reportDAO.getCategorySalesBreakdown());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     private void loadSalesReport() {

@@ -68,6 +68,15 @@ public class ReportDAO {
                 }
             }
 
+                        // Yearly Sales
+            try (PreparedStatement ps = conn.prepareStatement("SELECT COALESCE(SUM(total_amount), 0), COUNT(*) FROM sales WHERE YEAR(sale_date) = YEAR(CURRENT_DATE())");
+                 ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    stats.put("yearlySalesAmount", rs.getDouble(1));
+                    stats.put("yearlySalesCount", rs.getInt(2));
+                }
+            }
+
             // Total Revenue
             try (PreparedStatement ps = conn.prepareStatement("SELECT COALESCE(SUM(total_amount), 0) FROM sales");
                  ResultSet rs = ps.executeQuery()) {
@@ -173,5 +182,123 @@ public class ReportDAO {
         }
         return list;
     }
-}
 
+    public Map<String, Double> getDailySalesTrend(int days) throws SQLException {
+        Map<String, Double> map = new java.util.LinkedHashMap<>();
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM");
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        for (int i = days - 1; i >= 0; i--) {
+            java.util.Calendar temp = (java.util.Calendar) cal.clone();
+            temp.add(java.util.Calendar.DAY_OF_YEAR, -i);
+            map.put(sdf.format(temp.getTime()), 0.0);
+        }
+
+        String sql = "SELECT DATE_FORMAT(sale_date, '%d/%m') as day_lbl, COALESCE(SUM(total_amount), 0) as amt " +
+                     "FROM sales " +
+                     "WHERE sale_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ? DAY) " +
+                     "GROUP BY DATE_FORMAT(sale_date, '%d/%m') " +
+                     "ORDER BY MIN(sale_date) ASC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, days);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    map.put(rs.getString("day_lbl"), rs.getDouble("amt"));
+                }
+            }
+        } catch (Exception e) {
+            // keep seeded
+        }
+        return map;
+    }
+
+    public Map<String, Double> getMonthlyRevenueTrend(int months) throws SQLException {
+        Map<String, Double> map = new java.util.LinkedHashMap<>();
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MMM yy");
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        for (int i = months - 1; i >= 0; i--) {
+            java.util.Calendar temp = (java.util.Calendar) cal.clone();
+            temp.add(java.util.Calendar.MONTH, -i);
+            map.put(sdf.format(temp.getTime()), 0.0);
+        }
+
+        String sql = "SELECT DATE_FORMAT(sale_date, '%b %y') as mon_lbl, COALESCE(SUM(total_amount), 0) as amt " +
+                     "FROM sales " +
+                     "WHERE sale_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ? MONTH) " +
+                     "GROUP BY DATE_FORMAT(sale_date, '%b %y'), YEAR(sale_date), MONTH(sale_date) " +
+                     "ORDER BY YEAR(sale_date) ASC, MONTH(sale_date) ASC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, months);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    map.put(rs.getString("mon_lbl"), rs.getDouble("amt"));
+                }
+            }
+        } catch (Exception e) {
+            // keep seeded
+        }
+        return map;
+    }
+
+    public Map<String, Double> getYearlyRevenueTrend(int years) throws SQLException {
+        Map<String, Double> map = new java.util.LinkedHashMap<>();
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        int curYear = cal.get(java.util.Calendar.YEAR);
+        for (int i = years - 1; i >= 0; i--) {
+            map.put(String.valueOf(curYear - i), 0.0);
+        }
+
+        String sql = "SELECT YEAR(sale_date) as yr_lbl, COALESCE(SUM(total_amount), 0) as amt " +
+                     "FROM sales " +
+                     "WHERE YEAR(sale_date) >= ? " +
+                     "GROUP BY YEAR(sale_date) " +
+                     "ORDER BY YEAR(sale_date) ASC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, curYear - years + 1);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    map.put(String.valueOf(rs.getInt("yr_lbl")), rs.getDouble("amt"));
+                }
+            }
+        } catch (Exception e) {
+            // keep seeded
+        }
+        return map;
+    }
+
+    public Map<String, Double> getCategorySalesBreakdown() throws SQLException {
+        Map<String, Double> map = new java.util.LinkedHashMap<>();
+        String sql = "SELECT COALESCE(c.name, 'General / Other') as cat_name, COALESCE(SUM(si.subtotal), 0) as total " +
+                     "FROM sale_items si " +
+                     "JOIN products p ON si.product_id = p.id " +
+                     "LEFT JOIN categories c ON p.category_id = c.id " +
+                     "GROUP BY c.name " +
+                     "ORDER BY total DESC LIMIT 6";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                map.put(rs.getString("cat_name"), rs.getDouble("total"));
+            }
+        }
+        return map;
+    }
+
+    public Map<String, Double> getRevenueByPaymentSource() throws SQLException {
+        Map<String, Double> map = new java.util.LinkedHashMap<>();
+        String sql = "SELECT COALESCE(payment_mode, 'OTHER') as pmode, COALESCE(SUM(total_amount), 0) as total " +
+                     "FROM sales " +
+                     "GROUP BY payment_mode " +
+                     "ORDER BY total DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                map.put(rs.getString("pmode"), rs.getDouble("total"));
+            }
+        }
+        return map;
+    }
+}

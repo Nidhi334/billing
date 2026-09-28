@@ -39,7 +39,13 @@ public class DashboardFrame extends JFrame {
 
     // Stat card labels
     private JLabel lblTotalProducts, lblTotalStock, lblTotalCustomers, lblTotalSuppliers;
-    private JLabel lblLowStock, lblTodaySales, lblMonthlySales, lblTotalRevenue;
+    private JLabel lblLowStock, lblTodaySales, lblMonthlySales, lblYearlySales, lblTotalRevenue;
+
+    // Graphical Revenue Analytics
+    private DailySalesBarChartPanel revenueBarChart;
+    private CategoryPieChartPanel revenuePieChart;
+    private JComboBox<String> cmbTimelineFilter;
+    private JComboBox<String> cmbBreakdownFilter;
 
     private ReportDAO reportDAO = new ReportDAO();
 
@@ -278,30 +284,98 @@ public class DashboardFrame extends JFrame {
         banner.add(btnRefreshStats, BorderLayout.EAST);
         homeStatsPanel.add(banner, BorderLayout.NORTH);
 
-        // Stats Grid: 2 rows x 4 columns
-        JPanel statsGrid = new JPanel(new GridLayout(2, 4, 18, 18));
+        // 1. Revenue & Operations Metrics Grid: 2 rows x 5 columns
+        JPanel statsGrid = new JPanel(new GridLayout(2, 5, 14, 14));
         statsGrid.setBackground(new Color(248, 250, 252));
 
         lblTodaySales = new JLabel("₹0.00");
         lblMonthlySales = new JLabel("₹0.00");
+        lblYearlySales = new JLabel("₹0.00");
         lblTotalRevenue = new JLabel("₹0.00");
         lblLowStock = new JLabel("0");
         lblTotalProducts = new JLabel("0");
         lblTotalStock = new JLabel("0");
         lblTotalCustomers = new JLabel("0");
         lblTotalSuppliers = new JLabel("0");
+        JLabel lblProfitMargin = new JLabel("Live POS");
 
-        statsGrid.add(createMetricCard("Today's Sales", lblTodaySales, new Color(37, 99, 235), "🛒"));
-        statsGrid.add(createMetricCard("This Month's Sales", lblMonthlySales, new Color(13, 148, 136), "📅"));
+        statsGrid.add(createMetricCard("Today's Revenue", lblTodaySales, new Color(37, 99, 235), "⚡"));
+        statsGrid.add(createMetricCard("Monthly Revenue", lblMonthlySales, new Color(13, 148, 136), "📅"));
+        statsGrid.add(createMetricCard("Yearly Revenue", lblYearlySales, new Color(124, 58, 237), "📆"));
         statsGrid.add(createMetricCard("Total Revenue", lblTotalRevenue, new Color(16, 185, 129), "💰"));
         statsGrid.add(createMetricCard("Low Stock Alerts", lblLowStock, new Color(220, 38, 38), "⚠️"));
 
         statsGrid.add(createMetricCard("Unique Products", lblTotalProducts, new Color(100, 116, 139), "📦"));
-        statsGrid.add(createMetricCard("Total Stock Units", lblTotalStock, new Color(124, 58, 237), "🔢"));
+        statsGrid.add(createMetricCard("Total Stock Units", lblTotalStock, new Color(79, 70, 229), "🔢"));
         statsGrid.add(createMetricCard("Total Customers", lblTotalCustomers, new Color(217, 119, 6), "👨‍💼"));
         statsGrid.add(createMetricCard("Total Suppliers", lblTotalSuppliers, new Color(71, 85, 105), "🏢"));
+        statsGrid.add(createMetricCard("POS Billing Status", lblProfitMargin, new Color(5, 150, 105), "🟢"));
 
-        homeStatsPanel.add(statsGrid, BorderLayout.CENTER);
+        // 2. Chart Controls Toolbar
+        JPanel chartToolbar = new JPanel(new BorderLayout(10, 0));
+        chartToolbar.setOpaque(false);
+        chartToolbar.setBorder(new EmptyBorder(8, 0, 4, 0));
+
+        JLabel lblChartHeader = new JLabel("📊 Interactive Revenue Visual Analytics & Trends");
+        lblChartHeader.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        lblChartHeader.setForeground(new Color(30, 41, 59));
+        chartToolbar.add(lblChartHeader, BorderLayout.WEST);
+
+        JPanel filtersPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        filtersPanel.setOpaque(false);
+
+        filtersPanel.add(new JLabel("Timeline Trend:"));
+        cmbTimelineFilter = new JComboBox<>(new String[]{
+                "📅 Daily Revenue (Last 7 Days)",
+                "📅 Daily Revenue (Last 14 Days)",
+                "📅 Daily Revenue (Last 30 Days)",
+                "📆 Monthly Revenue (Last 6 Months)",
+                "📆 Monthly Revenue (Last 12 Months)",
+                "📊 Yearly Revenue (Last 5 Years)"
+        });
+        cmbTimelineFilter.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        cmbTimelineFilter.addActionListener(e -> refreshBarChartData());
+        filtersPanel.add(cmbTimelineFilter);
+
+        filtersPanel.add(new JLabel("Breakdown:"));
+        cmbBreakdownFilter = new JComboBox<>(new String[]{
+                "🍰 By Product Category",
+                "💳 By Payment Source (Cash/UPI/Card)"
+        });
+        cmbBreakdownFilter.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        cmbBreakdownFilter.addActionListener(e -> refreshPieChartData());
+        filtersPanel.add(cmbBreakdownFilter);
+
+        chartToolbar.add(filtersPanel, BorderLayout.EAST);
+
+        // 3. Visual Charts Grid (Interactive Bar Chart + Interactive Donut/Pie Chart)
+        JPanel chartsRow = new JPanel(new GridLayout(1, 2, 14, 0));
+        chartsRow.setOpaque(false);
+        chartsRow.setPreferredSize(new Dimension(0, 310));
+
+        revenueBarChart = new DailySalesBarChartPanel();
+        revenuePieChart = new CategoryPieChartPanel();
+
+        chartsRow.add(revenueBarChart);
+        chartsRow.add(revenuePieChart);
+
+        // Combine into vertically scrollable body
+        JPanel centerContainer = new JPanel();
+        centerContainer.setLayout(new BoxLayout(centerContainer, BoxLayout.Y_AXIS));
+        centerContainer.setOpaque(false);
+        centerContainer.add(statsGrid);
+        centerContainer.add(Box.createVerticalStrut(14));
+        centerContainer.add(chartToolbar);
+        centerContainer.add(Box.createVerticalStrut(10));
+        centerContainer.add(chartsRow);
+
+        JScrollPane scrollPane = new JScrollPane(centerContainer);
+        scrollPane.setBorder(null);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+
+        homeStatsPanel.add(scrollPane, BorderLayout.CENTER);
     }
 
     private JPanel createMetricCard(String title, JLabel valueLabel, Color accentColor, String icon) {
@@ -337,13 +411,55 @@ public class DashboardFrame extends JFrame {
             int totalSupp = (int) stats.getOrDefault("totalSuppliers", 0);
 
             lblTodaySales.setText(String.format("₹%.2f", todaySales));
+            double yearSales = (double) stats.getOrDefault("yearlySalesAmount", 0.0);
             lblMonthlySales.setText(String.format("₹%.2f", monthSales));
+            if (lblYearlySales != null) lblYearlySales.setText(String.format("₹%.2f", yearSales));
             lblTotalRevenue.setText(String.format("₹%.2f", totalRev));
             lblLowStock.setText(String.valueOf(lowStock));
             lblTotalProducts.setText(String.valueOf(totalPrd));
             lblTotalStock.setText(String.valueOf(totalUnits));
             lblTotalCustomers.setText(String.valueOf(totalCust));
-            lblTotalSuppliers.setText(String.valueOf(totalSupp));
+                        lblTotalSuppliers.setText(String.valueOf(totalSupp));
+
+            refreshBarChartData();
+            refreshPieChartData();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private void refreshBarChartData() {
+        if (revenueBarChart == null || cmbTimelineFilter == null) return;
+        try {
+            int sel = cmbTimelineFilter.getSelectedIndex();
+            if (sel == 0) {
+                revenueBarChart.setData(reportDAO.getDailySalesTrend(7), "📈 Daily Revenue Trend (Last 7 Days)");
+            } else if (sel == 1) {
+                revenueBarChart.setData(reportDAO.getDailySalesTrend(14), "📈 Daily Revenue Trend (Last 14 Days)");
+            } else if (sel == 2) {
+                revenueBarChart.setData(reportDAO.getDailySalesTrend(30), "📈 Daily Revenue Trend (Last 30 Days)");
+            } else if (sel == 3) {
+                revenueBarChart.setData(reportDAO.getMonthlyRevenueTrend(6), "📈 Monthly Revenue Trend (Last 6 Months)");
+            } else if (sel == 4) {
+                revenueBarChart.setData(reportDAO.getMonthlyRevenueTrend(12), "📈 Monthly Revenue Trend (Last 12 Months)");
+            } else {
+                revenueBarChart.setData(reportDAO.getYearlyRevenueTrend(5), "📈 Yearly Revenue Trend (Last 5 Years)");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void refreshPieChartData() {
+        if (revenuePieChart == null || cmbBreakdownFilter == null) return;
+        try {
+            int sel = cmbBreakdownFilter.getSelectedIndex();
+            if (sel == 0) {
+                revenuePieChart.setData(reportDAO.getCategorySalesBreakdown(), "🍰 Revenue by Category Share");
+            } else {
+                revenuePieChart.setData(reportDAO.getRevenueByPaymentSource(), "💳 Revenue by Payment Source (Cash / UPI / Card)");
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

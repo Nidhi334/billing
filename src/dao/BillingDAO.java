@@ -156,5 +156,100 @@ public class BillingDAO {
         }
         return list;
     }
-}
 
+    public Sale getSaleByInvoice(String invoiceNo) throws SQLException {
+        String sql = "SELECT s.*, c.name AS customer_name, u.full_name AS cashier_name " +
+                     "FROM sales s " +
+                     "LEFT JOIN customers c ON s.customer_id = c.id " +
+                     "LEFT JOIN users u ON s.created_by = u.id " +
+                     "WHERE s.invoice_no = ?";
+        Sale sale = null;
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, invoiceNo);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    sale = new Sale();
+                    sale.setId(rs.getInt("id"));
+                    sale.setInvoiceNo(rs.getString("invoice_no"));
+                    sale.setCustomerId(rs.getInt("customer_id"));
+                    sale.setCustomerName(rs.getString("customer_name"));
+                    sale.setSaleDate(rs.getTimestamp("sale_date"));
+                    sale.setSubtotal(rs.getDouble("subtotal"));
+                    sale.setGstRate(rs.getDouble("gst_rate"));
+                    sale.setGstAmount(rs.getDouble("gst_amount"));
+                    sale.setTotalAmount(rs.getDouble("total_amount"));
+                    sale.setPaymentMode(rs.getString("payment_mode"));
+                    sale.setCashierName(rs.getString("cashier_name"));
+                }
+            }
+        }
+        if (sale != null) {
+            sale.setItems(getSaleItems(sale.getId()));
+        }
+        return sale;
+    }
+
+    public List<SaleItem> getSaleItems(int saleId) throws SQLException {
+        List<SaleItem> items = new ArrayList<>();
+        String sql = "SELECT si.*, p.name AS product_name, p.code AS product_code " +
+                     "FROM sale_items si JOIN products p ON si.product_id = p.id " +
+                     "WHERE si.sale_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, saleId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    SaleItem item = new SaleItem();
+                    item.setId(rs.getInt("id"));
+                    item.setSaleId(rs.getInt("sale_id"));
+                    item.setProductId(rs.getInt("product_id"));
+                    item.setProductName(rs.getString("product_name"));
+                    item.setQuantity(rs.getInt("quantity"));
+                    item.setUnitPrice(rs.getDouble("unit_price"));
+                    item.setSubtotal(rs.getDouble("subtotal"));
+                    items.add(item);
+                }
+            }
+        }
+        return items;
+    }
+
+    public boolean processReturn(String invoiceNo, int productId, int returnQty, double refundAmount, String reason) throws SQLException {
+        Connection conn = null;
+        try {
+            conn = DBConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            // 1. Restock product inventory
+            String updateStock = "UPDATE products SET quantity = quantity + ? WHERE id = ?";
+            try (PreparedStatement ps = conn.prepareStatement(updateStock)) {
+                ps.setInt(1, returnQty);
+                ps.setInt(2, productId);
+                ps.executeUpdate();
+            }
+
+            // 2. Log stock transaction as RETURN (IN)
+            String logStock = "INSERT INTO stock_transactions (product_id, type, quantity, reference_id, notes) " +
+                              "VALUES (?, 'IN', ?, ?, ?)";
+            try (PreparedStatement ps = conn.prepareStatement(logStock)) {
+                ps.setInt(1, productId);
+                ps.setInt(2, returnQty);
+                ps.setString(3, "RET-" + invoiceNo);
+                ps.setString(4, "Product Returned: " + reason + " | Refund ₹" + String.format("%.2f", refundAmount));
+                ps.executeUpdate();
+            }
+
+            conn.commit();
+            return true;
+        } catch (SQLException ex) {
+            if (conn != null) conn.rollback();
+            throw ex;
+        } finally {
+            if (conn != null) {
+                conn.setAutoCommit(true);
+                conn.close();
+            }
+        }
+    }
+}
