@@ -8,6 +8,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ProductDAO {
+    private static boolean barcodeColChecked = false;
+    private synchronized void ensureBarcodeColumn(Connection conn) {
+        if (barcodeColChecked) return;
+        try (Statement st = conn.createStatement()) {
+            st.execute("ALTER TABLE products ADD COLUMN barcode VARCHAR(100) NULL AFTER code");
+        } catch (Exception ignored) {
+            // Column already exists
+        }
+        barcodeColChecked = true;
+    }
+
 
     public List<Product> getAllProducts() throws SQLException {
         List<Product> list = new ArrayList<>();
@@ -28,7 +39,7 @@ public class ProductDAO {
         List<Product> list = new ArrayList<>();
         String sql = "SELECT p.*, c.name AS category_name FROM products p " +
                      "LEFT JOIN categories c ON p.category_id = c.id " +
-                     "WHERE p.code LIKE ? OR p.name LIKE ? OR c.name LIKE ? " +
+                     "WHERE p.code LIKE ? OR p.barcode LIKE ? OR p.name LIKE ? OR c.name LIKE ? " +
                      "ORDER BY p.name ASC";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -36,6 +47,7 @@ public class ProductDAO {
             ps.setString(1, pattern);
             ps.setString(2, pattern);
             ps.setString(3, pattern);
+            ps.setString(4, pattern);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     list.add(mapProduct(rs));
@@ -64,10 +76,11 @@ public class ProductDAO {
     public Product getProductByCode(String code) throws SQLException {
         String sql = "SELECT p.*, c.name AS category_name FROM products p " +
                      "LEFT JOIN categories c ON p.category_id = c.id " +
-                     "WHERE p.code = ?";
+                     "WHERE p.code = ? OR p.barcode = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, code);
+            ps.setString(2, code);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return mapProduct(rs);
@@ -78,52 +91,58 @@ public class ProductDAO {
     }
 
     public boolean addProduct(Product p) throws SQLException {
-        String sql = "INSERT INTO products (code, name, category_id, purchase_price, selling_price, quantity, min_stock_level) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setString(1, p.getCode());
-            ps.setString(2, p.getName());
-            if (p.getCategoryId() > 0) {
-                ps.setInt(3, p.getCategoryId());
-            } else {
-                ps.setNull(3, Types.INTEGER);
-            }
-            ps.setDouble(4, p.getPurchasePrice());
-            ps.setDouble(5, p.getSellingPrice());
-            ps.setInt(6, p.getQuantity());
-            ps.setInt(7, p.getMinStockLevel());
-            int affected = ps.executeUpdate();
-            if (affected > 0) {
-                try (ResultSet rs = ps.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        p.setId(rs.getInt(1));
-                    }
+        try (Connection conn = DBConnection.getConnection()) {
+            ensureBarcodeColumn(conn);
+            String sql = "INSERT INTO products (code, barcode, name, category_id, purchase_price, selling_price, quantity, min_stock_level) " +
+                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, p.getCode());
+                ps.setString(2, p.getBarcode());
+                ps.setString(3, p.getName());
+                if (p.getCategoryId() > 0) {
+                    ps.setInt(4, p.getCategoryId());
+                } else {
+                    ps.setNull(4, Types.INTEGER);
                 }
-                return true;
+                ps.setDouble(5, p.getPurchasePrice());
+                ps.setDouble(6, p.getSellingPrice());
+                ps.setInt(7, p.getQuantity());
+                ps.setInt(8, p.getMinStockLevel());
+                int affected = ps.executeUpdate();
+                if (affected > 0) {
+                    try (ResultSet rs = ps.getGeneratedKeys()) {
+                        if (rs.next()) {
+                            p.setId(rs.getInt(1));
+                        }
+                    }
+                    return true;
+                }
             }
         }
         return false;
     }
 
     public boolean updateProduct(Product p) throws SQLException {
-        String sql = "UPDATE products SET code = ?, name = ?, category_id = ?, purchase_price = ?, selling_price = ?, " +
-                     "quantity = ?, min_stock_level = ? WHERE id = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, p.getCode());
-            ps.setString(2, p.getName());
-            if (p.getCategoryId() > 0) {
-                ps.setInt(3, p.getCategoryId());
-            } else {
-                ps.setNull(3, Types.INTEGER);
+        try (Connection conn = DBConnection.getConnection()) {
+            ensureBarcodeColumn(conn);
+            String sql = "UPDATE products SET code = ?, barcode = ?, name = ?, category_id = ?, purchase_price = ?, selling_price = ?, " +
+                         "quantity = ?, min_stock_level = ? WHERE id = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, p.getCode());
+                ps.setString(2, p.getBarcode());
+                ps.setString(3, p.getName());
+                if (p.getCategoryId() > 0) {
+                    ps.setInt(4, p.getCategoryId());
+                } else {
+                    ps.setNull(4, Types.INTEGER);
+                }
+                ps.setDouble(5, p.getPurchasePrice());
+                ps.setDouble(6, p.getSellingPrice());
+                ps.setInt(7, p.getQuantity());
+                ps.setInt(8, p.getMinStockLevel());
+                ps.setInt(9, p.getId());
+                return ps.executeUpdate() > 0;
             }
-            ps.setDouble(4, p.getPurchasePrice());
-            ps.setDouble(5, p.getSellingPrice());
-            ps.setInt(6, p.getQuantity());
-            ps.setInt(7, p.getMinStockLevel());
-            ps.setInt(8, p.getId());
-            return ps.executeUpdate() > 0;
         }
     }
 
@@ -151,6 +170,12 @@ public class ProductDAO {
         Product p = new Product();
         p.setId(rs.getInt("id"));
         p.setCode(rs.getString("code"));
+        try {
+            String b = rs.getString("barcode");
+            p.setBarcode((b != null && !b.trim().isEmpty()) ? b : p.getCode());
+        } catch (Exception e) {
+            p.setBarcode(p.getCode());
+        }
         p.setName(rs.getString("name"));
         p.setCategoryId(rs.getInt("category_id"));
         p.setCategoryName(rs.getString("category_name"));

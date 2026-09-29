@@ -27,7 +27,6 @@ public class DailySalesBarChartPanel extends JPanel {
                 handleMouseMove(e.getX(), e.getY());
             }
         });
-
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseExited(MouseEvent e) {
