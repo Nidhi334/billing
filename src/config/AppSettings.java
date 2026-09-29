@@ -27,6 +27,7 @@ public class AppSettings {
     public static final String KEY_BARCODE_BEEP = "device.barcode_beep";
     public static final String KEY_AUTO_PRINT = "device.auto_print";
     public static final String KEY_THERMAL_PRINTER_NAME = "device.thermal_printer_name";
+    public static final String KEY_RECEIPT_PRINT_SIZE = "device.receipt_print_size"; // 2_INCH, 3_INCH, A4
 
     // Navigation Sidebar Modules
     public static final String KEY_NAV_PRODUCTS = "nav.products";
@@ -72,7 +73,8 @@ public class AppSettings {
 
         properties.setProperty(KEY_BARCODE_BEEP, "true");
         properties.setProperty(KEY_AUTO_PRINT, "true");
-        properties.setProperty(KEY_THERMAL_PRINTER_NAME, "Default 80mm POS Printer");
+        properties.setProperty(KEY_THERMAL_PRINTER_NAME, "Default 58mm/2-inch POS Printer");
+        properties.setProperty(KEY_RECEIPT_PRINT_SIZE, "2_INCH");
 
         properties.setProperty(KEY_NAV_PRODUCTS, "true");
         properties.setProperty(KEY_NAV_INVENTORY, "true");

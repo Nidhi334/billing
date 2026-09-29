@@ -30,6 +30,7 @@ public class SettingsPanel extends JPanel {
     private JCheckBox chkBarcodeBeep;
     private JCheckBox chkAutoPrint;
     private JTextField txtPrinterName;
+    private JComboBox<String> cmbReceiptSize;
 
     // Database Connection Credentials (Configurable in Settings)
     private JTextField txtDbHost;
@@ -150,7 +151,7 @@ public class SettingsPanel extends JPanel {
 
         // 3. HARDWARE & DEVICE SETTINGS
         JPanel devCard = createSectionCard("🖨️ POS Devices & Hardware Integration");
-        devCard.setLayout(new GridLayout(3, 2, 12, 8));
+        devCard.setLayout(new GridLayout(4, 2, 12, 8));
 
         chkBarcodeBeep = new JCheckBox("Enable Audio Beep on Successful Barcode Scan");
         chkAutoPrint = new JCheckBox("Auto-Print Invoice immediately on Sale Complete");
@@ -163,6 +164,14 @@ public class SettingsPanel extends JPanel {
         devCard.add(new JLabel("Thermal Printer Model / Name:"));
         txtPrinterName = new JTextField();
         devCard.add(txtPrinterName);
+
+        devCard.add(new JLabel("Default Receipt Size:"));
+        cmbReceiptSize = new JComboBox<>(new String[]{
+                "🧾 2-Inch Thermal (58mm - Standard Mini POS)",
+                "🧾 3-Inch Thermal (80mm - Supermarket POS)",
+                "📄 Standard A4 / Full Page Invoice"
+        });
+        devCard.add(cmbReceiptSize);
 
         scrollContent.add(devCard);
         scrollContent.add(Box.createVerticalStrut(15));
@@ -331,7 +340,11 @@ public class SettingsPanel extends JPanel {
         // Devices
         chkBarcodeBeep.setSelected(AppSettings.getBoolean(AppSettings.KEY_BARCODE_BEEP, true));
         chkAutoPrint.setSelected(AppSettings.getBoolean(AppSettings.KEY_AUTO_PRINT, true));
-        txtPrinterName.setText(AppSettings.getString(AppSettings.KEY_THERMAL_PRINTER_NAME, "Default 80mm POS Printer"));
+        txtPrinterName.setText(AppSettings.getString(AppSettings.KEY_THERMAL_PRINTER_NAME, "Default 58mm/2-inch POS Printer"));
+        String savedSize = AppSettings.getString(AppSettings.KEY_RECEIPT_PRINT_SIZE, "2_INCH");
+        if ("3_INCH".equalsIgnoreCase(savedSize)) cmbReceiptSize.setSelectedIndex(1);
+        else if ("A4".equalsIgnoreCase(savedSize)) cmbReceiptSize.setSelectedIndex(2);
+        else cmbReceiptSize.setSelectedIndex(0);
 
         // DB Credentials
         Properties dbProps = DBConnection.getProperties();
@@ -369,6 +382,9 @@ public class SettingsPanel extends JPanel {
         AppSettings.setBoolean(AppSettings.KEY_BARCODE_BEEP, chkBarcodeBeep.isSelected());
         AppSettings.setBoolean(AppSettings.KEY_AUTO_PRINT, chkAutoPrint.isSelected());
         AppSettings.setString(AppSettings.KEY_THERMAL_PRINTER_NAME, txtPrinterName.getText().trim());
+        int szIdx = cmbReceiptSize.getSelectedIndex();
+        String szCode = szIdx == 1 ? "3_INCH" : (szIdx == 2 ? "A4" : "2_INCH");
+        AppSettings.setString(AppSettings.KEY_RECEIPT_PRINT_SIZE, szCode);
 
         AppSettings.setBoolean(AppSettings.KEY_NAV_PRODUCTS, chkNavProducts.isSelected());
         AppSettings.setBoolean(AppSettings.KEY_NAV_INVENTORY, chkNavInventory.isSelected());
