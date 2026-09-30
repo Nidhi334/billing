@@ -34,6 +34,7 @@ public class BillingPanel extends JPanel {
 
     // Form fields
     private JTextField txtBarcode;
+    private Timer barcodeScanTimer;
     private JComboBox<Customer> cmbCustomer;
     private JTextField txtCustPhone;
     private JTextField txtInvoiceNo;
@@ -269,6 +270,18 @@ public class BillingPanel extends JPanel {
         txtBarcode = new JTextField();
         txtBarcode.setFont(new Font("Segoe UI", Font.BOLD, 15));
         txtBarcode.setToolTipText("Scan barcode or type product name/code and press Enter");
+        barcodeScanTimer = new Timer(220, e -> {
+            String typed = txtBarcode.getText() == null ? "" : txtBarcode.getText().trim();
+            if (!typed.isEmpty() && looksLikeBarcodeScan(typed)) {
+                handleBarcodeScan();
+            }
+        });
+        barcodeScanTimer.setRepeats(false);
+        txtBarcode.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { scheduleBarcodeAutoScan(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { scheduleBarcodeAutoScan(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { scheduleBarcodeAutoScan(); }
+        });
         scanBar.add(txtBarcode, BorderLayout.CENTER);
 
         JButton btnScanAdd = new JButton("Add Item ↵");
@@ -642,6 +655,28 @@ public class BillingPanel extends JPanel {
         }
     }
 
+    private void scheduleBarcodeAutoScan() {
+        String typed = txtBarcode.getText() == null ? "" : txtBarcode.getText().trim();
+        if (typed.isEmpty()) {
+            barcodeScanTimer.stop();
+            return;
+        }
+
+        if (looksLikeBarcodeScan(typed)) {
+            barcodeScanTimer.restart();
+        } else {
+            barcodeScanTimer.stop();
+        }
+    }
+
+    private boolean looksLikeBarcodeScan(String value) {
+        if (value == null || value.trim().isEmpty()) return false;
+        String trimmed = value.trim();
+        if (trimmed.length() < 4) return false;
+        if (!trimmed.matches("[A-Za-z0-9-]+")) return false;
+        return trimmed.matches(".*\\d.*");
+    }
+
     public void loadCustomers() {
         try {
             cmbCustomer.removeAllItems();
@@ -685,7 +720,9 @@ public class BillingPanel extends JPanel {
         // Instant local lookup from cache
         Product match = null;
         for (Product p : cachedProducts) {
-            if (code.equalsIgnoreCase(p.getCode()) || code.equalsIgnoreCase(p.getName())) {
+            if (code.equalsIgnoreCase(p.getCode())
+                    || code.equalsIgnoreCase(p.getBarcode())
+                    || code.equalsIgnoreCase(p.getName())) {
                 match = p;
                 break;
             }
