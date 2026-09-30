@@ -94,5 +94,19 @@ public class CustomerDAO {
             return ps.executeUpdate() > 0;
         }
     }
+
+    public double[] getCustomerStats(int customerId) {
+        String sql = "SELECT COUNT(*) AS total_orders, COALESCE(SUM(total_amount), 0) AS total_spent FROM sales WHERE customer_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, customerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new double[]{rs.getDouble("total_orders"), rs.getDouble("total_spent")};
+                }
+            }
+        } catch (Exception ignored) {}
+        return new double[]{0.0, 0.0};
+    }
 }
 
