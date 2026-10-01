@@ -46,17 +46,11 @@ public class UserDAO {
     private void ensureDefaultUsersExist() {
         try (Connection conn = DBConnection.getConnection()) {
             ensureSecurityColumns(conn);
-            try (PreparedStatement check = conn.prepareStatement("SELECT COUNT(*) FROM users");
-                 ResultSet rs = check.executeQuery()) {
-                if (rs.next() && rs.getInt(1) == 0) {
-                    // Seed default admin and staff with security questions
-                    try (PreparedStatement insert = conn.prepareStatement(
-                            "INSERT INTO users (username, password, full_name, role, security_question, security_answer) VALUES " +
-                            "('admin', 'admin123', 'System Administrator', 'ADMIN', 'What is your pet name?', 'tiger'), " +
-                            "('staff', 'staff123', 'Cashier Desk', 'STAFF', 'What is your pet name?', 'buddy')")) {
-                        insert.executeUpdate();
-                    }
-                }
+            try (PreparedStatement insert = conn.prepareStatement(
+                    "INSERT IGNORE INTO users (username, password, full_name, role, security_question, security_answer) VALUES " +
+                    "('admin', 'admin123', 'System Administrator', 'ADMIN', 'What is your pet name?', 'tiger'), " +
+                    "('staff', 'staff123', 'Cashier Desk', 'STAFF', 'What is your pet name?', 'buddy')")) {
+                insert.executeUpdate();
             }
         } catch (Exception ex) {
             System.err.println("Could not auto-seed users: " + ex.getMessage());
