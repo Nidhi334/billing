@@ -9,6 +9,9 @@ public class User {
     private String fullName;
     private String role; // ADMIN or STAFF
     private Timestamp createdAt;
+    private String securityQuestion;
+    private String securityAnswer;
+
 
     public User() {}
 
@@ -18,6 +21,16 @@ public class User {
         this.password = password;
         this.fullName = fullName;
         this.role = role;
+    }
+
+    public User(int id, String username, String password, String fullName, String role, String securityQuestion, String securityAnswer) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.fullName = fullName;
+        this.role = role;
+        this.securityQuestion = securityQuestion;
+        this.securityAnswer = securityAnswer;
     }
 
     public int getId() { return id; }
@@ -38,6 +51,12 @@ public class User {
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
 
+
+    public String getSecurityQuestion() { return securityQuestion; }
+    public void setSecurityQuestion(String securityQuestion) { this.securityQuestion = securityQuestion; }
+
+    public String getSecurityAnswer() { return securityAnswer; }
+    public void setSecurityAnswer(String securityAnswer) { this.securityAnswer = securityAnswer; }
     public boolean isAdmin() {
         return "ADMIN".equalsIgnoreCase(role);
     }

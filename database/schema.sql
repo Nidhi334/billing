@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     full_name VARCHAR(100) NOT NULL,
     role ENUM('ADMIN', 'STAFF') NOT NULL DEFAULT 'STAFF',
+    security_question VARCHAR(255) DEFAULT 'What is your favorite color?',
+    security_answer VARCHAR(255) DEFAULT 'blue',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -14,6 +14,7 @@ public class LoginFrame extends JFrame {
     private JPasswordField txtPassword;
     private JButton btnLogin;
     private JButton btnDbConfig;
+    private JButton btnForgotPassword;
     private UserDAO userDAO = new UserDAO();
 
     public LoginFrame() {
@@ -102,16 +103,29 @@ public class LoginFrame extends JFrame {
         gbc.insets = new Insets(18, 10, 8, 10);
         formCard.add(btnLogin, gbc);
 
-        // DB Settings button
-        btnDbConfig = new JButton("⚙ Database Settings");
+        // Secondary Links Row (Forgot Password & DB Settings)
+        JPanel linksPanel = new JPanel(new BorderLayout(10, 0));
+        linksPanel.setOpaque(false);
+
+        btnForgotPassword = new JButton("Forgot Password?");
+        btnForgotPassword.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnForgotPassword.setForeground(new Color(37, 99, 235));
+        btnForgotPassword.setContentAreaFilled(false);
+        btnForgotPassword.setBorderPainted(false);
+        btnForgotPassword.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        linksPanel.add(btnForgotPassword, BorderLayout.WEST);
+
+        btnDbConfig = new JButton("⚙ DB Settings");
         btnDbConfig.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         btnDbConfig.setForeground(new Color(100, 116, 139));
         btnDbConfig.setContentAreaFilled(false);
         btnDbConfig.setBorderPainted(false);
         btnDbConfig.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        linksPanel.add(btnDbConfig, BorderLayout.EAST);
+
         gbc.gridy = 6;
-        gbc.insets = new Insets(4, 10, 4, 10);
-        formCard.add(btnDbConfig, gbc);
+        gbc.insets = new Insets(8, 10, 4, 10);
+        formCard.add(linksPanel, gbc);
 
         mainPanel.add(formCard, BorderLayout.CENTER);
 
@@ -127,6 +141,7 @@ public class LoginFrame extends JFrame {
         // Actions
         btnLogin.addActionListener(e -> performLogin());
         txtPassword.addActionListener(e -> performLogin());
+        btnForgotPassword.addActionListener(e -> openForgotPasswordDialog());
         btnDbConfig.addActionListener(e -> openDbConfigDialog());
     }
 
@@ -156,6 +171,11 @@ public class LoginFrame extends JFrame {
                     "\n\nPlease ensure MySQL is running and configured correctly via Database Settings button.",
                     "Connection Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void openForgotPasswordDialog() {
+        ForgotPasswordDialog dialog = new ForgotPasswordDialog(this);
+        dialog.setVisible(true);
     }
 
     private void openDbConfigDialog() {
