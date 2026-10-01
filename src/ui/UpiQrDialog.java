@@ -408,3 +408,4 @@ public class UpiQrDialog extends JDialog {
         }
     }
 }
+

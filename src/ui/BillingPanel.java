@@ -1015,20 +1015,11 @@ public class BillingPanel extends JPanel {
     }
 
     private void openUpiDialog() {
-        if (cartItems.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Cart is empty! Please add products before opening UPI payment.", "Cart Empty", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
         Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
-        String upiId = AppSettings.getString(AppSettings.KEY_STORE_UPI_ID, "");
-        String storeName = AppSettings.getString(AppSettings.KEY_STORE_NAME, "SmartBilling Store");
-        String invoiceNo = txtInvoiceNo.getText().trim();
-        UpiQrDialog upiDialog = new UpiQrDialog(owner, upiId, storeName, grandTotal, invoiceNo);
+        UpiQrDialog upiDialog = new UpiQrDialog(owner, "bazaarpoint@upi", "SmartBilling Pro", grandTotal, txtInvoiceNo.getText().trim());
         upiDialog.setVisible(true);
-        if (upiDialog.isPaymentConfirmed()) {
-            cmbPaymentMode.setSelectedItem("UPI");
-            setTenderedCash(grandTotal);
-        }
+        cmbPaymentMode.setSelectedItem("UPI");
+        setTenderedCash(grandTotal);
     }
 
     private void holdCurrentBill() {
@@ -1059,17 +1050,14 @@ public class BillingPanel extends JPanel {
         JOptionPane.showMessageDialog(this, "Bill held successfully as: " + ref);
     }
 
-    public boolean resumeHeldBill(HeldBill hb) {
-        if (hb == null) return false;
-        if (!cartItems.isEmpty()) {
-            int opt = JOptionPane.showConfirmDialog(this,
-                    "Current active cart has items. Do you want to replace active cart with held bill '" + hb.getReference() + "'?",
-                    "Replace Active Bill?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-            if (opt != JOptionPane.YES_OPTION) {
-                return false;
-            }
+    private void resumeSelectedBill() {
+        int idx = cmbHeldBills.getSelectedIndex();
+        if (idx <= 0 || heldBills.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please select a held bill from dropdown first.");
+            return;
         }
-        heldBills.remove(hb);
+
+        HeldBill hb = heldBills.remove(idx - 1);
         updateHeldBillsDropdown();
 
         // Restore
@@ -1102,21 +1090,9 @@ public class BillingPanel extends JPanel {
 
         calculateTotals();
         JOptionPane.showMessageDialog(this, "Recalled held bill: " + hb.getReference());
-        return true;
     }
 
-    private void resumeSelectedBill() {
-        int idx = cmbHeldBills.getSelectedIndex();
-        if (idx <= 0 || heldBills.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please select a held bill from dropdown first.");
-            return;
-        }
-
-        HeldBill hb = heldBills.get(idx - 1);
-        resumeHeldBill(hb);
-    }
-
-    public void updateHeldBillsDropdown() {
+    private void updateHeldBillsDropdown() {
         cmbHeldBills.removeAllItems();
         cmbHeldBills.addItem("-- Active Bill --");
         for (HeldBill hb : heldBills) {
