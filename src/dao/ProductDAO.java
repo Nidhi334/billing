@@ -74,15 +74,13 @@ public class ProductDAO {
     }
 
     public Product getProductByCode(String code) throws SQLException {
-        if (code == null || code.trim().isEmpty()) return null;
-        String trimmed = code.trim();
         String sql = "SELECT p.*, c.name AS category_name FROM products p " +
                      "LEFT JOIN categories c ON p.category_id = c.id " +
-                     "WHERE LOWER(TRIM(p.code)) = LOWER(?) OR LOWER(TRIM(COALESCE(p.barcode, ''))) = LOWER(?)";
+                     "WHERE p.code = ? OR p.barcode = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, trimmed);
-            ps.setString(2, trimmed);
+            ps.setString(1, code);
+            ps.setString(2, code);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return mapProduct(rs);
