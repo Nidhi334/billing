@@ -50,6 +50,7 @@ public class SettingsPanel extends JPanel {
     private JTextField txtStoreName;
     private JTextField txtStorePhone;
     private JTextField txtStoreGst;
+    private JTextField txtStoreUpi;
 
     public SettingsPanel(Runnable onSettingsChangedCallback) {
         this.onSettingsChangedCallback = onSettingsChangedCallback;
@@ -249,7 +250,7 @@ public class SettingsPanel extends JPanel {
 
         // 6. STORE / SHOP DETAILS
         JPanel storeCard = createSectionCard("🏢 Shop & Invoice Header Details");
-        storeCard.setLayout(new GridLayout(3, 2, 10, 8));
+        storeCard.setLayout(new GridLayout(4, 2, 10, 8));
 
         storeCard.add(new JLabel("Shop / Store Name:"));
         txtStoreName = new JTextField();
@@ -262,6 +263,10 @@ public class SettingsPanel extends JPanel {
         storeCard.add(new JLabel("Default GST (%):"));
         txtStoreGst = new JTextField();
         storeCard.add(txtStoreGst);
+
+        storeCard.add(new JLabel("My UPI ID / VPA (Paise aane ke liye):"));
+        txtStoreUpi = new JTextField();
+        storeCard.add(txtStoreUpi);
 
         scrollContent.add(storeCard);
 
@@ -365,6 +370,7 @@ public class SettingsPanel extends JPanel {
         txtStoreName.setText(AppSettings.getString(AppSettings.KEY_STORE_NAME, "SmartBilling Supermarket"));
         txtStorePhone.setText(AppSettings.getString(AppSettings.KEY_STORE_PHONE, "9876543210"));
         txtStoreGst.setText(AppSettings.getString(AppSettings.KEY_STORE_GST, "18.0"));
+        txtStoreUpi.setText(AppSettings.getString(AppSettings.KEY_STORE_UPI_ID, ""));
     }
 
     private void saveSettings() {
@@ -395,6 +401,7 @@ public class SettingsPanel extends JPanel {
         AppSettings.setString(AppSettings.KEY_STORE_NAME, txtStoreName.getText().trim());
         AppSettings.setString(AppSettings.KEY_STORE_PHONE, txtStorePhone.getText().trim());
         AppSettings.setString(AppSettings.KEY_STORE_GST, txtStoreGst.getText().trim());
+        AppSettings.setString(AppSettings.KEY_STORE_UPI_ID, txtStoreUpi.getText().trim());
 
         AppSettings.saveSettings();
 
