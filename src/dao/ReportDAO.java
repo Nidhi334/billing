@@ -301,4 +301,42 @@ public class ReportDAO {
         }
         return map;
     }
+
+    public Map<String, Double> getTopSellingProducts(int limit) throws SQLException {
+        Map<String, Double> map = new java.util.LinkedHashMap<>();
+        String sql = "SELECT p.name, COALESCE(SUM(si.quantity), 0) as total_qty " +
+                     "FROM sale_items si " +
+                     "JOIN products p ON si.product_id = p.id " +
+                     "GROUP BY p.id, p.name " +
+                     "ORDER BY total_qty DESC LIMIT ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    map.put(rs.getString("name"), (double) rs.getInt("total_qty"));
+                }
+            }
+        }
+        return map;
+    }
+
+    public Map<String, Double> getStockDistributionByCategory(int limit) throws SQLException {
+        Map<String, Double> map = new java.util.LinkedHashMap<>();
+        String sql = "SELECT COALESCE(c.name, 'General / Uncategorized') as cat_name, COALESCE(SUM(p.quantity), 0) as stock_qty " +
+                     "FROM products p " +
+                     "LEFT JOIN categories c ON p.category_id = c.id " +
+                     "GROUP BY c.name " +
+                     "ORDER BY stock_qty DESC LIMIT ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    map.put(rs.getString("cat_name"), (double) rs.getInt("stock_qty"));
+                }
+            }
+        }
+        return map;
+    }
 }

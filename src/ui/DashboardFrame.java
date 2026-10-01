@@ -44,6 +44,7 @@ public class DashboardFrame extends JFrame {
     // Graphical Revenue Analytics
     private DailySalesBarChartPanel revenueBarChart;
     private CategoryPieChartPanel revenuePieChart;
+    private HorizontalBarChartPanel topProductsChart;
     private JComboBox<String> cmbTimelineFilter;
     private JComboBox<String> cmbBreakdownFilter;
 
@@ -348,16 +349,18 @@ public class DashboardFrame extends JFrame {
 
         chartToolbar.add(filtersPanel, BorderLayout.EAST);
 
-        // 3. Visual Charts Grid (Interactive Bar Chart + Interactive Donut/Pie Chart)
-        JPanel chartsRow = new JPanel(new GridLayout(1, 2, 14, 0));
+        // 3. Visual Charts Grid (Interactive Bar Chart + Donut Pie Chart + Top Selling Products Chart)
+        JPanel chartsRow = new JPanel(new GridLayout(1, 3, 14, 0));
         chartsRow.setOpaque(false);
-        chartsRow.setPreferredSize(new Dimension(0, 310));
+        chartsRow.setPreferredSize(new Dimension(0, 340));
 
         revenueBarChart = new DailySalesBarChartPanel();
         revenuePieChart = new CategoryPieChartPanel();
+        topProductsChart = new HorizontalBarChartPanel();
 
         chartsRow.add(revenueBarChart);
         chartsRow.add(revenuePieChart);
+        chartsRow.add(topProductsChart);
 
         // Combine into vertically scrollable body
         JPanel centerContainer = new JPanel();
@@ -423,6 +426,7 @@ public class DashboardFrame extends JFrame {
 
             refreshBarChartData();
             refreshPieChartData();
+            refreshTopProductsChartData();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -460,6 +464,15 @@ public class DashboardFrame extends JFrame {
             } else {
                 revenuePieChart.setData(reportDAO.getRevenueByPaymentSource(), "💳 Revenue by Payment Source (Cash / UPI / Card)");
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void refreshTopProductsChartData() {
+        if (topProductsChart == null) return;
+        try {
+            topProductsChart.setData(reportDAO.getTopSellingProducts(6), "🏆 Top Selling Products");
         } catch (Exception e) {
             e.printStackTrace();
         }

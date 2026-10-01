@@ -328,8 +328,7 @@ public class ForgotPasswordDialog extends JDialog {
             boolean success = userDAO.resetPassword(matchedUser.getUsername(), answer, newPass);
             if (success) {
                 JOptionPane.showMessageDialog(this, 
-                        "Password reset successful!
-You can now login with your new password.", 
+                        "Password reset successful!\nYou can now login with your new password.", 
                         "Success", JOptionPane.INFORMATION_MESSAGE);
                 dispose();
             } else {
