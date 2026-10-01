@@ -72,5 +72,32 @@ public class SupplierDAO {
             return ps.executeUpdate() > 0;
         }
     }
+
+    public List<Supplier> searchSuppliers(String query) throws SQLException {
+        List<Supplier> list = new ArrayList<>();
+        String sql = "SELECT * FROM suppliers WHERE name LIKE ? OR company_name LIKE ? OR phone LIKE ? OR email LIKE ? ORDER BY name ASC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            String p = "%" + query + "%";
+            ps.setString(1, p);
+            ps.setString(2, p);
+            ps.setString(3, p);
+            ps.setString(4, p);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Supplier s = new Supplier();
+                    s.setId(rs.getInt("id"));
+                    s.setName(rs.getString("name"));
+                    s.setCompanyName(rs.getString("company_name"));
+                    s.setPhone(rs.getString("phone"));
+                    s.setEmail(rs.getString("email"));
+                    s.setAddress(rs.getString("address"));
+                    s.setCreatedAt(rs.getTimestamp("created_at"));
+                    list.add(s);
+                }
+            }
+        }
+        return list;
+    }
 }
 

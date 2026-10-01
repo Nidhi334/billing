@@ -1057,7 +1057,13 @@ public class BillingPanel extends JPanel {
             return;
         }
 
-        HeldBill hb = heldBills.remove(idx - 1);
+        HeldBill hb = heldBills.get(idx - 1);
+        resumeHeldBill(hb);
+    }
+
+    public boolean resumeHeldBill(HeldBill hb) {
+        if (hb == null) return false;
+        heldBills.remove(hb);
         updateHeldBillsDropdown();
 
         // Restore
@@ -1090,9 +1096,10 @@ public class BillingPanel extends JPanel {
 
         calculateTotals();
         JOptionPane.showMessageDialog(this, "Recalled held bill: " + hb.getReference());
+        return true;
     }
 
-    private void updateHeldBillsDropdown() {
+    public void updateHeldBillsDropdown() {
         cmbHeldBills.removeAllItems();
         cmbHeldBills.addItem("-- Active Bill --");
         for (HeldBill hb : heldBills) {
