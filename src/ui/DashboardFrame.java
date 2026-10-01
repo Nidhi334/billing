@@ -58,7 +58,9 @@ public class DashboardFrame extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         initComponents();
-        loadDashboardStats();
+        if (currentUser.isAdmin()) {
+            loadDashboardStats();
+        }
         updateUIVisibilityFromSettings();
     }
 
@@ -140,14 +142,6 @@ public class DashboardFrame extends JFrame {
         sidebar.add(Box.createVerticalStrut(6));
         sidebar.add(btnNavSettings);
 
-        // Role based restriction: If staff, disable reports & settings
-        if (!currentUser.isAdmin()) {
-            btnNavReports.setEnabled(false);
-            btnNavReports.setToolTipText("Admin only");
-            btnNavSettings.setEnabled(false);
-            btnNavSettings.setToolTipText("Admin only");
-        }
-
         root.add(sidebar, BorderLayout.WEST);
 
         // 3. Central Content Cards
@@ -212,6 +206,11 @@ public class DashboardFrame extends JFrame {
             cardLayout.show(contentPanel, "SETTINGS");
         });
 
+        if (!currentUser.isAdmin()) {
+            billingPanel.resetBillingDesk();
+            cardLayout.show(contentPanel, "BILLING");
+        }
+
         add(root);
     }
 
@@ -234,13 +233,16 @@ public class DashboardFrame extends JFrame {
         boolean showCust = AppSettings.getBoolean(AppSettings.KEY_NAV_CUSTOMERS, true);
         boolean showSupp = AppSettings.getBoolean(AppSettings.KEY_NAV_SUPPLIERS, true);
         boolean showRep = AppSettings.getBoolean(AppSettings.KEY_NAV_REPORTS, true);
+        boolean isAdmin = currentUser.isAdmin();
 
-        if (btnNavBilling != null) btnNavBilling.setVisible(showPos);
-        if (btnNavProducts != null) btnNavProducts.setVisible(showPrd);
-        if (btnNavInventory != null) btnNavInventory.setVisible(showInv);
+        if (btnNavHome != null) btnNavHome.setVisible(isAdmin);
+        if (btnNavBilling != null) btnNavBilling.setVisible(showPos || !isAdmin);
+        if (btnNavProducts != null) btnNavProducts.setVisible(isAdmin && showPrd);
+        if (btnNavInventory != null) btnNavInventory.setVisible(isAdmin && showInv);
         if (btnNavCustomers != null) btnNavCustomers.setVisible(showCust);
-        if (btnNavSuppliers != null) btnNavSuppliers.setVisible(showSupp);
-        if (btnNavReports != null) btnNavReports.setVisible(showRep && currentUser.isAdmin());
+        if (btnNavSuppliers != null) btnNavSuppliers.setVisible(isAdmin && showSupp);
+        if (btnNavReports != null) btnNavReports.setVisible(showRep && isAdmin);
+        if (btnNavSettings != null) btnNavSettings.setVisible(isAdmin);
 
         if (billingPanel != null) {
             billingPanel.applySettingsVisibility();

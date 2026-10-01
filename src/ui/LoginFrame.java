@@ -154,22 +154,31 @@ public class LoginFrame extends JFrame {
             return;
         }
 
+        User user;
         try {
-            User user = userDAO.authenticate(username, password);
-            if (user != null) {
-                dispose();
-                SwingUtilities.invokeLater(() -> {
-                    DashboardFrame dashboard = new DashboardFrame(user);
-                    dashboard.setVisible(true);
-                });
-            } else {
-                JOptionPane.showMessageDialog(this, "Invalid username or password!", "Authentication Failed", JOptionPane.ERROR_MESSAGE);
-            }
+            user = userDAO.authenticate(username, password);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Database connection error!\n\nDetails: " + ex.getMessage() +
                     "\n\nPlease ensure MySQL is running and configured correctly via Database Settings button.",
                     "Connection Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (user == null) {
+            JOptionPane.showMessageDialog(this, "Invalid username or password!", "Authentication Failed", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            DashboardFrame dashboard = new DashboardFrame(user);
+            dashboard.setVisible(true);
+            dispose();
+        } catch (RuntimeException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Login succeeded, but the dashboard could not be opened.\n\nDetails: " + ex.getMessage(),
+                    "Dashboard Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
