@@ -54,6 +54,28 @@ public class CustomerDAO {
         return list;
     }
 
+    public Customer getCustomerByPhone(String phone) throws SQLException {
+        if (phone == null || phone.trim().isEmpty()) return null;
+        String sql = "SELECT * FROM customers WHERE phone = ? LIMIT 1";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, phone.trim());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Customer c = new Customer();
+                    c.setId(rs.getInt("id"));
+                    c.setName(rs.getString("name"));
+                    c.setPhone(rs.getString("phone"));
+                    c.setEmail(rs.getString("email"));
+                    c.setAddress(rs.getString("address"));
+                    c.setCreatedAt(rs.getTimestamp("created_at"));
+                    return c;
+                }
+            }
+        }
+        return null;
+    }
+
     public boolean addCustomer(Customer c) throws SQLException {
         String sql = "INSERT INTO customers (name, phone, email, address) VALUES (?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
