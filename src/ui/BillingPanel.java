@@ -78,6 +78,10 @@ public class BillingPanel extends JPanel {
     private JPanel quickCashPanel;
     private JPanel numpadPanel;
 
+    private JButton btnOpenScanner;
+    private JButton btnScanAdd;
+    private JButton btnQuickCheckout;
+
     // Touch vs Non-Touch UI Mode indicator
     private JLabel lblTouchBadge;
 
@@ -93,6 +97,18 @@ public class BillingPanel extends JPanel {
         loadProductCache();
         applySettingsVisibility();
         resetBillingDesk();
+
+        addAncestorListener(new javax.swing.event.AncestorListener() {
+            @Override
+            public void ancestorAdded(javax.swing.event.AncestorEvent event) {
+                loadProductCache();
+                focusBarcodeField();
+            }
+            @Override
+            public void ancestorRemoved(javax.swing.event.AncestorEvent event) {}
+            @Override
+            public void ancestorMoved(javax.swing.event.AncestorEvent event) {}
+        });
     }
 
 
@@ -165,7 +181,7 @@ public class BillingPanel extends JPanel {
         headerLeft.add(lblTerminal);
         headerLeft.add(lblTouchBadge);
 
-        JLabel lblShortcuts = new JLabel("[F1: Barcode | F2: Hold Bill | F3: Customer | F4: Cash | F6: UPI QR | Ctrl+D: Discount | Ctrl+Enter: Pay]");
+        JLabel lblShortcuts = new JLabel("[F1: Barcode | F7: Scan Dialog | F2: Hold | F3: Cust | F4: Cash | F6: UPI | Ctrl+D: Disc | Ctrl+Enter: Pay]");
         lblShortcuts.setFont(new Font("Monospaced", Font.PLAIN, 11));
         lblShortcuts.setForeground(new Color(148, 163, 184));
         headerLeft.add(lblShortcuts);
@@ -262,18 +278,18 @@ public class BillingPanel extends JPanel {
                 new EmptyBorder(8, 12, 8, 12)
         ));
 
-        JLabel lblScanIcon = new JLabel("🔍 SCAN / SEARCH (F1): ");
+        JLabel lblScanIcon = new JLabel("🏷️ BARCODE / SCAN (F1): ");
         lblScanIcon.setFont(new Font("Segoe UI", Font.BOLD, 13));
         lblScanIcon.setForeground(new Color(30, 41, 59));
         scanBar.add(lblScanIcon, BorderLayout.WEST);
 
         txtBarcode = new JTextField();
         txtBarcode.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        txtBarcode.setToolTipText("Scan barcode or type product name/code and press Enter");
-        barcodeScanTimer = new Timer(220, e -> {
+        txtBarcode.setToolTipText("Scan barcode or type code/name and press Enter");
+        barcodeScanTimer = new Timer(250, e -> {
             String typed = txtBarcode.getText() == null ? "" : txtBarcode.getText().trim();
             if (!typed.isEmpty() && looksLikeBarcodeScan(typed)) {
-                handleBarcodeScan();
+                handleBarcodeScan(false);
             }
         });
         barcodeScanTimer.setRepeats(false);
@@ -284,11 +300,24 @@ public class BillingPanel extends JPanel {
         });
         scanBar.add(txtBarcode, BorderLayout.CENTER);
 
-        JButton btnScanAdd = new JButton("Add Item ↵");
+        JPanel scanEastActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        scanEastActions.setOpaque(false);
+
+        btnOpenScanner = new JButton("📷 Scan Barcode (F7)");
+        btnOpenScanner.setBackground(new Color(37, 99, 235));
+        btnOpenScanner.setForeground(Color.WHITE);
+        btnOpenScanner.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnOpenScanner.setFocusPainted(false);
+        scanEastActions.add(btnOpenScanner);
+
+        btnScanAdd = new JButton("➕ Add Item ↵");
         btnScanAdd.setBackground(new Color(16, 185, 129));
         btnScanAdd.setForeground(Color.WHITE);
         btnScanAdd.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        scanBar.add(btnScanAdd, BorderLayout.EAST);
+        btnScanAdd.setFocusPainted(false);
+        scanEastActions.add(btnScanAdd);
+
+        scanBar.add(scanEastActions, BorderLayout.EAST);
 
         leftCenter.add(scanBar, BorderLayout.NORTH);
 
@@ -368,6 +397,13 @@ public class BillingPanel extends JPanel {
         JButton btnClear = new JButton("Clear All");
         btnClear.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         cartActionsPanel.add(btnClear);
+
+        btnQuickCheckout = new JButton("💳 Pay & Print (Ctrl+Enter)");
+        btnQuickCheckout.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnQuickCheckout.setBackground(new Color(16, 185, 129));
+        btnQuickCheckout.setForeground(Color.WHITE);
+        btnQuickCheckout.setFocusPainted(false);
+        cartActionsPanel.add(btnQuickCheckout);
 
         cartFooter.add(cartActionsPanel, BorderLayout.EAST);
         leftCenter.add(cartFooter, BorderLayout.SOUTH);
@@ -525,8 +561,25 @@ public class BillingPanel extends JPanel {
         add(rightHub, BorderLayout.EAST);
 
         // LISTENERS
-        btnScanAdd.addActionListener(e -> handleBarcodeScan());
-        txtBarcode.addActionListener(e -> handleBarcodeScan());
+        btnOpenScanner.addActionListener(e -> openBarcodeScannerDialog());
+        btnScanAdd.addActionListener(e -> handleBarcodeScan(true));
+        btnQuickCheckout.addActionListener(e -> completeSale());
+
+        txtBarcode.addActionListener(e -> {
+            String val = txtBarcode.getText() == null ? "" : txtBarcode.getText().trim();
+            if (val.isEmpty()) {
+                if (!cartItems.isEmpty()) {
+                    int opt = JOptionPane.showConfirmDialog(this,
+                            "Cart is ready with " + cartItems.size() + " item(s) (Total: " + lblGrandTotal.getText() + ").\nProceed to Pay & Print Bill now?",
+                            "Ready for Billing", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                    if (opt == JOptionPane.YES_OPTION) {
+                        completeSale();
+                    }
+                }
+            } else {
+                handleBarcodeScan(true);
+            }
+        });
 
         btnIncQty.addActionListener(e -> adjustSelectedQuantity(1));
         btnDecQty.addActionListener(e -> adjustSelectedQuantity(-1));
@@ -645,6 +698,13 @@ public class BillingPanel extends JPanel {
                 completeSale();
             }
         });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F7, 0), "openScannerDialog");
+        am.put("openScannerDialog", new AbstractAction() {
+            public void actionPerformed(ActionEvent e) {
+                openBarcodeScannerDialog();
+            }
+        });
     }
 
     private void loadProductCache() {
@@ -672,9 +732,8 @@ public class BillingPanel extends JPanel {
     private boolean looksLikeBarcodeScan(String value) {
         if (value == null || value.trim().isEmpty()) return false;
         String trimmed = value.trim();
-        if (trimmed.length() < 4) return false;
-        if (!trimmed.matches("[A-Za-z0-9-]+")) return false;
-        return trimmed.matches(".*\\d.*");
+        if (trimmed.length() < 3) return false;
+        return trimmed.matches("[A-Za-z0-9_-]+");
     }
 
     public void loadCustomers() {
@@ -704,7 +763,7 @@ public class BillingPanel extends JPanel {
                     }
                 }
                 txtCustPhone.setText(matched.getPhone() != null ? matched.getPhone() : matched.getName());
-                txtBarcode.requestFocus();
+                focusBarcodeField();
             } else {
                 JOptionPane.showMessageDialog(this, "No customer found for '" + query + "'");
             }
@@ -713,22 +772,25 @@ public class BillingPanel extends JPanel {
         }
     }
 
-    private void handleBarcodeScan() {
-        String code = txtBarcode.getText().trim();
+    public void handleBarcodeScan() {
+        handleBarcodeScan(true);
+    }
+
+    public void handleBarcodeScan(boolean isExplicitSubmit) {
+        String raw = txtBarcode.getText() == null ? "" : txtBarcode.getText().trim();
+        String code = raw.replaceAll("[\\r\\n\\t]", "").trim();
         if (code.isEmpty()) return;
 
         // Instant local lookup from cache
-        Product match = null;
-        for (Product p : cachedProducts) {
-            if (code.equalsIgnoreCase(p.getCode())
-                    || code.equalsIgnoreCase(p.getBarcode())
-                    || code.equalsIgnoreCase(p.getName())) {
-                match = p;
-                break;
-            }
+        Product match = findProductByCodeOrBarcode(code);
+
+        // If not found in cache, reload cache and try again
+        if (match == null) {
+            loadProductCache();
+            match = findProductByCodeOrBarcode(code);
         }
 
-        // DB Fallback if not found in cache
+        // DB Fallback if still not found in cache
         if (match == null) {
             try {
                 match = productDAO.getProductByCode(code);
@@ -744,18 +806,40 @@ public class BillingPanel extends JPanel {
         }
 
         if (match == null) {
-            Toolkit.getDefaultToolkit().beep();
-            JOptionPane.showMessageDialog(this, "Item not found for barcode: " + code, "Barcode Scan", JOptionPane.WARNING_MESSAGE);
-            txtBarcode.selectAll();
+            if (isExplicitSubmit) {
+                Toolkit.getDefaultToolkit().beep();
+                JOptionPane.showMessageDialog(this,
+                        "Product not found for barcode / code: " + code,
+                        "Barcode Scan", JOptionPane.WARNING_MESSAGE);
+                txtBarcode.selectAll();
+            }
             return;
         }
 
-        addProductToCart(match, 1);
-        txtBarcode.setText("");
-        txtBarcode.requestFocus();
+        boolean ok = addProductToCart(match, 1);
+        if (ok) {
+            txtBarcode.setText("");
+            focusBarcodeField();
+        }
     }
 
-    private void addProductToCart(Product p, int qty) {
+    public Product findProductByCodeOrBarcode(String query) {
+        if (query == null || query.trim().isEmpty()) return null;
+        String q = query.trim();
+        for (Product p : cachedProducts) {
+            String b = p.getBarcode() != null ? p.getBarcode().trim() : "";
+            String c = p.getCode() != null ? p.getCode().trim() : "";
+            String n = p.getName() != null ? p.getName().trim() : "";
+            if (q.equalsIgnoreCase(b) || q.equalsIgnoreCase(c) || q.equalsIgnoreCase(n)) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    public boolean addProductToCart(Product p, int qty) {
+        if (p == null || qty <= 0) return false;
+
         // Stock check
         int inCart = 0;
         for (SaleItem it : cartItems) {
@@ -765,9 +849,9 @@ public class BillingPanel extends JPanel {
         if (inCart + qty > p.getQuantity()) {
             Toolkit.getDefaultToolkit().beep();
             JOptionPane.showMessageDialog(this,
-                    "Insufficient stock! Available: " + p.getQuantity() + ", in cart: " + inCart,
+                    "Insufficient stock for '" + p.getName() + "'!\nAvailable: " + p.getQuantity() + ", in cart: " + inCart,
                     "Stock Warning", JOptionPane.WARNING_MESSAGE);
-            return;
+            return false;
         }
 
         // Update existing or add new
@@ -786,11 +870,12 @@ public class BillingPanel extends JPanel {
 
         if (!found) {
             double itemSub = qty * p.getSellingPrice();
-            SaleItem it = new SaleItem(p.getId(), p.getCode(), p.getName(), qty, p.getSellingPrice(), itemSub);
+            String codeOrBarcode = (p.getBarcode() != null && !p.getBarcode().trim().isEmpty()) ? p.getBarcode() : p.getCode();
+            SaleItem it = new SaleItem(p.getId(), codeOrBarcode, p.getName(), qty, p.getSellingPrice(), itemSub);
             cartItems.add(it);
             cartModel.addRow(new Object[]{
                     cartItems.size(),
-                    it.getProductCode(),
+                    codeOrBarcode,
                     it.getProductName(),
                     String.format("₹%.2f", it.getUnitPrice()),
                     it.getQuantity(),
@@ -801,6 +886,7 @@ public class BillingPanel extends JPanel {
 
         Toolkit.getDefaultToolkit().beep(); // cashier beep
         calculateTotals();
+        return true;
     }
 
     private void adjustSelectedQuantity(int delta) {
@@ -868,6 +954,12 @@ public class BillingPanel extends JPanel {
         lblDiscount.setText(String.format("-₹%.2f", discAmt));
         lblGstAmount.setText(String.format("₹%.2f", gstAmount));
         lblGrandTotal.setText(String.format("₹%.2f", grandTotal));
+
+        // Auto-update cash tendered to grand total so bill is ready for immediate payment
+        if ("CASH".equalsIgnoreCase((String) cmbPaymentMode.getSelectedItem()) || cashTendered <= 0.0 || Math.abs(cashTendered - grandTotal) < 0.01) {
+            cashTendered = grandTotal;
+            txtCashPaid.setText(String.format("%.2f", grandTotal));
+        }
 
         updateCashCalculations();
     }
@@ -1023,13 +1115,32 @@ public class BillingPanel extends JPanel {
         txtBarcode.setText("");
         calculateTotals();
         loadProductCache();
-        txtBarcode.requestFocus();
+        focusBarcodeField();
     }
 
-    private void completeSale() {
+    public void openBarcodeScannerDialog() {
+        Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+        BarcodeScannerDialog dlg = new BarcodeScannerDialog(owner, this);
+        dlg.setVisible(true);
+    }
+
+    public void triggerCheckout() {
+        completeSale();
+    }
+
+    public void focusBarcodeField() {
+        SwingUtilities.invokeLater(() -> {
+            if (txtBarcode != null) {
+                txtBarcode.requestFocusInWindow();
+                txtBarcode.selectAll();
+            }
+        });
+    }
+
+    public void completeSale() {
         if (cartItems.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Cart is empty! Add products before checking out.", "Empty Cart", JOptionPane.WARNING_MESSAGE);
-            txtBarcode.requestFocus();
+            focusBarcodeField();
             return;
         }
 
@@ -1044,7 +1155,7 @@ public class BillingPanel extends JPanel {
         sale.setSubtotal(subtotal);
         sale.setGstRate(gstRate);
         sale.setGstAmount(gstAmount);
-        sale.setDiscountAmount(subtotal - (grandTotal - gstAmount));
+        sale.setDiscountAmount(Math.max(0, subtotal - (grandTotal - gstAmount)));
         sale.setDiscountType(discountType);
         sale.setTotalAmount(grandTotal);
         sale.setPaymentMode((String) cmbPaymentMode.getSelectedItem());
