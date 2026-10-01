@@ -40,6 +40,7 @@ public class AppSettings {
     public static final String KEY_STORE_NAME = "store.name";
     public static final String KEY_STORE_PHONE = "store.phone";
     public static final String KEY_STORE_GST = "store.gst";
+    public static final String KEY_STORE_UPI_ID = "store.upi_id";
 
     static {
         loadSettings();
@@ -85,6 +86,7 @@ public class AppSettings {
         properties.setProperty(KEY_STORE_NAME, "SmartBilling Supermarket");
         properties.setProperty(KEY_STORE_PHONE, "9876543210");
         properties.setProperty(KEY_STORE_GST, "18.0");
+        properties.setProperty(KEY_STORE_UPI_ID, "bazaarpoint@upi");
     }
 
     public static boolean isTouchMode() {
