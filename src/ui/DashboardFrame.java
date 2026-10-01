@@ -178,6 +178,7 @@ public class DashboardFrame extends JFrame {
         btnNavBilling.addActionListener(e -> {
             billingPanel.resetBillingDesk();
             cardLayout.show(contentPanel, "BILLING");
+            billingPanel.focusBarcodeField();
         });
         btnNavProducts.addActionListener(e -> {
             productPanel.loadProductTable();
@@ -209,6 +210,7 @@ public class DashboardFrame extends JFrame {
         if (!currentUser.isAdmin()) {
             billingPanel.resetBillingDesk();
             cardLayout.show(contentPanel, "BILLING");
+            billingPanel.focusBarcodeField();
         }
 
         add(root);
