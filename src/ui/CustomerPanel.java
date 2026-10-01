@@ -4,9 +4,14 @@ import dao.CustomerDAO;
 import model.Customer;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import java.awt.*;
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 public class CustomerPanel extends JPanel {
@@ -14,7 +19,7 @@ public class CustomerPanel extends JPanel {
     private DefaultTableModel tableModel;
     private JTable table;
     private JTextField txtName, txtPhone, txtEmail, txtAddress, txtSearch;
-    private JButton btnAdd, btnUpdate, btnDelete, btnClear;
+    private JButton btnAdd, btnUpdate, btnDelete, btnClear, btnSearch, btnReset;
     private int selectedCustomerId = -1;
 
     public CustomerPanel() {
@@ -37,62 +42,110 @@ public class CustomerPanel extends JPanel {
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         searchPanel.setBackground(new Color(248, 250, 252));
-        searchPanel.add(new JLabel("Search:"));
-        txtSearch = new JTextField(16);
-        searchPanel.add(txtSearch);
-        JButton btnSearch = new JButton("Search");
-        searchPanel.add(btnSearch);
-        JButton btnReset = new JButton("Reset");
-        searchPanel.add(btnReset);
-        topPanel.add(searchPanel, BorderLayout.EAST);
 
+        JLabel lblSearch = new JLabel("Search:");
+        lblSearch.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        searchPanel.add(lblSearch);
+
+        txtSearch = new JTextField(16);
+        txtSearch.setPreferredSize(new Dimension(180, 28));
+        searchPanel.add(txtSearch);
+
+        btnSearch = new JButton("Search");
+        btnSearch.setBackground(new Color(37, 99, 235));
+        btnSearch.setForeground(Color.WHITE);
+        btnSearch.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnSearch.setFocusPainted(false);
+        searchPanel.add(btnSearch);
+
+        btnReset = new JButton("Reset");
+        btnReset.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        btnReset.setFocusPainted(false);
+        searchPanel.add(btnReset);
+
+        topPanel.add(searchPanel, BorderLayout.EAST);
         add(topPanel, BorderLayout.NORTH);
 
-        // LEFT: Form
+        // LEFT: Form Card
         JPanel formCard = new JPanel(new GridBagLayout());
         formCard.setBackground(Color.WHITE);
         formCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                new EmptyBorder(15, 15, 15, 15)
+                new EmptyBorder(14, 14, 14, 14)
         ));
-        formCard.setPreferredSize(new Dimension(320, 0));
+        formCard.setPreferredSize(new Dimension(340, 0));
 
         GridBagConstraints g = new GridBagConstraints();
-        g.insets = new Insets(6, 6, 6, 6);
+        g.insets = new Insets(4, 4, 4, 4);
         g.fill = GridBagConstraints.HORIZONTAL;
-        g.anchor = GridBagConstraints.WEST;
+        g.anchor = GridBagConstraints.NORTHWEST;
+        g.weightx = 1.0;
 
-        g.gridx = 0; g.gridy = 0; formCard.add(new JLabel("Full Name:"), g);
+        // 1. Full Name
+        g.gridx = 0; g.gridy = 0;
+        formCard.add(createFieldHeader("Full Name:"), g);
         txtName = new JTextField();
-        g.gridy = 1; formCard.add(txtName, g);
+        txtName.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        txtName.setPreferredSize(new Dimension(0, 30));
+        g.gridy = 1;
+        formCard.add(txtName, g);
 
-        g.gridy = 2; formCard.add(new JLabel("Phone Number:"), g);
+        // 2. Phone Number
+        g.gridy = 2;
+        formCard.add(createFieldHeader("Phone Number:"), g);
         txtPhone = new JTextField();
-        g.gridy = 3; formCard.add(txtPhone, g);
+        txtPhone.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        txtPhone.setPreferredSize(new Dimension(0, 30));
+        g.gridy = 3;
+        formCard.add(txtPhone, g);
 
-        g.gridy = 4; formCard.add(new JLabel("Email Address:"), g);
+        // 3. Email Address
+        g.gridy = 4;
+        formCard.add(createFieldHeader("Email Address:"), g);
         txtEmail = new JTextField();
-        g.gridy = 5; formCard.add(txtEmail, g);
+        txtEmail.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        txtEmail.setPreferredSize(new Dimension(0, 30));
+        g.gridy = 5;
+        formCard.add(txtEmail, g);
 
-        g.gridy = 6; formCard.add(new JLabel("Billing Address:"), g);
+        // 4. Billing Address
+        g.gridy = 6;
+        formCard.add(createFieldHeader("Billing Address:"), g);
         txtAddress = new JTextField();
-        g.gridy = 7; formCard.add(txtAddress, g);
+        txtAddress.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        txtAddress.setPreferredSize(new Dimension(0, 30));
+        g.gridy = 7;
+        formCard.add(txtAddress, g);
 
-        JPanel btnPanel = new JPanel(new GridLayout(2, 2, 8, 8));
+        // 5. Action Buttons Grid
+        JPanel btnPanel = new JPanel(new GridLayout(2, 2, 6, 6));
         btnPanel.setBackground(Color.WHITE);
-        btnAdd = new JButton("Add");
+
+        btnAdd = new JButton("Add Customer");
         btnAdd.setBackground(new Color(16, 185, 129));
         btnAdd.setForeground(Color.WHITE);
+        btnAdd.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnAdd.setFocusPainted(false);
+        btnAdd.setPreferredSize(new Dimension(0, 32));
 
         btnUpdate = new JButton("Update");
         btnUpdate.setBackground(new Color(37, 99, 235));
         btnUpdate.setForeground(Color.WHITE);
+        btnUpdate.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnUpdate.setFocusPainted(false);
+        btnUpdate.setPreferredSize(new Dimension(0, 32));
 
         btnDelete = new JButton("Delete");
         btnDelete.setBackground(new Color(239, 68, 68));
         btnDelete.setForeground(Color.WHITE);
+        btnDelete.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnDelete.setFocusPainted(false);
+        btnDelete.setPreferredSize(new Dimension(0, 32));
 
-        btnClear = new JButton("Clear");
+        btnClear = new JButton("Clear Form");
+        btnClear.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        btnClear.setFocusPainted(false);
+        btnClear.setPreferredSize(new Dimension(0, 32));
 
         btnPanel.add(btnAdd);
         btnPanel.add(btnUpdate);
@@ -100,20 +153,50 @@ public class CustomerPanel extends JPanel {
         btnPanel.add(btnClear);
 
         g.gridy = 8;
-        g.insets = new Insets(15, 6, 6, 6);
+        g.insets = new Insets(12, 4, 6, 4);
         formCard.add(btnPanel, g);
 
-        add(formCard, BorderLayout.WEST);
+        // Spacer to stick form controls to top
+        JPanel verticalSpacer = new JPanel();
+        verticalSpacer.setOpaque(false);
+        g.gridy = 9;
+        g.weighty = 1.0;
+        formCard.add(verticalSpacer, g);
+
+        JScrollPane formScroll = new JScrollPane(formCard);
+        formScroll.setBorder(null);
+        formScroll.getVerticalScrollBar().setUnitIncrement(14);
+        add(formScroll, BorderLayout.WEST);
 
         // CENTER: Table
-        tableModel = new DefaultTableModel(new String[]{"ID", "Name", "Phone", "Email", "Address", "Registered Date"}, 0) {
+        String[] cols = {"ID", "Name", "Phone", "Email", "Address", "Registered Date"};
+        tableModel = new DefaultTableModel(cols, 0) {
             @Override
             public boolean isCellEditable(int r, int c) { return false; }
         };
         table = new JTable(tableModel);
-        table.setRowHeight(26);
+        table.setRowHeight(28);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        table.setShowVerticalLines(false);
+        table.setGridColor(new Color(241, 245, 249));
+
+        // Column widths
+        table.getColumnModel().getColumn(0).setPreferredWidth(50);
+        table.getColumnModel().getColumn(1).setPreferredWidth(160);
+        table.getColumnModel().getColumn(2).setPreferredWidth(120);
+        table.getColumnModel().getColumn(3).setPreferredWidth(180);
+        table.getColumnModel().getColumn(4).setPreferredWidth(220);
+        table.getColumnModel().getColumn(5).setPreferredWidth(140);
+
+        DefaultTableCellRenderer centerRender = new DefaultTableCellRenderer();
+        centerRender.setHorizontalAlignment(SwingConstants.CENTER);
+        table.getColumnModel().getColumn(0).setCellRenderer(centerRender);
+
+        JScrollPane tableScroll = new JScrollPane(table);
+        tableScroll.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240)));
+        add(tableScroll, BorderLayout.CENTER);
 
         // Actions
         btnAdd.addActionListener(e -> addCustomer());
@@ -139,13 +222,22 @@ public class CustomerPanel extends JPanel {
         });
     }
 
+    private JLabel createFieldHeader(String text) {
+        JLabel lbl = new JLabel(text);
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lbl.setForeground(new Color(51, 65, 85));
+        return lbl;
+    }
+
     public void loadCustomerTable() {
         try {
             tableModel.setRowCount(0);
             List<Customer> list = customerDAO.getAllCustomers();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
             for (Customer c : list) {
+                String regDate = c.getCreatedAt() != null ? sdf.format(c.getCreatedAt()) : "N/A";
                 tableModel.addRow(new Object[]{
-                        c.getId(), c.getName(), c.getPhone(), c.getEmail(), c.getAddress(), c.getCreatedAt()
+                        c.getId(), c.getName(), c.getPhone(), c.getEmail(), c.getAddress(), regDate
                 });
             }
         } catch (Exception e) {
@@ -162,9 +254,11 @@ public class CustomerPanel extends JPanel {
         try {
             tableModel.setRowCount(0);
             List<Customer> list = customerDAO.searchCustomers(q);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
             for (Customer c : list) {
+                String regDate = c.getCreatedAt() != null ? sdf.format(c.getCreatedAt()) : "N/A";
                 tableModel.addRow(new Object[]{
-                        c.getId(), c.getName(), c.getPhone(), c.getEmail(), c.getAddress(), c.getCreatedAt()
+                        c.getId(), c.getName(), c.getPhone(), c.getEmail(), c.getAddress(), regDate
                 });
             }
         } catch (Exception e) {
@@ -180,6 +274,7 @@ public class CustomerPanel extends JPanel {
 
         if (name.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Customer name is mandatory.", "Validation", JOptionPane.WARNING_MESSAGE);
+            txtName.requestFocus();
             return;
         }
 
@@ -200,8 +295,14 @@ public class CustomerPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Please select a customer from table to update.");
             return;
         }
+        String name = txtName.getText().trim();
+        if (name.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Customer name cannot be empty.", "Validation", JOptionPane.WARNING_MESSAGE);
+            txtName.requestFocus();
+            return;
+        }
         try {
-            Customer c = new Customer(selectedCustomerId, txtName.getText().trim(), txtPhone.getText().trim(), txtEmail.getText().trim(), txtAddress.getText().trim());
+            Customer c = new Customer(selectedCustomerId, name, txtPhone.getText().trim(), txtEmail.getText().trim(), txtAddress.getText().trim());
             if (customerDAO.updateCustomer(c)) {
                 JOptionPane.showMessageDialog(this, "Customer updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
                 clearForm();
@@ -239,4 +340,3 @@ public class CustomerPanel extends JPanel {
         table.clearSelection();
     }
 }
-
