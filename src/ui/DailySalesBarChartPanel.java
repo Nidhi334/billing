@@ -59,17 +59,19 @@ public class DailySalesBarChartPanel extends JPanel {
         int topPad = 45;
         int bottomPad = 45;
         int chartW = w - leftPad - rightPad;
-        int chartH = h - topPad - bottomPad;
+        int availH = h - topPad - bottomPad;
+        int chartH = Math.min(300, availH);
+        int startY = topPad + Math.max(0, (availH - chartH) / 2);
 
         int count = chartData.size();
         int slotW = chartW / Math.max(1, count);
-        int barW = Math.max(6, Math.min(36, slotW - 8));
+        int barW = Math.max(14, Math.min(42, slotW - 12));
 
         int newHover = -1;
         int idx = 0;
         for (double val : chartData.values()) {
             int x = leftPad + (idx * slotW) + (slotW - barW) / 2;
-            if (mx >= x && mx <= x + barW && my >= topPad && my <= topPad + chartH + 20) {
+            if (mx >= x && mx <= x + barW && my >= startY && my <= startY + chartH + 20) {
                 newHover = idx;
                 break;
             }
@@ -124,13 +126,15 @@ public class DailySalesBarChartPanel extends JPanel {
         int topPad = 45;
         int bottomPad = 45;
         int chartW = w - leftPad - rightPad;
-        int chartH = h - topPad - bottomPad;
+        int availH = h - topPad - bottomPad;
+        int chartH = Math.min(300, availH);
+        int startY = topPad + Math.max(0, (availH - chartH) / 2);
 
         // Draw horizontal gridlines & Y labels
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
         int gridSteps = 4;
         for (int i = 0; i <= gridSteps; i++) {
-            int y = topPad + (chartH * i / gridSteps);
+            int y = startY + (chartH * i / gridSteps);
             g2.setColor(new Color(226, 232, 240));
             g2.drawLine(leftPad, y, leftPad + chartW, y);
 
@@ -143,7 +147,7 @@ public class DailySalesBarChartPanel extends JPanel {
         // Draw Bars
         int count = chartData.size();
         int slotW = chartW / Math.max(1, count);
-        int barW = Math.max(6, Math.min(36, slotW - 8));
+        int barW = Math.max(14, Math.min(42, slotW - 12));
 
         int idx = 0;
         int tooltipX = -1, tooltipY = -1;
@@ -153,7 +157,7 @@ public class DailySalesBarChartPanel extends JPanel {
             double val = entry.getValue();
             int barHeight = (int) Math.round((val / maxVal) * chartH);
             int x = leftPad + (idx * slotW) + (slotW - barW) / 2;
-            int y = topPad + chartH - barHeight;
+            int y = startY + chartH - barHeight;
 
             boolean isHovered = (idx == hoveredIndex);
 
@@ -170,7 +174,7 @@ public class DailySalesBarChartPanel extends JPanel {
                 g2.setColor(isHovered ? new Color(30, 41, 59) : new Color(71, 85, 105));
                 String vStr = String.format("₹%.0f", val);
                 int strW = g2.getFontMetrics().stringWidth(vStr);
-                g2.drawString(vStr, x + (barW - strW) / 2, Math.max(topPad - 5, y - 5));
+                g2.drawString(vStr, x + (barW - strW) / 2, Math.max(startY - 5, y - 5));
             }
 
             // X-axis label
@@ -178,7 +182,7 @@ public class DailySalesBarChartPanel extends JPanel {
             g2.setColor(isHovered ? new Color(30, 41, 59) : new Color(100, 116, 139));
             String dateLabel = entry.getKey();
             int dateW = g2.getFontMetrics().stringWidth(dateLabel);
-            g2.drawString(dateLabel, x + (barW - dateW) / 2, topPad + chartH + 18);
+            g2.drawString(dateLabel, x + (barW - dateW) / 2, startY + chartH + 18);
 
             if (isHovered) {
                 tooltipX = x + barW / 2;

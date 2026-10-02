@@ -489,8 +489,8 @@ public class DashboardFrame extends JFrame {
             currentStatsCols = targetCols;
             int totalCards = 10;
             int rows = (int) Math.ceil((double) totalCards / targetCols);
-            int gridHeight = (rows * 72) + ((rows - 1) * 12);
-            statsGrid.setLayout(new GridLayout(0, targetCols, 12, 12));
+            int gridHeight = (rows * 84) + ((rows - 1) * 10);
+            statsGrid.setLayout(new GridLayout(0, targetCols, 12, 10));
             statsGrid.setPreferredSize(new Dimension(0, gridHeight));
             statsGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, gridHeight));
             statsGrid.revalidate();
@@ -532,7 +532,7 @@ public class DashboardFrame extends JFrame {
             if (targetChartsMode == 0) {
                 // 3 columns side-by-side filling all available vertical space down to bottom
                 chartsWrapper.setLayout(new GridLayout(1, 3, 14, 0));
-                chartsWrapper.setPreferredSize(new Dimension(0, 320));
+                chartsWrapper.setPreferredSize(new Dimension(0, 350));
                 chartsWrapper.setMaximumSize(null);
                 revenueBarChart.setPreferredSize(null);
                 revenuePieChart.setPreferredSize(null);

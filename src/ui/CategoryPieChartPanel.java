@@ -65,15 +65,18 @@ public class CategoryPieChartPanel extends JPanel {
 
         int w = getWidth();
         int h = getHeight();
-        int pieDiameter = Math.min(240, Math.min(Math.max(110, (int) (w * 0.42)), h - 60));
+        int contentTop = 38;
+        int contentH = h - contentTop - 12;
+        int contentCenterY = contentTop + contentH / 2;
+        int pieDiameter = Math.min(210, Math.min(Math.max(120, (int)(w * 0.42)), contentH - 20));
         int pieX = 20;
-        int pieY = 38 + (h - 45 - pieDiameter) / 2;
+        int pieY = contentCenterY - pieDiameter / 2;
         int centerX = pieX + pieDiameter / 2;
         int centerY = pieY + pieDiameter / 2;
 
         double dist = Math.sqrt(Math.pow(mx - centerX, 2) + Math.pow(my - centerY, 2));
         int outerR = pieDiameter / 2;
-        int innerR = (int) (pieDiameter * 0.45 / 2);
+        int innerR = (int) (pieDiameter * 0.52 / 2);
 
         if (dist >= innerR && dist <= outerR) {
             double angle = Math.toDegrees(Math.atan2(-(my - centerY), mx - centerX));
@@ -134,7 +137,13 @@ public class CategoryPieChartPanel extends JPanel {
         }
 
         double total = 0.0;
-        for (double v : chartData.values()) total += v;
+        int activeCount = 0;
+        for (double v : chartData.values()) {
+            if (v > 0) {
+                total += v;
+                activeCount++;
+            }
+        }
 
         if (total <= 0) {
             g2.setFont(new Font("Segoe UI", Font.ITALIC, 12));
@@ -144,15 +153,20 @@ public class CategoryPieChartPanel extends JPanel {
             return;
         }
 
-        int pieDiameter = Math.min(240, Math.min(Math.max(110, (int) (w * 0.42)), h - 60));
+        int contentTop = 38;
+        int contentH = h - contentTop - 12;
+        int contentCenterY = contentTop + contentH / 2;
+        int pieDiameter = Math.min(210, Math.min(Math.max(120, (int)(w * 0.42)), contentH - 20));
         int pieX = 20;
-        int pieY = 38 + (h - 45 - pieDiameter) / 2;
+        int pieY = contentCenterY - pieDiameter / 2;
 
         double curAngle = 0;
         int colorIdx = 0;
 
-        int legendX = pieX + pieDiameter + 18;
-        int legendY = 48;
+        int itemH = 26;
+        int totalLegendH = Math.max(activeCount * itemH, 40);
+        int legendY = contentCenterY - totalLegendH / 2;
+        int legendX = pieX + pieDiameter + 20;
 
         String hoveredText = null;
 
@@ -181,22 +195,24 @@ public class CategoryPieChartPanel extends JPanel {
 
             // Draw Legend
             if (legendY + 16 < h && legendX < w - 40) {
-                g2.fillRect(legendX, legendY, 11, 11);
+                g2.setColor(color);
+                g2.fillRoundRect(legendX, legendY + 2, 12, 12, 3, 3);
+
                 g2.setColor(isHover ? new Color(15, 23, 42) : new Color(51, 65, 85));
                 g2.setFont(new Font("Segoe UI", isHover ? Font.BOLD : Font.PLAIN, 11));
                 String name = entry.getKey();
                 int maxChars = Math.max(8, (w - legendX - 50) / 7);
                 if (name.length() > maxChars) name = name.substring(0, Math.max(6, maxChars - 2)) + "..";
                 String text = String.format("%s (%.0f%%)", name, fraction * 100);
-                g2.drawString(text, legendX + 18, legendY + 10);
-                legendY += 22;
+                g2.drawString(text, legendX + 20, legendY + 12);
+                legendY += itemH;
             }
 
             colorIdx++;
         }
 
         // Sleek Donut Hole
-        int holeDiameter = (int) (pieDiameter * 0.45);
+        int holeDiameter = (int) (pieDiameter * 0.52);
         int holeX = pieX + (pieDiameter - holeDiameter) / 2;
         int holeY = pieY + (pieDiameter - holeDiameter) / 2;
         g2.setColor(Color.WHITE);
@@ -209,8 +225,8 @@ public class CategoryPieChartPanel extends JPanel {
         int cLW = g2.getFontMetrics().stringWidth(centerLbl);
         g2.drawString(centerLbl, holeX + (holeDiameter - cLW) / 2, holeY + holeDiameter / 2 - 4);
 
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        g2.setColor(new Color(16, 185, 129));
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        g2.setColor(new Color(30, 41, 59));
         String cVal = String.format("₹%.0f", total);
         int cVW = g2.getFontMetrics().stringWidth(cVal);
         g2.drawString(cVal, holeX + (holeDiameter - cVW) / 2, holeY + holeDiameter / 2 + 12);

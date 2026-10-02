@@ -53,12 +53,14 @@ public class HorizontalBarChartPanel extends JPanel {
         int bottomPad = 20;
         int chartH = h - topPad - bottomPad;
         int count = chartData.size();
-        int slotH = chartH / Math.max(1, count);
+        int slotH = Math.min(46, Math.max(26, chartH / Math.max(1, count)));
+        int totalBarsH = count * slotH;
+        int startY = topPad + Math.max(0, (chartH - totalBarsH) / 2);
 
         int newHover = -1;
         int idx = 0;
         for (double val : chartData.values()) {
-            int y = topPad + (idx * slotH);
+            int y = startY + (idx * slotH);
             if (my >= y && my <= y + slotH) {
                 newHover = idx;
                 break;
@@ -117,8 +119,10 @@ public class HorizontalBarChartPanel extends JPanel {
         int chartH = h - topPad - bottomPad;
 
         int count = chartData.size();
-        int slotH = chartH / Math.max(1, count);
-        int barH = Math.max(14, Math.min(30, slotH - 8));
+        int slotH = Math.min(46, Math.max(26, chartH / Math.max(1, count)));
+        int barH = Math.min(22, Math.max(14, slotH - 14));
+        int totalBarsH = count * slotH;
+        int startY = topPad + Math.max(0, (chartH - totalBarsH) / 2);
 
         int idx = 0;
         String tooltipText = null;
@@ -127,7 +131,7 @@ public class HorizontalBarChartPanel extends JPanel {
         for (Map.Entry<String, Double> entry : chartData.entrySet()) {
             double val = entry.getValue();
             int barWidth = (int) Math.round((val / maxVal) * chartW);
-            int y = topPad + (idx * slotH) + (slotH - barH) / 2;
+            int y = startY + (idx * slotH) + (slotH - barH) / 2;
             int x = leftPad;
 
             boolean isHovered = (idx == hoveredIndex);
