@@ -21,15 +21,17 @@ public class DashboardFrame extends JFrame {
     private CustomerPanel customerPanel;
     private SupplierPanel supplierPanel;
     private BillingPanel billingPanel;
+    private BillHistoryPanel billHistoryPanel;
     private ReportsPanel reportsPanel;
     private SettingsPanel settingsPanel;
 
     // Sidebar Navigation Buttons
     private JButton btnNavHome;
     private JButton btnNavBilling;
+    private JButton btnNavBillHistory;
+    private JButton btnNavCustomers;
     private JButton btnNavProducts;
     private JButton btnNavInventory;
-    private JButton btnNavCustomers;
     private JButton btnNavSuppliers;
     private JButton btnNavReports;
     private JButton btnNavSettings;
@@ -149,6 +151,7 @@ public class DashboardFrame extends JFrame {
 
         btnNavHome = createSidebarButton("🏠  Dashboard");
         btnNavBilling = createSidebarButton("🧾  New Sale / Billing");
+        btnNavBillHistory = createSidebarButton("📜  Bill History / Orders");
         btnNavCustomers = createSidebarButton("👨‍💼  Customers");
         btnNavProducts = createSidebarButton("📦  Products");
         btnNavInventory = createSidebarButton("📊  Inventory / Stock");
@@ -159,6 +162,8 @@ public class DashboardFrame extends JFrame {
         sidebar.add(btnNavHome);
         sidebar.add(Box.createVerticalStrut(6));
         sidebar.add(btnNavBilling);
+        sidebar.add(Box.createVerticalStrut(6));
+        sidebar.add(btnNavBillHistory);
         sidebar.add(Box.createVerticalStrut(6));
         sidebar.add(btnNavCustomers);
         sidebar.add(Box.createVerticalStrut(6));
@@ -185,11 +190,13 @@ public class DashboardFrame extends JFrame {
         customerPanel = new CustomerPanel();
         supplierPanel = new SupplierPanel();
         billingPanel = new BillingPanel(currentUser);
+        billHistoryPanel = new BillHistoryPanel(currentUser);
         reportsPanel = new ReportsPanel();
         settingsPanel = new SettingsPanel(this::updateUIVisibilityFromSettings);
 
         contentPanel.add(homeStatsPanel, "HOME");
         contentPanel.add(billingPanel, "BILLING");
+        contentPanel.add(billHistoryPanel, "BILL_HISTORY");
         contentPanel.add(productPanel, "PRODUCTS");
         contentPanel.add(inventoryPanel, "INVENTORY");
         contentPanel.add(customerPanel, "CUSTOMERS");
@@ -209,6 +216,10 @@ public class DashboardFrame extends JFrame {
             billingPanel.resetBillingDesk();
             cardLayout.show(contentPanel, "BILLING");
             billingPanel.focusBarcodeField();
+        });
+        btnNavBillHistory.addActionListener(e -> {
+            billHistoryPanel.loadBillHistory();
+            cardLayout.show(contentPanel, "BILL_HISTORY");
         });
         btnNavProducts.addActionListener(e -> {
             productPanel.loadProductTable();
@@ -244,6 +255,13 @@ public class DashboardFrame extends JFrame {
         }
 
         add(root);
+    }
+
+    public void showBillHistory() {
+        if (billHistoryPanel != null) {
+            billHistoryPanel.loadBillHistory();
+            cardLayout.show(contentPanel, "BILL_HISTORY");
+        }
     }
 
 

@@ -217,6 +217,22 @@ public class BillingPanel extends JPanel {
         btnHoldBill.setMargin(new Insets(2, 6, 2, 6));
         heldBillsPanel.add(btnHoldBill);
 
+        JButton btnHistory = new JButton("📜 Bill History");
+        btnHistory.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnHistory.setBackground(new Color(241, 245, 249));
+        btnHistory.setForeground(new Color(30, 41, 59));
+        btnHistory.setMargin(new Insets(2, 8, 2, 8));
+        btnHistory.setFocusable(false);
+        btnHistory.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnHistory.setToolTipText("View Total Orders & Sales History");
+        btnHistory.addActionListener(e -> {
+            Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+            if (owner instanceof DashboardFrame) {
+                ((DashboardFrame) owner).showBillHistory();
+            }
+        });
+        heldBillsPanel.add(btnHistory);
+
         headerStrip.add(heldBillsPanel, BorderLayout.EAST);
         topContainer.add(headerStrip, BorderLayout.NORTH);
 

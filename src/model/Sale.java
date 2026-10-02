@@ -20,6 +20,8 @@ public class Sale {
     private String paymentMode;
     private Integer createdBy;
     private String cashierName;
+    private int itemCount;
+    private int totalUnits;
     private List<SaleItem> items = new ArrayList<>();
 
     public Sale() {}
@@ -68,6 +70,12 @@ public class Sale {
 
     public String getCashierName() { return cashierName; }
     public void setCashierName(String cashierName) { this.cashierName = cashierName; }
+
+    public int getItemCount() { return itemCount; }
+    public void setItemCount(int itemCount) { this.itemCount = itemCount; }
+
+    public int getTotalUnits() { return totalUnits; }
+    public void setTotalUnits(int totalUnits) { this.totalUnits = totalUnits; }
 
     public List<SaleItem> getItems() { return items; }
     public void setItems(List<SaleItem> items) { this.items = items; }

@@ -252,4 +252,76 @@ public class BillingDAO {
             }
         }
     }
+
+    public List<Sale> searchSales(String keyword, String fromDate, String toDate, String paymentMode) throws SQLException {
+        List<Sale> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(
+                "SELECT s.*, " +
+                "       COALESCE(c.name, 'Walk-in Customer') AS customer_name, " +
+                "       c.phone AS customer_phone, " +
+                "       COALESCE(u.full_name, 'Admin') AS cashier_name, " +
+                "       (SELECT COUNT(*) FROM sale_items si WHERE si.sale_id = s.id) AS item_count, " +
+                "       (SELECT COALESCE(SUM(si.quantity), 0) FROM sale_items si WHERE si.sale_id = s.id) AS total_units " +
+                "FROM sales s " +
+                "LEFT JOIN customers c ON s.customer_id = c.id " +
+                "LEFT JOIN users u ON s.created_by = u.id " +
+                "WHERE 1=1 "
+        );
+
+        List<Object> params = new ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String kw = "%" + keyword.trim() + "%";
+            sql.append("AND (s.invoice_no LIKE ? OR c.name LIKE ? OR c.phone LIKE ? OR u.full_name LIKE ?) ");
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+
+        if (fromDate != null && !fromDate.trim().isEmpty()) {
+            sql.append("AND DATE(s.sale_date) >= ? ");
+            params.add(fromDate.trim());
+        }
+
+        if (toDate != null && !toDate.trim().isEmpty()) {
+            sql.append("AND DATE(s.sale_date) <= ? ");
+            params.add(toDate.trim());
+        }
+
+        if (paymentMode != null && !paymentMode.trim().isEmpty() && !"ALL".equalsIgnoreCase(paymentMode.trim())) {
+            sql.append("AND UPPER(s.payment_mode) = UPPER(?) ");
+            params.add(paymentMode.trim());
+        }
+
+        sql.append("ORDER BY s.id DESC");
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Sale s = new Sale();
+                    s.setId(rs.getInt("id"));
+                    s.setInvoiceNo(rs.getString("invoice_no"));
+                    s.setCustomerId(rs.getInt("customer_id"));
+                    s.setCustomerName(rs.getString("customer_name"));
+                    s.setCustomerPhone(rs.getString("customer_phone"));
+                    s.setSaleDate(rs.getTimestamp("sale_date"));
+                    s.setSubtotal(rs.getDouble("subtotal"));
+                    s.setGstRate(rs.getDouble("gst_rate"));
+                    s.setGstAmount(rs.getDouble("gst_amount"));
+                    s.setTotalAmount(rs.getDouble("total_amount"));
+                    s.setPaymentMode(rs.getString("payment_mode"));
+                    s.setCashierName(rs.getString("cashier_name"));
+                    s.setItemCount(rs.getInt("item_count"));
+                    s.setTotalUnits(rs.getInt("total_units"));
+                    list.add(s);
+                }
+            }
+        }
+        return list;
+    }
 }
