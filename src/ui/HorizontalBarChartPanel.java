@@ -14,8 +14,8 @@ public class HorizontalBarChartPanel extends JPanel {
 
     public HorizontalBarChartPanel() {
         setBackground(Color.WHITE);
-        setPreferredSize(new Dimension(500, 260));
-        setMinimumSize(new Dimension(360, 220));
+        setPreferredSize(new Dimension(450, 260));
+        setMinimumSize(new Dimension(150, 180));
         setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240)),
                 BorderFactory.createEmptyBorder(12, 14, 12, 14)
@@ -109,11 +109,11 @@ public class HorizontalBarChartPanel extends JPanel {
         int subW = g2.getFontMetrics().stringWidth(sub);
         g2.drawString(sub, w - subW - 16, 22);
 
-        int leftPad = 130;
-        int rightPad = 70;
+        int leftPad = Math.max(90, Math.min(140, w / 4));
+        int rightPad = Math.max(65, Math.min(90, w / 5));
         int topPad = 42;
         int bottomPad = 20;
-        int chartW = w - leftPad - rightPad;
+        int chartW = Math.max(40, w - leftPad - rightPad);
         int chartH = h - topPad - bottomPad;
 
         int count = chartData.size();
@@ -136,7 +136,8 @@ public class HorizontalBarChartPanel extends JPanel {
             g2.setFont(new Font("Segoe UI", isHovered ? Font.BOLD : Font.PLAIN, 11));
             g2.setColor(isHovered ? new Color(30, 41, 59) : new Color(71, 85, 105));
             String name = entry.getKey();
-            if (name.length() > 16) name = name.substring(0, 14) + "..";
+            int maxChars = Math.max(8, (leftPad - 16) / 7);
+            if (name.length() > maxChars) name = name.substring(0, Math.max(6, maxChars - 2)) + "..";
             int nameW = g2.getFontMetrics().stringWidth(name);
             g2.drawString(name, leftPad - nameW - 10, y + barH - 4);
 
@@ -151,11 +152,19 @@ public class HorizontalBarChartPanel extends JPanel {
             g2.setPaint(gp);
             g2.fill(new RoundRectangle2D.Float(x, y, Math.max(6, barWidth), barH, 6, 6));
 
-            // Value text on right
+            // Value text on right (guaranteed not clipped)
             g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
             g2.setColor(isHovered ? new Color(15, 23, 42) : new Color(100, 116, 139));
             String vStr = String.format("%.0f units", val);
-            g2.drawString(vStr, x + barWidth + 8, y + barH - 4);
+            int vStrW = g2.getFontMetrics().stringWidth(vStr);
+            int vx = x + barWidth + 8;
+            if (vx + vStrW > w - 8) {
+                vx = Math.max(x + 6, w - vStrW - 10);
+                if (barWidth > vStrW + 16) {
+                    g2.setColor(Color.WHITE);
+                }
+            }
+            g2.drawString(vStr, vx, y + barH - 4);
 
             if (isHovered) {
                 tooltipX = x + barWidth / 2;

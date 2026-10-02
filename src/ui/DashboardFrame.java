@@ -48,15 +48,27 @@ public class DashboardFrame extends JFrame {
     private JComboBox<String> cmbTimelineFilter;
     private JComboBox<String> cmbBreakdownFilter;
 
+    // Responsive Dashboard Components & State
+    private JPanel sidebar;
+    private JButton btnToggleSidebar;
+    private JPanel statsGrid;
+    private int currentStatsCols = -1;
+    private JPanel chartToolbar;
+    private JLabel lblChartHeader;
+    private JPanel filtersPanel;
+    private JPanel chartsWrapper;
+    private int currentChartsLayoutMode = -1;
+
     private ReportDAO reportDAO = new ReportDAO();
 
     public DashboardFrame(User user) {
         this.currentUser = user;
         setTitle("SmartBilling Pro - " + (user.isAdmin() ? "Admin Portal" : "Staff Desk") + " [" + user.getFullName() + "]");
-        setSize(1200, 780);
-        setMinimumSize(new Dimension(1000, 650));
+        setSize(1280, 800);
+        setMinimumSize(new Dimension(850, 600));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         initComponents();
         if (currentUser.isAdmin()) {
             loadDashboardStats();
@@ -71,7 +83,24 @@ public class DashboardFrame extends JFrame {
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.setBackground(new Color(15, 23, 42));
         topBar.setPreferredSize(new Dimension(0, 56));
-        topBar.setBorder(new EmptyBorder(10, 20, 10, 20));
+        topBar.setBorder(new EmptyBorder(10, 16, 10, 16));
+
+        btnToggleSidebar = new JButton("☰");
+        btnToggleSidebar.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        btnToggleSidebar.setForeground(Color.WHITE);
+        btnToggleSidebar.setBackground(new Color(30, 41, 59));
+        btnToggleSidebar.setFocusPainted(false);
+        btnToggleSidebar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(71, 85, 105), 1),
+                new EmptyBorder(4, 10, 4, 10)
+        ));
+        btnToggleSidebar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnToggleSidebar.setToolTipText("Toggle Sidebar (Show / Hide)");
+        btnToggleSidebar.addActionListener(e -> {
+            sidebar.setVisible(!sidebar.isVisible());
+            root.revalidate();
+            root.repaint();
+        });
 
         JLabel brandLabel = new JLabel("⚡ SmartBilling & Inventory Management");
         lblModeBadge = new JLabel(" [TOUCH MODE] ");
@@ -81,8 +110,9 @@ public class DashboardFrame extends JFrame {
         lblModeBadge.setForeground(Color.WHITE);
         lblModeBadge.setBorder(new EmptyBorder(3, 8, 3, 8));
 
-        JPanel brandBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel brandBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         brandBox.setOpaque(false);
+        brandBox.add(btnToggleSidebar);
         brandBox.add(brandLabel);
         brandBox.add(lblModeBadge);
         brandLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
@@ -111,7 +141,7 @@ public class DashboardFrame extends JFrame {
         root.add(topBar, BorderLayout.NORTH);
 
         // 2. Sidebar Navigation
-        JPanel sidebar = new JPanel();
+        sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
         sidebar.setBackground(new Color(30, 41, 59));
         sidebar.setPreferredSize(new Dimension(220, 0));
@@ -267,30 +297,60 @@ public class DashboardFrame extends JFrame {
         return btn;
     }
 
+    // Responsive Scrollable Panel ensuring viewport width tracking
+    private static class ResponsiveScrollablePanel extends JPanel implements Scrollable {
+        public ResponsiveScrollablePanel() {
+            super();
+        }
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 16;
+        }
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 64;
+        }
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
+    }
+
     private void initHomeStatsPanel() {
         homeStatsPanel = new JPanel(new BorderLayout(15, 15));
         homeStatsPanel.setBackground(new Color(248, 250, 252));
-        homeStatsPanel.setBorder(new EmptyBorder(25, 25, 25, 25));
+        homeStatsPanel.setBorder(new EmptyBorder(16, 16, 16, 16));
 
         // Welcome banner
-        JPanel banner = new JPanel(new BorderLayout());
+        JPanel banner = new JPanel(new BorderLayout(10, 10));
         banner.setBackground(Color.WHITE);
         banner.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240)),
-                new EmptyBorder(18, 20, 18, 20)
+                new EmptyBorder(14, 18, 14, 18)
         ));
         JLabel welcomeMsg = new JLabel("Welcome back, " + currentUser.getFullName() + "! Here is your shop overview:");
-        welcomeMsg.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        welcomeMsg.setFont(new Font("Segoe UI", Font.BOLD, 17));
         welcomeMsg.setForeground(new Color(30, 41, 59));
         banner.add(welcomeMsg, BorderLayout.WEST);
 
         JButton btnRefreshStats = new JButton("🔄 Refresh Metrics");
+        btnRefreshStats.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnRefreshStats.setFocusPainted(false);
+        btnRefreshStats.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnRefreshStats.addActionListener(e -> loadDashboardStats());
         banner.add(btnRefreshStats, BorderLayout.EAST);
         homeStatsPanel.add(banner, BorderLayout.NORTH);
 
-        // 1. Revenue & Operations Metrics Grid: 2 rows x 5 columns
-        JPanel statsGrid = new JPanel(new GridLayout(2, 5, 14, 14));
+        // 1. Revenue & Operations Metrics Grid
+        statsGrid = new JPanel(new GridLayout(0, 5, 12, 12));
         statsGrid.setBackground(new Color(248, 250, 252));
 
         lblTodaySales = new JLabel("₹0.00");
@@ -317,19 +377,21 @@ public class DashboardFrame extends JFrame {
         statsGrid.add(createMetricCard("POS Billing Status", lblProfitMargin, new Color(5, 150, 105), "🟢"));
 
         // 2. Chart Controls Toolbar
-        JPanel chartToolbar = new JPanel(new BorderLayout(10, 0));
+        chartToolbar = new JPanel(new BorderLayout(10, 0));
         chartToolbar.setOpaque(false);
-        chartToolbar.setBorder(new EmptyBorder(8, 0, 4, 0));
+        chartToolbar.setBorder(new EmptyBorder(10, 0, 6, 0));
 
-        JLabel lblChartHeader = new JLabel("📊 Interactive Revenue Visual Analytics & Trends");
+        lblChartHeader = new JLabel("📊 Interactive Revenue Visual Analytics & Trends");
         lblChartHeader.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblChartHeader.setForeground(new Color(30, 41, 59));
-        chartToolbar.add(lblChartHeader, BorderLayout.WEST);
 
-        JPanel filtersPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        filtersPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         filtersPanel.setOpaque(false);
 
-        filtersPanel.add(new JLabel("Timeline Trend:"));
+        JLabel lblTimeline = new JLabel("Timeline Trend:");
+        lblTimeline.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        filtersPanel.add(lblTimeline);
+
         cmbTimelineFilter = new JComboBox<>(new String[]{
                 "📅 Daily Revenue (Last 7 Days)",
                 "📅 Daily Revenue (Last 14 Days)",
@@ -342,7 +404,10 @@ public class DashboardFrame extends JFrame {
         cmbTimelineFilter.addActionListener(e -> refreshBarChartData());
         filtersPanel.add(cmbTimelineFilter);
 
-        filtersPanel.add(new JLabel("Breakdown:"));
+        JLabel lblBreakdown = new JLabel("Breakdown:");
+        lblBreakdown.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        filtersPanel.add(lblBreakdown);
+
         cmbBreakdownFilter = new JComboBox<>(new String[]{
                 "🍰 By Product Category",
                 "💳 By Payment Source (Cash/UPI/Card)"
@@ -351,54 +416,172 @@ public class DashboardFrame extends JFrame {
         cmbBreakdownFilter.addActionListener(e -> refreshPieChartData());
         filtersPanel.add(cmbBreakdownFilter);
 
+        chartToolbar.add(lblChartHeader, BorderLayout.WEST);
         chartToolbar.add(filtersPanel, BorderLayout.EAST);
 
-        // 3. Visual Charts Grid (Interactive Bar Chart + Donut Pie Chart + Top Selling Products Chart)
-        JPanel chartsRow = new JPanel(new GridLayout(1, 3, 14, 0));
-        chartsRow.setOpaque(false);
-        chartsRow.setPreferredSize(new Dimension(0, 340));
-
+        // 3. Visual Charts Container
         revenueBarChart = new DailySalesBarChartPanel();
         revenuePieChart = new CategoryPieChartPanel();
         topProductsChart = new HorizontalBarChartPanel();
 
-        chartsRow.add(revenueBarChart);
-        chartsRow.add(revenuePieChart);
-        chartsRow.add(topProductsChart);
+        chartsWrapper = new JPanel();
+        chartsWrapper.setOpaque(false);
 
-        // Combine into vertically scrollable body
-        JPanel centerContainer = new JPanel();
+        // 4. Combine into responsive vertically scrollable body
+        ResponsiveScrollablePanel centerContainer = new ResponsiveScrollablePanel();
         centerContainer.setLayout(new BoxLayout(centerContainer, BoxLayout.Y_AXIS));
         centerContainer.setOpaque(false);
         centerContainer.add(statsGrid);
-        centerContainer.add(Box.createVerticalStrut(14));
+        centerContainer.add(Box.createVerticalStrut(12));
         centerContainer.add(chartToolbar);
-        centerContainer.add(Box.createVerticalStrut(10));
-        centerContainer.add(chartsRow);
+        centerContainer.add(Box.createVerticalStrut(8));
+        centerContainer.add(chartsWrapper);
 
         JScrollPane scrollPane = new JScrollPane(centerContainer);
+        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setBorder(null);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
 
+        // Responsive viewport listener
+        scrollPane.getViewport().addChangeListener(e -> {
+            int w = scrollPane.getViewport().getWidth();
+            updateResponsiveHomeLayout(w);
+        });
+
+        homeStatsPanel.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                int w = scrollPane.getViewport().getWidth();
+                if (w <= 0) w = homeStatsPanel.getWidth() - 32;
+                updateResponsiveHomeLayout(w);
+            }
+        });
+
+        updateResponsiveHomeLayout(1150);
+
         homeStatsPanel.add(scrollPane, BorderLayout.CENTER);
     }
 
+    private void updateResponsiveHomeLayout(int availableWidth) {
+        if (availableWidth < 100) return;
+
+        // 1. Metric Cards Grid: Dynamic column count
+        int targetCols;
+        if (availableWidth >= 1200) {
+            targetCols = 5;
+        } else if (availableWidth >= 960) {
+            targetCols = 4;
+        } else if (availableWidth >= 700) {
+            targetCols = 3;
+        } else {
+            targetCols = 2;
+        }
+
+        if (currentStatsCols != targetCols && statsGrid != null) {
+            currentStatsCols = targetCols;
+            statsGrid.setLayout(new GridLayout(0, targetCols, 12, 12));
+            statsGrid.revalidate();
+        }
+
+        // 2. Chart Toolbar: Wrap filters if width is constrained
+        if (chartToolbar != null && lblChartHeader != null && filtersPanel != null) {
+            if (availableWidth >= 1050) {
+                chartToolbar.removeAll();
+                chartToolbar.setLayout(new BorderLayout(10, 0));
+                chartToolbar.add(lblChartHeader, BorderLayout.WEST);
+                chartToolbar.add(filtersPanel, BorderLayout.EAST);
+            } else {
+                chartToolbar.removeAll();
+                chartToolbar.setLayout(new BorderLayout(0, 8));
+                chartToolbar.add(lblChartHeader, BorderLayout.NORTH);
+                chartToolbar.add(filtersPanel, BorderLayout.WEST);
+            }
+            chartToolbar.revalidate();
+        }
+
+        // 3. Visual Charts: Responsive arrangement
+        int targetChartsMode;
+        if (availableWidth >= 1250) {
+            targetChartsMode = 0; // 3 columns side by side
+        } else if (availableWidth >= 780) {
+            targetChartsMode = 1; // 2 tiers: Row 1 = 2 charts, Row 2 = 1 wide chart
+        } else {
+            targetChartsMode = 2; // 1 column stacked
+        }
+
+        if (currentChartsLayoutMode != targetChartsMode && chartsWrapper != null) {
+            currentChartsLayoutMode = targetChartsMode;
+            chartsWrapper.removeAll();
+
+            if (targetChartsMode == 0) {
+                // 3 columns side-by-side
+                chartsWrapper.setLayout(new GridLayout(1, 3, 14, 0));
+                chartsWrapper.setPreferredSize(new Dimension(0, 340));
+                chartsWrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 340));
+                revenueBarChart.setPreferredSize(null);
+                revenuePieChart.setPreferredSize(null);
+                topProductsChart.setPreferredSize(null);
+                chartsWrapper.add(revenueBarChart);
+                chartsWrapper.add(revenuePieChart);
+                chartsWrapper.add(topProductsChart);
+            } else if (targetChartsMode == 1) {
+                // 2 tiers
+                chartsWrapper.setLayout(new BorderLayout(0, 14));
+                chartsWrapper.setPreferredSize(new Dimension(0, 580));
+                chartsWrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 580));
+
+                JPanel topTwo = new JPanel(new GridLayout(1, 2, 14, 0));
+                topTwo.setOpaque(false);
+                topTwo.setPreferredSize(new Dimension(0, 310));
+                topTwo.add(revenueBarChart);
+                topTwo.add(revenuePieChart);
+
+                JPanel bottomOne = new JPanel(new BorderLayout());
+                bottomOne.setOpaque(false);
+                bottomOne.setPreferredSize(new Dimension(0, 250));
+                bottomOne.add(topProductsChart, BorderLayout.CENTER);
+
+                chartsWrapper.add(topTwo, BorderLayout.NORTH);
+                chartsWrapper.add(bottomOne, BorderLayout.CENTER);
+            } else {
+                // 1 column vertically stacked
+                chartsWrapper.setLayout(new BoxLayout(chartsWrapper, BoxLayout.Y_AXIS));
+                chartsWrapper.setPreferredSize(new Dimension(0, 880));
+                chartsWrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 880));
+
+                revenueBarChart.setPreferredSize(new Dimension(0, 280));
+                revenuePieChart.setPreferredSize(new Dimension(0, 280));
+                topProductsChart.setPreferredSize(new Dimension(0, 280));
+
+                chartsWrapper.add(revenueBarChart);
+                chartsWrapper.add(Box.createVerticalStrut(14));
+                chartsWrapper.add(revenuePieChart);
+                chartsWrapper.add(Box.createVerticalStrut(14));
+                chartsWrapper.add(topProductsChart);
+            }
+
+            chartsWrapper.revalidate();
+            chartsWrapper.repaint();
+        }
+    }
+
     private JPanel createMetricCard(String title, JLabel valueLabel, Color accentColor, String icon) {
-        JPanel card = new JPanel(new BorderLayout(10, 8));
+        JPanel card = new JPanel(new BorderLayout(8, 6));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240)),
-                new EmptyBorder(16, 18, 16, 18)
+                new EmptyBorder(12, 14, 12, 14)
         ));
 
         JLabel lblTitle = new JLabel(icon + " " + title);
-        lblTitle.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
         lblTitle.setForeground(new Color(100, 116, 139));
         card.add(lblTitle, BorderLayout.NORTH);
 
-        valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         valueLabel.setForeground(accentColor);
         card.add(valueLabel, BorderLayout.CENTER);
 

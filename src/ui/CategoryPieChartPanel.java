@@ -25,7 +25,7 @@ public class CategoryPieChartPanel extends JPanel {
     public CategoryPieChartPanel() {
         setBackground(Color.WHITE);
         setPreferredSize(new Dimension(420, 260));
-        setMinimumSize(new Dimension(320, 220));
+        setMinimumSize(new Dimension(150, 180));
         setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240)),
                 BorderFactory.createEmptyBorder(12, 14, 12, 14)
@@ -63,9 +63,10 @@ public class CategoryPieChartPanel extends JPanel {
     private void handleMouseMove(int mx, int my) {
         if (chartData == null || chartData.isEmpty()) return;
 
+        int w = getWidth();
         int h = getHeight();
-        int pieDiameter = Math.min(160, h - 60);
-        int pieX = 24;
+        int pieDiameter = Math.min(160, Math.min(Math.max(90, w / 3), h - 60));
+        int pieX = 20;
         int pieY = 38 + (h - 45 - pieDiameter) / 2;
         int centerX = pieX + pieDiameter / 2;
         int centerY = pieY + pieDiameter / 2;
@@ -143,14 +144,14 @@ public class CategoryPieChartPanel extends JPanel {
             return;
         }
 
-        int pieDiameter = Math.min(160, h - 60);
-        int pieX = 24;
+        int pieDiameter = Math.min(160, Math.min(Math.max(90, w / 3), h - 60));
+        int pieX = 20;
         int pieY = 38 + (h - 45 - pieDiameter) / 2;
 
         double curAngle = 0;
         int colorIdx = 0;
 
-        int legendX = pieX + pieDiameter + 25;
+        int legendX = pieX + pieDiameter + 18;
         int legendY = 48;
 
         String hoveredText = null;
@@ -179,12 +180,13 @@ public class CategoryPieChartPanel extends JPanel {
             curAngle += arcAngle;
 
             // Draw Legend
-            if (legendY + 16 < h && legendX < w - 60) {
+            if (legendY + 16 < h && legendX < w - 40) {
                 g2.fillRect(legendX, legendY, 11, 11);
                 g2.setColor(isHover ? new Color(15, 23, 42) : new Color(51, 65, 85));
                 g2.setFont(new Font("Segoe UI", isHover ? Font.BOLD : Font.PLAIN, 11));
                 String name = entry.getKey();
-                if (name.length() > 14) name = name.substring(0, 12) + "..";
+                int maxChars = Math.max(8, (w - legendX - 50) / 7);
+                if (name.length() > maxChars) name = name.substring(0, Math.max(6, maxChars - 2)) + "..";
                 String text = String.format("%s (%.0f%%)", name, fraction * 100);
                 g2.drawString(text, legendX + 18, legendY + 10);
                 legendY += 22;

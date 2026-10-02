@@ -14,8 +14,8 @@ public class DailySalesBarChartPanel extends JPanel {
 
     public DailySalesBarChartPanel() {
         setBackground(Color.WHITE);
-        setPreferredSize(new Dimension(500, 260));
-        setMinimumSize(new Dimension(360, 220));
+        setPreferredSize(new Dimension(450, 260));
+        setMinimumSize(new Dimension(150, 180));
         setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240)),
                 BorderFactory.createEmptyBorder(12, 14, 12, 14)
@@ -63,7 +63,7 @@ public class DailySalesBarChartPanel extends JPanel {
 
         int count = chartData.size();
         int slotW = chartW / Math.max(1, count);
-        int barW = Math.max(16, slotW - 18);
+        int barW = Math.max(6, Math.min(36, slotW - 8));
 
         int newHover = -1;
         int idx = 0;
@@ -143,7 +143,7 @@ public class DailySalesBarChartPanel extends JPanel {
         // Draw Bars
         int count = chartData.size();
         int slotW = chartW / Math.max(1, count);
-        int barW = Math.max(16, slotW - 18);
+        int barW = Math.max(6, Math.min(36, slotW - 8));
 
         int idx = 0;
         int tooltipX = -1, tooltipY = -1;
