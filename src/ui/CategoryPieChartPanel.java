@@ -65,7 +65,7 @@ public class CategoryPieChartPanel extends JPanel {
 
         int w = getWidth();
         int h = getHeight();
-        int pieDiameter = Math.min(160, Math.min(Math.max(90, w / 3), h - 60));
+        int pieDiameter = Math.min(220, Math.min(Math.max(90, w / 3), h - 60));
         int pieX = 20;
         int pieY = 38 + (h - 45 - pieDiameter) / 2;
         int centerX = pieX + pieDiameter / 2;
@@ -144,7 +144,7 @@ public class CategoryPieChartPanel extends JPanel {
             return;
         }
 
-        int pieDiameter = Math.min(160, Math.min(Math.max(90, w / 3), h - 60));
+        int pieDiameter = Math.min(220, Math.min(Math.max(90, w / 3), h - 60));
         int pieX = 20;
         int pieY = 38 + (h - 45 - pieDiameter) / 2;
 
