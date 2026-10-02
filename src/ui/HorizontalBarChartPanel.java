@@ -118,7 +118,7 @@ public class HorizontalBarChartPanel extends JPanel {
 
         int count = chartData.size();
         int slotH = chartH / Math.max(1, count);
-        int barH = Math.max(14, Math.min(26, slotH - 8));
+        int barH = Math.max(14, Math.min(30, slotH - 8));
 
         int idx = 0;
         String tooltipText = null;

@@ -475,11 +475,11 @@ public class DashboardFrame extends JFrame {
 
         // 1. Metric Cards Grid: Dynamic column count
         int targetCols;
-        if (availableWidth >= 1200) {
+        if (availableWidth >= 980) {
             targetCols = 5;
-        } else if (availableWidth >= 960) {
+        } else if (availableWidth >= 780) {
             targetCols = 4;
-        } else if (availableWidth >= 700) {
+        } else if (availableWidth >= 580) {
             targetCols = 3;
         } else {
             targetCols = 2;
@@ -499,7 +499,7 @@ public class DashboardFrame extends JFrame {
         // 2. Chart Toolbar: Wrap filters if width is constrained
         if (chartToolbar != null && lblChartHeader != null && filtersPanel != null) {
             chartToolbar.removeAll();
-            if (availableWidth >= 1050) {
+            if (availableWidth >= 950) {
                 chartToolbar.setLayout(new BorderLayout(10, 0));
                 chartToolbar.setPreferredSize(new Dimension(0, 36));
                 chartToolbar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
@@ -517,9 +517,9 @@ public class DashboardFrame extends JFrame {
 
         // 3. Visual Charts: Responsive arrangement
         int targetChartsMode;
-        if (availableWidth >= 1250) {
-            targetChartsMode = 0; // 3 columns side by side
-        } else if (availableWidth >= 780) {
+        if (availableWidth >= 980) {
+            targetChartsMode = 0; // 3 columns side by side filling all remaining vertical space
+        } else if (availableWidth >= 680) {
             targetChartsMode = 1; // 2 tiers: Row 1 = 2 charts, Row 2 = 1 wide chart
         } else {
             targetChartsMode = 2; // 1 column stacked
@@ -530,9 +530,9 @@ public class DashboardFrame extends JFrame {
             chartsWrapper.removeAll();
 
             if (targetChartsMode == 0) {
-                // 3 columns side-by-side filling all available vertical space
+                // 3 columns side-by-side filling all available vertical space down to bottom
                 chartsWrapper.setLayout(new GridLayout(1, 3, 14, 0));
-                chartsWrapper.setPreferredSize(null);
+                chartsWrapper.setPreferredSize(new Dimension(0, 320));
                 chartsWrapper.setMaximumSize(null);
                 revenueBarChart.setPreferredSize(null);
                 revenuePieChart.setPreferredSize(null);
