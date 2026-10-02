@@ -8,7 +8,7 @@ echo "    Compiling Billing & Inventory Management System...    "
 echo "=========================================================="
 
 mkdir -p bin
-javac -cp "lib/*:src" -d bin src/config/*.java src/model/*.java src/dao/*.java src/ui/*.java src/App.java
+javac -cp "lib/*:src" -d bin src/config/*.java src/model/*.java src/dao/*.java src/util/*.java src/ui/*.java src/App.java
 
 if [ $? -eq 0 ]; then
     echo "✓ Compilation Successful!"
