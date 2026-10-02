@@ -661,6 +661,22 @@ public class BillingPanel extends JPanel {
 
         // Quick phone search auto-select customer
         txtCustPhone.addActionListener(e -> quickSearchCustomer(txtCustPhone.getText().trim()));
+
+        // Payment mode selection change: reset cash to 0.00 for online / non-cash modes
+        cmbPaymentMode.addActionListener(e -> {
+            String mode = (String) cmbPaymentMode.getSelectedItem();
+            boolean isCash = "CASH".equalsIgnoreCase(mode);
+            if (isCash) {
+                if (cashTendered <= 0.0 || Math.abs(cashTendered - grandTotal) < 0.01) {
+                    cashTendered = grandTotal;
+                    txtCashPaid.setText(String.format("%.2f", grandTotal));
+                }
+            } else {
+                cashTendered = 0.0;
+                txtCashPaid.setText("0.00");
+            }
+            updateCashCalculations();
+        });
     }
 
     private JLabel createWhiteLabel(String text) {
@@ -1145,16 +1161,25 @@ public class BillingPanel extends JPanel {
         lblGstAmount.setText(String.format("₹%.2f", gstAmount));
         lblGrandTotal.setText(String.format("₹%.2f", grandTotal));
 
-        // Auto-update cash tendered to grand total so bill is ready for immediate payment
-        if ("CASH".equalsIgnoreCase((String) cmbPaymentMode.getSelectedItem()) || cashTendered <= 0.0 || Math.abs(cashTendered - grandTotal) < 0.01) {
-            cashTendered = grandTotal;
-            txtCashPaid.setText(String.format("%.2f", grandTotal));
+        // Auto-update cash tendered: only for CASH mode, otherwise 0.00
+        boolean isCash = "CASH".equalsIgnoreCase((String) cmbPaymentMode.getSelectedItem());
+        if (isCash) {
+            if (cashTendered <= 0.0 || Math.abs(cashTendered - grandTotal) < 0.01) {
+                cashTendered = grandTotal;
+                txtCashPaid.setText(String.format("%.2f", grandTotal));
+            }
+        } else {
+            cashTendered = 0.0;
+            txtCashPaid.setText("0.00");
         }
 
         updateCashCalculations();
     }
 
     private void setTenderedCash(double amt) {
+        if (amt > 0) {
+            cmbPaymentMode.setSelectedItem("CASH");
+        }
         cashTendered = amt;
         txtCashPaid.setText(String.format("%.2f", cashTendered));
         updateCashCalculations();
@@ -1170,10 +1195,17 @@ public class BillingPanel extends JPanel {
             cur += key;
             txtCashPaid.setText(cur);
         }
+        cmbPaymentMode.setSelectedItem("CASH");
         updateCashCalculations();
     }
 
     private void updateCashCalculations() {
+        boolean isCash = "CASH".equalsIgnoreCase((String) cmbPaymentMode.getSelectedItem());
+        if (!isCash) {
+            cashTendered = 0.0;
+            lblChangeDue.setText("₹0.00");
+            return;
+        }
         try {
             cashTendered = Double.parseDouble(txtCashPaid.getText().trim());
         } catch (Exception e) {
@@ -1205,11 +1237,14 @@ public class BillingPanel extends JPanel {
     }
 
     private void openUpiDialog() {
+        cmbPaymentMode.setSelectedItem("UPI");
+        cashTendered = 0.0;
+        txtCashPaid.setText("0.00");
+        updateCashCalculations();
+
         Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
         UpiQrDialog upiDialog = new UpiQrDialog(owner, "bazaarpoint@upi", "SmartBilling Pro", grandTotal, txtInvoiceNo.getText().trim());
         upiDialog.setVisible(true);
-        cmbPaymentMode.setSelectedItem("UPI");
-        setTenderedCash(grandTotal);
     }
 
     private void holdCurrentBill() {
@@ -1311,6 +1346,9 @@ public class BillingPanel extends JPanel {
         txtCashPaid.setText("0.00");
         txtBarcode.setText("");
         txtCustPhone.setText("");
+        if (cmbPaymentMode != null) {
+            cmbPaymentMode.setSelectedItem("CASH");
+        }
         if (cmbCustomer != null && cmbCustomer.getItemCount() > 0) {
             isUpdatingCustomerCombo = true;
             cmbCustomer.setSelectedIndex(0);
