@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS sales (
     gst_rate DECIMAL(5, 2) NOT NULL DEFAULT 18.00,
     gst_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     total_amount DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
-    payment_mode ENUM('CASH', 'ONLINE', 'CARD', 'CREDIT') DEFAULT 'CASH',
+    payment_mode VARCHAR(50) DEFAULT 'CASH',
     created_by INT,
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL

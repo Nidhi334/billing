@@ -9,6 +9,7 @@ public class Sale {
     private String invoiceNo;
     private Integer customerId;
     private String customerName;
+    private String customerPhone;
     private Timestamp saleDate;
     private double subtotal;
     private double gstRate;
@@ -34,6 +35,9 @@ public class Sale {
 
     public String getCustomerName() { return customerName; }
     public void setCustomerName(String customerName) { this.customerName = customerName; }
+
+    public String getCustomerPhone() { return customerPhone; }
+    public void setCustomerPhone(String customerPhone) { this.customerPhone = customerPhone; }
 
     public Timestamp getSaleDate() { return saleDate; }
     public void setSaleDate(Timestamp saleDate) { this.saleDate = saleDate; }

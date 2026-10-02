@@ -39,6 +39,7 @@ public class BillingPanel extends JPanel {
     private JTextField txtCustPhone;
     private JTextField txtInvoiceNo;
     private JComboBox<String> cmbPaymentMode;
+    private boolean isUpdatingCustomerCombo = false;
 
     // Cart table
     private DefaultTableModel cartModel;
@@ -241,7 +242,27 @@ public class BillingPanel extends JPanel {
         // 2. Customer
         JPanel pCust = new JPanel(new BorderLayout(4, 2));
         pCust.setBackground(Color.WHITE);
-        pCust.add(new JLabel("Customer (F3):"), BorderLayout.NORTH);
+        JPanel pCustHeader = new JPanel(new BorderLayout(4, 0));
+        pCustHeader.setOpaque(false);
+        JLabel lblCust = new JLabel("Customer (F3):");
+        lblCust.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        pCustHeader.add(lblCust, BorderLayout.WEST);
+
+        JButton btnQuickAdd = new JButton("+ New");
+        btnQuickAdd.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        btnQuickAdd.setForeground(new Color(37, 99, 235));
+        btnQuickAdd.setBackground(new Color(239, 246, 255));
+        btnQuickAdd.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(191, 219, 254), 1),
+                new EmptyBorder(1, 6, 1, 6)
+        ));
+        btnQuickAdd.setFocusable(false);
+        btnQuickAdd.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnQuickAdd.setToolTipText("Quick Add New Customer");
+        btnQuickAdd.addActionListener(e -> openQuickAddCustomerDialog(txtCustPhone.getText().trim()));
+        pCustHeader.add(btnQuickAdd, BorderLayout.EAST);
+        pCust.add(pCustHeader, BorderLayout.NORTH);
+
         cmbCustomer = new JComboBox<>();
         pCust.add(cmbCustomer, BorderLayout.CENTER);
         metaPanel.add(pCust);
@@ -249,9 +270,10 @@ public class BillingPanel extends JPanel {
         // 3. Customer Mobile Quick Search
         JPanel pPhone = new JPanel(new BorderLayout(4, 2));
         pPhone.setBackground(Color.WHITE);
-        pPhone.add(new JLabel("Mobile / Search:"), BorderLayout.NORTH);
+        pPhone.add(new JLabel("Mobile / Search (Enter):"), BorderLayout.NORTH);
         txtCustPhone = new JTextField();
         txtCustPhone.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        txtCustPhone.setToolTipText("Enter customer mobile to search or register (Press Enter)");
         pPhone.add(txtCustPhone, BorderLayout.CENTER);
         metaPanel.add(pPhone);
 
@@ -626,6 +648,17 @@ public class BillingPanel extends JPanel {
             }
         });
 
+        // Customer selection sync
+        cmbCustomer.addActionListener(e -> {
+            if (isUpdatingCustomerCombo) return;
+            Customer c = (Customer) cmbCustomer.getSelectedItem();
+            if (c != null && c.getId() > 0) {
+                txtCustPhone.setText(c.getPhone() != null ? c.getPhone() : "");
+            } else {
+                txtCustPhone.setText("");
+            }
+        });
+
         // Quick phone search auto-select customer
         txtCustPhone.addActionListener(e -> quickSearchCustomer(txtCustPhone.getText().trim()));
     }
@@ -737,39 +770,196 @@ public class BillingPanel extends JPanel {
     }
 
     public void loadCustomers() {
+        isUpdatingCustomerCombo = true;
         try {
+            Customer prev = (Customer) cmbCustomer.getSelectedItem();
+            int prevId = prev != null ? prev.getId() : 0;
             cmbCustomer.removeAllItems();
             cmbCustomer.addItem(new Customer(0, "Walk-in Customer", "", "", ""));
             List<Customer> customers = customerDAO.getAllCustomers();
             for (Customer c : customers) {
                 cmbCustomer.addItem(c);
+                if (c.getId() == prevId) {
+                    cmbCustomer.setSelectedItem(c);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            isUpdatingCustomerCombo = false;
+        }
+    }
+
+    private void quickSearchCustomer(String query) {
+        if (query == null || query.trim().isEmpty()) return;
+        String q = query.trim();
+        try {
+            List<Customer> list = customerDAO.searchCustomers(q);
+            if (!list.isEmpty()) {
+                Customer matched = list.get(0);
+                for (int i = 0; i < cmbCustomer.getItemCount(); i++) {
+                    Customer item = cmbCustomer.getItemAt(i);
+                    if (item.getId() == matched.getId()) {
+                        isUpdatingCustomerCombo = true;
+                        cmbCustomer.setSelectedIndex(i);
+                        isUpdatingCustomerCombo = false;
+                        break;
+                    }
+                }
+                txtCustPhone.setText(matched.getPhone() != null && !matched.getPhone().isEmpty() ? matched.getPhone() : matched.getName());
+                focusBarcodeField();
+            } else {
+                int choice = JOptionPane.showConfirmDialog(
+                        this,
+                        "Customer '" + q + "' not found.\nWould you like to register this customer now?",
+                        "Customer Not Found",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.QUESTION_MESSAGE
+                );
+                if (choice == JOptionPane.YES_OPTION) {
+                    openQuickAddCustomerDialog(q);
+                } else {
+                    txtCustPhone.requestFocus();
+                    txtCustPhone.selectAll();
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void quickSearchCustomer(String query) {
-        if (query.isEmpty()) return;
-        try {
-            List<Customer> list = customerDAO.searchCustomers(query);
-            if (!list.isEmpty()) {
-                Customer matched = list.get(0);
-                for (int i = 0; i < cmbCustomer.getItemCount(); i++) {
-                    Customer item = cmbCustomer.getItemAt(i);
-                    if (item.getId() == matched.getId()) {
-                        cmbCustomer.setSelectedIndex(i);
-                        break;
-                    }
-                }
-                txtCustPhone.setText(matched.getPhone() != null ? matched.getPhone() : matched.getName());
-                focusBarcodeField();
-            } else {
-                JOptionPane.showMessageDialog(this, "No customer found for '" + query + "'");
+    public Customer openQuickAddCustomerDialog(String phonePrefill) {
+        Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+        JDialog dlg = new JDialog(owner, "Quick Add Customer", true);
+        dlg.setLayout(new BorderLayout(10, 10));
+        dlg.setSize(400, 270);
+        dlg.setLocationRelativeTo(owner);
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(new Color(241, 245, 249));
+        header.setBorder(new EmptyBorder(10, 16, 10, 16));
+        JLabel lblHeader = new JLabel("Register New Customer");
+        lblHeader.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblHeader.setForeground(new Color(30, 41, 59));
+        header.add(lblHeader, BorderLayout.CENTER);
+        dlg.add(header, BorderLayout.NORTH);
+
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setBorder(new EmptyBorder(14, 16, 10, 16));
+        form.setBackground(Color.WHITE);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel lblPhone = new JLabel("Mobile No:*");
+        lblPhone.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JTextField txtPhone = new JTextField(phonePrefill != null ? phonePrefill : "", 15);
+        txtPhone.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+
+        JLabel lblName = new JLabel("Full Name:*");
+        lblName.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JTextField txtName = new JTextField(15);
+        txtName.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+
+        JLabel lblAddress = new JLabel("City / Address:");
+        lblAddress.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        JTextField txtAddress = new JTextField(15);
+        txtAddress.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+
+        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.32;
+        form.add(lblPhone, gbc);
+        gbc.gridx = 1; gbc.weightx = 0.68;
+        form.add(txtPhone, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.32;
+        form.add(lblName, gbc);
+        gbc.gridx = 1; gbc.weightx = 0.68;
+        form.add(txtName, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0.32;
+        form.add(lblAddress, gbc);
+        gbc.gridx = 1; gbc.weightx = 0.68;
+        form.add(txtAddress, gbc);
+
+        final Customer[] result = new Customer[1];
+
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+        footer.setBackground(new Color(248, 250, 252));
+        JButton btnCancel = new JButton("Cancel");
+        JButton btnSave = new JButton("Save & Select Customer");
+        btnSave.setBackground(new Color(37, 99, 235));
+        btnSave.setForeground(Color.WHITE);
+        btnSave.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnSave.setFocusPainted(false);
+
+        btnCancel.addActionListener(e -> dlg.dispose());
+
+        ActionListener saveAction = e -> {
+            String p = txtPhone.getText().trim();
+            String n = txtName.getText().trim();
+            String addr = txtAddress.getText().trim();
+
+            if (n.isEmpty()) {
+                JOptionPane.showMessageDialog(dlg, "Please enter customer name.", "Required Field", JOptionPane.WARNING_MESSAGE);
+                txtName.requestFocus();
+                return;
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+
+            Customer c = new Customer();
+            c.setName(n);
+            c.setPhone(p);
+            c.setAddress(addr);
+            c.setEmail("");
+
+            try {
+                boolean ok = customerDAO.addCustomer(c);
+                if (ok) {
+                    result[0] = c;
+                    loadCustomers();
+                    for (int i = 0; i < cmbCustomer.getItemCount(); i++) {
+                        Customer item = cmbCustomer.getItemAt(i);
+                        if (item.getId() == c.getId()) {
+                            isUpdatingCustomerCombo = true;
+                            cmbCustomer.setSelectedIndex(i);
+                            isUpdatingCustomerCombo = false;
+                            break;
+                        }
+                    }
+                    txtCustPhone.setText(c.getPhone() != null && !c.getPhone().isEmpty() ? c.getPhone() : c.getName());
+                    dlg.dispose();
+                    focusBarcodeField();
+                } else {
+                    JOptionPane.showMessageDialog(dlg, "Failed to register customer.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dlg, "Error saving customer: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        };
+
+        btnSave.addActionListener(saveAction);
+        txtName.addActionListener(saveAction);
+        txtPhone.addActionListener(e -> {
+            if (!txtPhone.getText().trim().isEmpty()) {
+                txtName.requestFocus();
+            }
+        });
+
+        footer.add(btnCancel);
+        footer.add(btnSave);
+
+        dlg.add(form, BorderLayout.CENTER);
+        dlg.add(footer, BorderLayout.SOUTH);
+
+        SwingUtilities.invokeLater(() -> {
+            if (phonePrefill != null && !phonePrefill.isEmpty()) {
+                txtName.requestFocusInWindow();
+            } else {
+                txtPhone.requestFocusInWindow();
+            }
+        });
+
+        dlg.setVisible(true);
+        return result[0];
     }
 
     public void handleBarcodeScan() {
@@ -1120,6 +1310,12 @@ public class BillingPanel extends JPanel {
         cashTendered = 0.0;
         txtCashPaid.setText("0.00");
         txtBarcode.setText("");
+        txtCustPhone.setText("");
+        if (cmbCustomer != null && cmbCustomer.getItemCount() > 0) {
+            isUpdatingCustomerCombo = true;
+            cmbCustomer.setSelectedIndex(0);
+            isUpdatingCustomerCombo = false;
+        }
         calculateTotals();
         loadProductCache();
         focusBarcodeField();
@@ -1144,6 +1340,228 @@ public class BillingPanel extends JPanel {
         });
     }
 
+    private static class CustomerPromptResult {
+        boolean cancelled = false;
+        Customer customer = null;
+    }
+
+    private CustomerPromptResult promptCustomerDetailsBeforeCheckout(String prefillPhone) {
+        CustomerPromptResult res = new CustomerPromptResult();
+        Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+        JDialog dlg = new JDialog(owner, "Customer Details - Billing", true);
+        dlg.setSize(440, 310);
+        dlg.setLocationRelativeTo(owner);
+        dlg.setLayout(new BorderLayout());
+
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(241, 245, 249));
+        headerPanel.setBorder(new EmptyBorder(12, 16, 12, 16));
+        JLabel lblTitle = new JLabel("Customer Information (Bill #" + txtInvoiceNo.getText() + ")");
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblTitle.setForeground(new Color(15, 23, 42));
+        JLabel lblSubtitle = new JLabel("Enter customer mobile to link bill & records, or Skip for Walk-in");
+        lblSubtitle.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblSubtitle.setForeground(new Color(100, 116, 139));
+        headerPanel.add(lblTitle, BorderLayout.NORTH);
+        headerPanel.add(lblSubtitle, BorderLayout.SOUTH);
+        dlg.add(headerPanel, BorderLayout.NORTH);
+
+        JPanel form = new JPanel(new GridBagLayout());
+        form.setBackground(Color.WHITE);
+        form.setBorder(new EmptyBorder(16, 20, 10, 20));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel lblPhone = new JLabel("Mobile Number:");
+        lblPhone.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JTextField txtPhone = new JTextField(prefillPhone != null ? prefillPhone : "", 15);
+        txtPhone.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+
+        JLabel lblName = new JLabel("Customer Name:");
+        lblName.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JTextField txtName = new JTextField(15);
+        txtName.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+
+        JLabel lblStatus = new JLabel("Type mobile number to search or add");
+        lblStatus.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        lblStatus.setForeground(new Color(100, 116, 139));
+
+        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.35;
+        form.add(lblPhone, gbc);
+        gbc.gridx = 1; gbc.weightx = 0.65;
+        form.add(txtPhone, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.35;
+        form.add(lblName, gbc);
+        gbc.gridx = 1; gbc.weightx = 0.65;
+        form.add(txtName, gbc);
+
+        gbc.gridx = 1; gbc.gridy = 2; gbc.weightx = 0.65;
+        form.add(lblStatus, gbc);
+
+        dlg.add(form, BorderLayout.CENTER);
+
+        Runnable checkPhone = () -> {
+            String p = txtPhone.getText().trim();
+            if (p.length() >= 10 || (p.length() >= 4 && !p.isEmpty())) {
+                try {
+                    Customer exist = customerDAO.getCustomerByPhone(p);
+                    if (exist == null) {
+                        List<Customer> list = customerDAO.searchCustomers(p);
+                        if (!list.isEmpty()) exist = list.get(0);
+                    }
+                    if (exist != null) {
+                        txtName.setText(exist.getName());
+                        lblStatus.setText("✓ Existing: " + exist.getName());
+                        lblStatus.setForeground(new Color(22, 163, 74));
+                    } else {
+                        lblStatus.setText("New customer (will be registered)");
+                        lblStatus.setForeground(new Color(37, 99, 235));
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        };
+
+        txtPhone.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                checkPhone.run();
+            }
+        });
+        if (prefillPhone != null && !prefillPhone.isEmpty()) {
+            checkPhone.run();
+        }
+
+        JPanel footer = new JPanel(new BorderLayout(8, 8));
+        footer.setBackground(new Color(248, 250, 252));
+        footer.setBorder(new EmptyBorder(10, 16, 12, 16));
+
+        JButton btnSkip = new JButton("Skip (Walk-in Customer)");
+        btnSkip.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        btnSkip.setToolTipText("Proceed as Walk-in Customer without saving details (Esc)");
+
+        JPanel rightBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        rightBtns.setOpaque(false);
+        JButton btnCancel = new JButton("Cancel");
+        JButton btnContinue = new JButton("Save & Bill (Enter)");
+        btnContinue.setBackground(new Color(37, 99, 235));
+        btnContinue.setForeground(Color.WHITE);
+        btnContinue.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnContinue.setFocusPainted(false);
+        rightBtns.add(btnCancel);
+        rightBtns.add(btnContinue);
+
+        footer.add(btnSkip, BorderLayout.WEST);
+        footer.add(rightBtns, BorderLayout.EAST);
+        dlg.add(footer, BorderLayout.SOUTH);
+
+        btnCancel.addActionListener(e -> {
+            res.cancelled = true;
+            dlg.dispose();
+        });
+
+        btnSkip.addActionListener(e -> {
+            res.cancelled = false;
+            res.customer = null;
+            dlg.dispose();
+        });
+
+        ActionListener proceedAction = e -> {
+            String p = txtPhone.getText().trim();
+            String n = txtName.getText().trim();
+
+            if (p.isEmpty() && n.isEmpty()) {
+                res.cancelled = false;
+                res.customer = null;
+                dlg.dispose();
+                return;
+            }
+
+            try {
+                Customer existing = null;
+                if (!p.isEmpty()) {
+                    existing = customerDAO.getCustomerByPhone(p);
+                }
+                if (existing == null && !n.isEmpty()) {
+                    List<Customer> matches = customerDAO.searchCustomers(n);
+                    for (Customer mc : matches) {
+                        if (mc.getName().equalsIgnoreCase(n)) {
+                            existing = mc;
+                            break;
+                        }
+                    }
+                }
+
+                if (existing != null) {
+                    res.customer = existing;
+                } else {
+                    Customer newCust = new Customer();
+                    newCust.setName(n.isEmpty() ? "Cust " + p : n);
+                    newCust.setPhone(p);
+                    newCust.setEmail("");
+                    newCust.setAddress("");
+                    customerDAO.addCustomer(newCust);
+                    res.customer = newCust;
+                }
+
+                loadCustomers();
+                if (res.customer != null) {
+                    for (int i = 0; i < cmbCustomer.getItemCount(); i++) {
+                        Customer item = cmbCustomer.getItemAt(i);
+                        if (item.getId() == res.customer.getId()) {
+                            isUpdatingCustomerCombo = true;
+                            cmbCustomer.setSelectedIndex(i);
+                            isUpdatingCustomerCombo = false;
+                            break;
+                        }
+                    }
+                    txtCustPhone.setText(res.customer.getPhone() != null ? res.customer.getPhone() : "");
+                }
+
+                res.cancelled = false;
+                dlg.dispose();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dlg, "Error saving customer: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        };
+
+        btnContinue.addActionListener(proceedAction);
+        txtName.addActionListener(proceedAction);
+        txtPhone.addActionListener(e -> {
+            if (!txtPhone.getText().trim().isEmpty() && txtName.getText().trim().isEmpty()) {
+                checkPhone.run();
+                txtName.requestFocus();
+            } else {
+                proceedAction.actionPerformed(e);
+            }
+        });
+
+        dlg.getRootPane().setDefaultButton(btnContinue);
+        dlg.getRootPane().registerKeyboardAction(
+                e -> {
+                    res.cancelled = false;
+                    res.customer = null;
+                    dlg.dispose();
+                },
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
+        SwingUtilities.invokeLater(() -> {
+            if (prefillPhone != null && !prefillPhone.isEmpty()) {
+                txtName.requestFocusInWindow();
+            } else {
+                txtPhone.requestFocusInWindow();
+            }
+        });
+
+        dlg.setVisible(true);
+        return res;
+    }
+
     public void completeSale() {
         if (cartItems.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Cart is empty! Add products before checking out.", "Empty Cart", JOptionPane.WARNING_MESSAGE);
@@ -1154,11 +1572,31 @@ public class BillingPanel extends JPanel {
         Customer cust = (Customer) cmbCustomer.getSelectedItem();
         Integer custId = (cust != null && cust.getId() > 0) ? cust.getId() : null;
         String custName = cust != null ? cust.getName() : "Walk-in Customer";
+        String custPhone = (cust != null && cust.getPhone() != null) ? cust.getPhone().trim() : txtCustPhone.getText().trim();
+
+        // If customer is currently Walk-in Customer (custId == null), ask cashier for customer details
+        if (custId == null || custId == 0) {
+            CustomerPromptResult promptRes = promptCustomerDetailsBeforeCheckout(custPhone);
+            if (promptRes.cancelled) {
+                return;
+            }
+            if (promptRes.customer != null) {
+                cust = promptRes.customer;
+                custId = cust.getId();
+                custName = cust.getName();
+                custPhone = cust.getPhone() != null ? cust.getPhone() : "";
+            } else {
+                custName = "Walk-in Customer";
+                custId = null;
+                custPhone = "";
+            }
+        }
 
         Sale sale = new Sale();
         sale.setInvoiceNo(txtInvoiceNo.getText().trim());
         sale.setCustomerId(custId);
         sale.setCustomerName(custName);
+        sale.setCustomerPhone(custPhone);
         sale.setSubtotal(subtotal);
         sale.setGstRate(gstRate);
         sale.setGstAmount(gstAmount);

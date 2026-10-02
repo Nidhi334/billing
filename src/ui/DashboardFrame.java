@@ -149,9 +149,9 @@ public class DashboardFrame extends JFrame {
 
         btnNavHome = createSidebarButton("🏠  Dashboard");
         btnNavBilling = createSidebarButton("🧾  New Sale / Billing");
+        btnNavCustomers = createSidebarButton("👨‍💼  Customers");
         btnNavProducts = createSidebarButton("📦  Products");
         btnNavInventory = createSidebarButton("📊  Inventory / Stock");
-        btnNavCustomers = createSidebarButton("👨‍💼  Customers");
         btnNavSuppliers = createSidebarButton("🛒  Suppliers");
         btnNavReports = createSidebarButton("📈  Reports & P/L");
         btnNavSettings = createSidebarButton("⚙️  Settings");
@@ -160,11 +160,11 @@ public class DashboardFrame extends JFrame {
         sidebar.add(Box.createVerticalStrut(6));
         sidebar.add(btnNavBilling);
         sidebar.add(Box.createVerticalStrut(6));
+        sidebar.add(btnNavCustomers);
+        sidebar.add(Box.createVerticalStrut(6));
         sidebar.add(btnNavProducts);
         sidebar.add(Box.createVerticalStrut(6));
         sidebar.add(btnNavInventory);
-        sidebar.add(Box.createVerticalStrut(6));
-        sidebar.add(btnNavCustomers);
         sidebar.add(Box.createVerticalStrut(6));
         sidebar.add(btnNavSuppliers);
         sidebar.add(Box.createVerticalStrut(6));

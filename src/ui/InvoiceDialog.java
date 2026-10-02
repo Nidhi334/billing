@@ -131,7 +131,10 @@ public class InvoiceDialog extends JDialog {
         sb.append("--------------------------------\n");
         sb.append(String.format("Bill: %-15s %10s\n", sale.getInvoiceNo(), dateStr));
         String cust = sale.getCustomerName() != null ? sale.getCustomerName() : "Walk-in";
-        if (cust.length() > 24) cust = cust.substring(0, 22) + "..";
+        if (sale.getCustomerPhone() != null && !sale.getCustomerPhone().isEmpty()) {
+            cust = cust + " (" + sale.getCustomerPhone() + ")";
+        }
+        if (cust.length() > 26) cust = cust.substring(0, 24) + "..";
         sb.append(String.format("Cust: %-26s\n", cust));
         sb.append(String.format("Pay : %-15s Desk #1\n", sale.getPaymentMode()));
         sb.append("--------------------------------\n");
@@ -180,7 +183,12 @@ public class InvoiceDialog extends JDialog {
         sb.append("============================================\n");
         sb.append(String.format("Invoice No : %-30s\n", sale.getInvoiceNo()));
         sb.append(String.format("Date & Time: %-30s\n", dateStr));
-        sb.append(String.format("Customer   : %-30s\n", (sale.getCustomerName() != null ? sale.getCustomerName() : "Walk-in Customer")));
+        String cust3 = (sale.getCustomerName() != null ? sale.getCustomerName() : "Walk-in Customer");
+        if (sale.getCustomerPhone() != null && !sale.getCustomerPhone().isEmpty()) {
+            cust3 = cust3 + " (" + sale.getCustomerPhone() + ")";
+        }
+        if (cust3.length() > 30) cust3 = cust3.substring(0, 28) + "..";
+        sb.append(String.format("Customer   : %-30s\n", cust3));
         sb.append(String.format("Cashier    : %-18s Pay: %-10s\n", (sale.getCashierName() != null ? sale.getCashierName() : "Admin"), sale.getPaymentMode()));
         sb.append("--------------------------------------------\n");
         sb.append(String.format("%-18s %4s %9s %9s\n", "Item Description", "Qty", "Price", "Amount"));
@@ -229,7 +237,12 @@ public class InvoiceDialog extends JDialog {
         sb.append("====================================================\n");
         sb.append(String.format("Invoice No : %-20s\n", sale.getInvoiceNo()));
         sb.append(String.format("Date & Time: %-20s\n", dateStr));
-        sb.append(String.format("Customer   : %-20s\n", (sale.getCustomerName() != null ? sale.getCustomerName() : "Walk-in Customer")));
+        String custStd = (sale.getCustomerName() != null ? sale.getCustomerName() : "Walk-in Customer");
+        if (sale.getCustomerPhone() != null && !sale.getCustomerPhone().isEmpty()) {
+            custStd = custStd + " (" + sale.getCustomerPhone() + ")";
+        }
+        if (custStd.length() > 30) custStd = custStd.substring(0, 28) + "..";
+        sb.append(String.format("Customer   : %-30s\n", custStd));
         sb.append(String.format("Payment By : %-20s\n", sale.getPaymentMode()));
         sb.append("----------------------------------------------------\n");
         sb.append(String.format("%-20s %5s %11s %12s\n", "Item Name", "Qty", "Price", "Total"));
