@@ -475,11 +475,11 @@ public class DashboardFrame extends JFrame {
 
         // 1. Metric Cards Grid: Dynamic column count
         int targetCols;
-        if (availableWidth >= 980) {
+        if (availableWidth >= 1200) {
             targetCols = 5;
-        } else if (availableWidth >= 780) {
+        } else if (availableWidth >= 960) {
             targetCols = 4;
-        } else if (availableWidth >= 580) {
+        } else if (availableWidth >= 700) {
             targetCols = 3;
         } else {
             targetCols = 2;
@@ -489,8 +489,8 @@ public class DashboardFrame extends JFrame {
             currentStatsCols = targetCols;
             int totalCards = 10;
             int rows = (int) Math.ceil((double) totalCards / targetCols);
-            int gridHeight = (rows * 84) + ((rows - 1) * 10);
-            statsGrid.setLayout(new GridLayout(0, targetCols, 12, 10));
+            int gridHeight = (rows * 72) + ((rows - 1) * 12);
+            statsGrid.setLayout(new GridLayout(0, targetCols, 12, 12));
             statsGrid.setPreferredSize(new Dimension(0, gridHeight));
             statsGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, gridHeight));
             statsGrid.revalidate();
@@ -499,7 +499,7 @@ public class DashboardFrame extends JFrame {
         // 2. Chart Toolbar: Wrap filters if width is constrained
         if (chartToolbar != null && lblChartHeader != null && filtersPanel != null) {
             chartToolbar.removeAll();
-            if (availableWidth >= 950) {
+            if (availableWidth >= 1050) {
                 chartToolbar.setLayout(new BorderLayout(10, 0));
                 chartToolbar.setPreferredSize(new Dimension(0, 36));
                 chartToolbar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
@@ -517,9 +517,9 @@ public class DashboardFrame extends JFrame {
 
         // 3. Visual Charts: Responsive arrangement
         int targetChartsMode;
-        if (availableWidth >= 980) {
-            targetChartsMode = 0; // 3 columns side by side filling all remaining vertical space
-        } else if (availableWidth >= 680) {
+        if (availableWidth >= 1250) {
+            targetChartsMode = 0; // 3 columns side by side
+        } else if (availableWidth >= 780) {
             targetChartsMode = 1; // 2 tiers: Row 1 = 2 charts, Row 2 = 1 wide chart
         } else {
             targetChartsMode = 2; // 1 column stacked
@@ -530,9 +530,9 @@ public class DashboardFrame extends JFrame {
             chartsWrapper.removeAll();
 
             if (targetChartsMode == 0) {
-                // 3 columns side-by-side filling all available vertical space down to bottom
+                // 3 columns side-by-side filling all available vertical space
                 chartsWrapper.setLayout(new GridLayout(1, 3, 14, 0));
-                chartsWrapper.setPreferredSize(new Dimension(0, 350));
+                chartsWrapper.setPreferredSize(null);
                 chartsWrapper.setMaximumSize(null);
                 revenueBarChart.setPreferredSize(null);
                 revenuePieChart.setPreferredSize(null);
