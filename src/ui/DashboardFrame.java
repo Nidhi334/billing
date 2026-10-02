@@ -320,7 +320,7 @@ public class DashboardFrame extends JFrame {
         }
         @Override
         public boolean getScrollableTracksViewportHeight() {
-            return getParent() != null && getParent().getHeight() > getPreferredSize().height;
+            return false;
         }
     }
 
@@ -379,9 +379,7 @@ public class DashboardFrame extends JFrame {
         // 2. Chart Controls Toolbar
         chartToolbar = new JPanel(new BorderLayout(10, 0));
         chartToolbar.setOpaque(false);
-        chartToolbar.setBorder(new EmptyBorder(6, 0, 4, 0));
-        chartToolbar.setPreferredSize(new Dimension(0, 36));
-        chartToolbar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        chartToolbar.setBorder(new EmptyBorder(10, 0, 6, 0));
 
         lblChartHeader = new JLabel("📊 Interactive Revenue Visual Analytics & Trends");
         lblChartHeader.setFont(new Font("Segoe UI", Font.BOLD, 15));
@@ -427,20 +425,17 @@ public class DashboardFrame extends JFrame {
         topProductsChart = new HorizontalBarChartPanel();
 
         chartsWrapper = new JPanel();
-        // Top Section combining stats cards and chart toolbar
-        JPanel topSection = new JPanel();
-        topSection.setLayout(new BoxLayout(topSection, BoxLayout.Y_AXIS));
-        topSection.setOpaque(false);
-        topSection.add(statsGrid);
-        topSection.add(Box.createVerticalStrut(10));
-        topSection.add(chartToolbar);
+        chartsWrapper.setOpaque(false);
 
-        // Center container with BorderLayout: chartsWrapper fills all remaining height down to bottom!
+        // 4. Combine into responsive vertically scrollable body
         ResponsiveScrollablePanel centerContainer = new ResponsiveScrollablePanel();
-        centerContainer.setLayout(new BorderLayout(0, 10));
+        centerContainer.setLayout(new BoxLayout(centerContainer, BoxLayout.Y_AXIS));
         centerContainer.setOpaque(false);
-        centerContainer.add(topSection, BorderLayout.NORTH);
-        centerContainer.add(chartsWrapper, BorderLayout.CENTER);
+        centerContainer.add(statsGrid);
+        centerContainer.add(Box.createVerticalStrut(12));
+        centerContainer.add(chartToolbar);
+        centerContainer.add(Box.createVerticalStrut(8));
+        centerContainer.add(chartsWrapper);
 
         JScrollPane scrollPane = new JScrollPane(centerContainer);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -487,28 +482,20 @@ public class DashboardFrame extends JFrame {
 
         if (currentStatsCols != targetCols && statsGrid != null) {
             currentStatsCols = targetCols;
-            int totalCards = 10;
-            int rows = (int) Math.ceil((double) totalCards / targetCols);
-            int gridHeight = (rows * 72) + ((rows - 1) * 12);
             statsGrid.setLayout(new GridLayout(0, targetCols, 12, 12));
-            statsGrid.setPreferredSize(new Dimension(0, gridHeight));
-            statsGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, gridHeight));
             statsGrid.revalidate();
         }
 
         // 2. Chart Toolbar: Wrap filters if width is constrained
         if (chartToolbar != null && lblChartHeader != null && filtersPanel != null) {
-            chartToolbar.removeAll();
             if (availableWidth >= 1050) {
+                chartToolbar.removeAll();
                 chartToolbar.setLayout(new BorderLayout(10, 0));
-                chartToolbar.setPreferredSize(new Dimension(0, 36));
-                chartToolbar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
                 chartToolbar.add(lblChartHeader, BorderLayout.WEST);
                 chartToolbar.add(filtersPanel, BorderLayout.EAST);
             } else {
-                chartToolbar.setLayout(new BorderLayout(0, 6));
-                chartToolbar.setPreferredSize(new Dimension(0, 68));
-                chartToolbar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 68));
+                chartToolbar.removeAll();
+                chartToolbar.setLayout(new BorderLayout(0, 8));
                 chartToolbar.add(lblChartHeader, BorderLayout.NORTH);
                 chartToolbar.add(filtersPanel, BorderLayout.WEST);
             }
@@ -530,10 +517,10 @@ public class DashboardFrame extends JFrame {
             chartsWrapper.removeAll();
 
             if (targetChartsMode == 0) {
-                // 3 columns side-by-side filling all available vertical space
+                // 3 columns side-by-side
                 chartsWrapper.setLayout(new GridLayout(1, 3, 14, 0));
-                chartsWrapper.setPreferredSize(null);
-                chartsWrapper.setMaximumSize(null);
+                chartsWrapper.setPreferredSize(new Dimension(0, 340));
+                chartsWrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 340));
                 revenueBarChart.setPreferredSize(null);
                 revenuePieChart.setPreferredSize(null);
                 topProductsChart.setPreferredSize(null);
@@ -631,6 +618,7 @@ public class DashboardFrame extends JFrame {
             e.printStackTrace();
         }
     }
+
 
     private void refreshBarChartData() {
         if (revenueBarChart == null || cmbTimelineFilter == null) return;
