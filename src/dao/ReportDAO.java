@@ -339,4 +339,112 @@ public class ReportDAO {
         }
         return map;
     }
+
+    public List<Map<String, Object>> getRecentSales(int limit) throws SQLException {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT s.invoice_no, s.sale_date, COALESCE(c.name, 'Walk-in Customer') AS customer_name, " +
+                     "s.total_amount, s.payment_mode " +
+                     "FROM sales s " +
+                     "LEFT JOIN customers c ON s.customer_id = c.id " +
+                     "ORDER BY s.id DESC LIMIT ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("invoiceNo", rs.getString("invoice_no"));
+                    row.put("saleDate", rs.getString("sale_date"));
+                    row.put("customer", rs.getString("customer_name"));
+                    row.put("totalAmount", rs.getDouble("total_amount"));
+                    row.put("paymentMode", rs.getString("payment_mode"));
+                    list.add(row);
+                }
+            }
+        }
+        return list;
+    }
+
+    public List<Map<String, Object>> getLowStockProducts(int limit) throws SQLException {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT p.code, p.name, COALESCE(c.name, 'General') as category, p.quantity, p.min_stock_level " +
+                     "FROM products p " +
+                     "LEFT JOIN categories c ON p.category_id = c.id " +
+                     "WHERE p.quantity <= p.min_stock_level " +
+                     "ORDER BY p.quantity ASC LIMIT ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("code", rs.getString("code"));
+                    row.put("name", rs.getString("name"));
+                    row.put("category", rs.getString("category"));
+                    row.put("qty", rs.getInt("quantity"));
+                    row.put("minStock", rs.getInt("min_stock_level"));
+                    list.add(row);
+                }
+            }
+        }
+        return list;
+    }
+
+    public Map<String, Object> getFinancialOverview() throws SQLException {
+        Map<String, Object> fin = new HashMap<>();
+        double totalRevenue = 0.0;
+        double costOfGoods = 0.0;
+        double totalPurchases = 0.0;
+        double cashRevenue = 0.0;
+        double upiRevenue = 0.0;
+        double cardRevenue = 0.0;
+
+        try (Connection conn = DBConnection.getConnection()) {
+            String sqlRevenue = "SELECT COALESCE(SUM(total_amount), 0) FROM sales";
+            try (PreparedStatement ps = conn.prepareStatement(sqlRevenue);
+                 ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) totalRevenue = rs.getDouble(1);
+            }
+
+            String sqlCogs = "SELECT COALESCE(SUM(si.quantity * p.purchase_price), 0) " +
+                            "FROM sale_items si JOIN products p ON si.product_id = p.id";
+            try (PreparedStatement ps = conn.prepareStatement(sqlCogs);
+                 ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) costOfGoods = rs.getDouble(1);
+            }
+
+            String sqlPur = "SELECT COALESCE(SUM(total_amount), 0) FROM purchases";
+            try (PreparedStatement ps = conn.prepareStatement(sqlPur);
+                 ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) totalPurchases = rs.getDouble(1);
+            }
+
+            String sqlModes = "SELECT UPPER(COALESCE(payment_mode, 'OTHER')) as pmode, COALESCE(SUM(total_amount), 0) as amt " +
+                              "FROM sales GROUP BY UPPER(COALESCE(payment_mode, 'OTHER'))";
+            try (PreparedStatement ps = conn.prepareStatement(sqlModes);
+                 ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String m = rs.getString("pmode");
+                    double amt = rs.getDouble("amt");
+                    if (m.contains("CASH")) cashRevenue += amt;
+                    else if (m.contains("UPI")) upiRevenue += amt;
+                    else if (m.contains("CARD")) cardRevenue += amt;
+                }
+            }
+        }
+
+        double grossProfit = Math.max(0, totalRevenue - costOfGoods);
+        double profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100.0 : 0.0;
+
+        fin.put("totalRevenue", totalRevenue);
+        fin.put("costOfGoods", costOfGoods);
+        fin.put("totalPurchases", totalPurchases);
+        fin.put("grossProfit", grossProfit);
+        fin.put("profitMargin", profitMargin);
+        fin.put("cashRevenue", cashRevenue);
+        fin.put("upiRevenue", upiRevenue);
+        fin.put("cardRevenue", cardRevenue);
+
+        return fin;
+    }
 }
