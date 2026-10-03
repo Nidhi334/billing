@@ -49,8 +49,8 @@ public class HorizontalBarChartPanel extends JPanel {
         if (chartData == null || chartData.isEmpty()) return;
 
         int h = getHeight();
-        int topPad = 42;
-        int bottomPad = 20;
+        int topPad = 44;
+        int bottomPad = 22;
         int chartH = h - topPad - bottomPad;
         int count = chartData.size();
         int slotH = chartH / Math.max(1, count);
@@ -109,16 +109,16 @@ public class HorizontalBarChartPanel extends JPanel {
         int subW = g2.getFontMetrics().stringWidth(sub);
         g2.drawString(sub, w - subW - 16, 22);
 
-        int leftPad = Math.max(90, Math.min(140, w / 4));
-        int rightPad = Math.max(65, Math.min(90, w / 5));
-        int topPad = 42;
-        int bottomPad = 20;
+        int leftPad = Math.max(125, Math.min(170, (int)(w * 0.32)));
+        int rightPad = Math.max(65, Math.min(85, (int)(w * 0.18)));
+        int topPad = 44;
+        int bottomPad = 22;
         int chartW = Math.max(40, w - leftPad - rightPad);
         int chartH = h - topPad - bottomPad;
 
         int count = chartData.size();
         int slotH = chartH / Math.max(1, count);
-        int barH = Math.max(14, Math.min(26, slotH - 8));
+        int barH = Math.max(16, Math.min(30, slotH - 12));
 
         int idx = 0;
         String tooltipText = null;
@@ -136,9 +136,15 @@ public class HorizontalBarChartPanel extends JPanel {
             g2.setFont(new Font("Segoe UI", isHovered ? Font.BOLD : Font.PLAIN, 11));
             g2.setColor(isHovered ? new Color(30, 41, 59) : new Color(71, 85, 105));
             String name = entry.getKey();
-            int maxChars = Math.max(8, (leftPad - 16) / 7);
-            if (name.length() > maxChars) name = name.substring(0, Math.max(6, maxChars - 2)) + "..";
-            int nameW = g2.getFontMetrics().stringWidth(name);
+            FontMetrics fm = g2.getFontMetrics();
+            int maxAllowedW = leftPad - 14;
+            if (fm.stringWidth(name) > maxAllowedW) {
+                while (name.length() > 3 && fm.stringWidth(name + "…") > maxAllowedW) {
+                    name = name.substring(0, name.length() - 1);
+                }
+                name = name.trim() + "…";
+            }
+            int nameW = fm.stringWidth(name);
             g2.drawString(name, leftPad - nameW - 10, y + barH - 4);
 
             // Bar background track
