@@ -54,10 +54,10 @@ public class DailySalesBarChartPanel extends JPanel {
 
         int w = getWidth();
         int h = getHeight();
-        int leftPad = 68;
-        int rightPad = 20;
-        int topPad = 48;
-        int bottomPad = 42;
+        int leftPad = 55;
+        int rightPad = 25;
+        int topPad = 45;
+        int bottomPad = 45;
         int chartW = w - leftPad - rightPad;
         int chartH = h - topPad - bottomPad;
 
@@ -105,14 +105,12 @@ public class DailySalesBarChartPanel extends JPanel {
             return;
         }
 
-        double rawMax = 100.0;
+        double maxVal = 100.0;
         double totalRev = 0.0;
         for (double v : chartData.values()) {
-            if (v > rawMax) rawMax = v;
+            if (v > maxVal) maxVal = v;
             totalRev += v;
         }
-        // 18% headroom so the tallest bar and its value label have generous breathing room
-        double maxVal = rawMax * 1.18;
 
         // Subtitle Total
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
@@ -121,14 +119,14 @@ public class DailySalesBarChartPanel extends JPanel {
         int subW = g2.getFontMetrics().stringWidth(sub);
         g2.drawString(sub, w - subW - 16, 22);
 
-        int leftPad = 68;
-        int rightPad = 20;
-        int topPad = 48;
-        int bottomPad = 42;
+        int leftPad = 55;
+        int rightPad = 25;
+        int topPad = 45;
+        int bottomPad = 45;
         int chartW = w - leftPad - rightPad;
         int chartH = h - topPad - bottomPad;
 
-        // Draw horizontal gridlines & Y labels (right-aligned against axis)
+        // Draw horizontal gridlines & Y labels
         g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
         int gridSteps = 4;
         for (int i = 0; i <= gridSteps; i++) {
@@ -136,11 +134,10 @@ public class DailySalesBarChartPanel extends JPanel {
             g2.setColor(new Color(226, 232, 240));
             g2.drawLine(leftPad, y, leftPad + chartW, y);
 
-            double lblVal = (rawMax > 0) ? (rawMax * (gridSteps - i) / gridSteps) : 0;
+            double lblVal = maxVal * (gridSteps - i) / gridSteps;
             g2.setColor(new Color(100, 116, 139));
             String lbl = String.format("₹%.0f", lblVal);
-            int lw = g2.getFontMetrics().stringWidth(lbl);
-            g2.drawString(lbl, leftPad - lw - 8, y + 4);
+            g2.drawString(lbl, 8, y + 4);
         }
 
         // Draw Bars
@@ -173,7 +170,7 @@ public class DailySalesBarChartPanel extends JPanel {
                 g2.setColor(isHovered ? new Color(30, 41, 59) : new Color(71, 85, 105));
                 String vStr = String.format("₹%.0f", val);
                 int strW = g2.getFontMetrics().stringWidth(vStr);
-                g2.drawString(vStr, x + (barW - strW) / 2, Math.max(topPad - 2, y - 6));
+                g2.drawString(vStr, x + (barW - strW) / 2, Math.max(topPad - 5, y - 5));
             }
 
             // X-axis label
