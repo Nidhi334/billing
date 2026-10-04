@@ -150,6 +150,30 @@ public class DBConnection {
         }
     }
 
+    public static String testConnection(String host, String port, String dbName, String user, String password) {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            return "MySQL Driver not found in classpath!";
+        }
+
+        String targetUrl = "jdbc:mysql://" + host + ":" + port + "/" + dbName + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+        try (Connection conn = DriverManager.getConnection(targetUrl, user, password)) {
+            return "SUCCESS: Connected to database '" + dbName + "' successfully!";
+        } catch (SQLException e) {
+            if (e.getErrorCode() == 1049 || (e.getMessage() != null && e.getMessage().toLowerCase().contains("unknown database"))) {
+                // Try connecting to MySQL server root
+                String serverUrl = "jdbc:mysql://" + host + ":" + port + "/?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+                try (Connection conn = DriverManager.getConnection(serverUrl, user, password)) {
+                    return "CONNECTED TO MYSQL SERVER! (Database '" + dbName + "' will be automatically created on first login)";
+                } catch (SQLException ex) {
+                    return "ERROR: " + ex.getMessage();
+                }
+            }
+            return "ERROR: " + e.getMessage();
+        }
+    }
+
     public static Properties getProperties() {
         return properties;
     }

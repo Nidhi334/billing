@@ -19,7 +19,7 @@ public class LoginFrame extends JFrame {
 
     public LoginFrame() {
         setTitle("Login - Billing & Inventory Management System");
-        setSize(480, 520);
+        setSize(480, 640);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
@@ -97,11 +97,25 @@ public class LoginFrame extends JFrame {
         btnLogin.setBackground(new Color(37, 99, 235));
         btnLogin.setForeground(Color.WHITE);
         btnLogin.setFocusPainted(false);
-        btnLogin.setPreferredSize(new Dimension(320, 40));
+        btnLogin.setPreferredSize(new Dimension(320, 38));
         btnLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
         gbc.gridy = 5;
-        gbc.insets = new Insets(18, 10, 8, 10);
+        gbc.insets = new Insets(16, 10, 6, 10);
         formCard.add(btnLogin, gbc);
+
+        // Offline / Demo Login Button
+        JButton btnDemoLogin = new JButton("⚡ Quick Offline / Demo Login");
+        btnDemoLogin.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnDemoLogin.setBackground(new Color(241, 245, 249));
+        btnDemoLogin.setForeground(new Color(30, 41, 59));
+        btnDemoLogin.setFocusPainted(false);
+        btnDemoLogin.setPreferredSize(new Dimension(320, 34));
+        btnDemoLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnDemoLogin.setToolTipText("Login as Admin in Offline/Demo mode without waiting for MySQL");
+        btnDemoLogin.addActionListener(e -> launchDemoAdmin());
+        gbc.gridy = 6;
+        gbc.insets = new Insets(4, 10, 6, 10);
+        formCard.add(btnDemoLogin, gbc);
 
         // Secondary Links Row (Forgot Password & DB Settings)
         JPanel linksPanel = new JPanel(new BorderLayout(10, 0));
@@ -123,18 +137,38 @@ public class LoginFrame extends JFrame {
         btnDbConfig.setCursor(new Cursor(Cursor.HAND_CURSOR));
         linksPanel.add(btnDbConfig, BorderLayout.EAST);
 
-        gbc.gridy = 6;
-        gbc.insets = new Insets(8, 10, 4, 10);
+        gbc.gridy = 7;
+        gbc.insets = new Insets(6, 10, 4, 10);
         formCard.add(linksPanel, gbc);
 
         mainPanel.add(formCard, BorderLayout.CENTER);
 
-        // Footer note
+        // Footer Section
+        JPanel footerBox = new JPanel();
+        footerBox.setLayout(new BoxLayout(footerBox, BoxLayout.Y_AXIS));
+        footerBox.setOpaque(false);
+        footerBox.setBorder(new EmptyBorder(6, 15, 12, 15));
+
+        JButton btnKioskMode = new JButton("🛒 Launch Customer Self-Checkout Kiosk");
+        btnKioskMode.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnKioskMode.setBackground(new Color(16, 185, 129));
+        btnKioskMode.setForeground(Color.WHITE);
+        btnKioskMode.setFocusPainted(false);
+        btnKioskMode.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnKioskMode.setMaximumSize(new Dimension(360, 36));
+        btnKioskMode.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnKioskMode.setToolTipText("Open full-screen express self-service checkout kiosk");
+        btnKioskMode.addActionListener(e -> new SelfCheckoutFrame(null).setVisible(true));
+
         JLabel footerNote = new JLabel("Default logins: admin/admin123 (Admin) | staff/staff123 (Staff)", SwingConstants.CENTER);
         footerNote.setFont(new Font("Segoe UI", Font.ITALIC, 11));
         footerNote.setForeground(new Color(100, 116, 139));
-        footerNote.setBorder(new EmptyBorder(8, 8, 15, 8));
-        mainPanel.add(footerNote, BorderLayout.SOUTH);
+        footerNote.setAlignmentX(Component.CENTER_ALIGNMENT);
+        footerNote.setBorder(new EmptyBorder(6, 0, 0, 0));
+
+        footerBox.add(btnKioskMode);
+        footerBox.add(footerNote);
+        mainPanel.add(footerBox, BorderLayout.SOUTH);
 
         add(mainPanel);
 
@@ -143,6 +177,24 @@ public class LoginFrame extends JFrame {
         txtPassword.addActionListener(e -> performLogin());
         btnForgotPassword.addActionListener(e -> openForgotPasswordDialog());
         btnDbConfig.addActionListener(e -> openDbConfigDialog());
+    }
+
+    private void launchDemoAdmin() {
+        User demoAdmin = new User(1, "admin", "admin123", "System Administrator (Demo/Offline)", "ADMIN");
+        launchDashboard(demoAdmin);
+    }
+
+    private void launchDashboard(User user) {
+        try {
+            DashboardFrame dashboard = new DashboardFrame(user);
+            dashboard.setVisible(true);
+            dispose();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Login succeeded, but the dashboard could not be opened.\n\nDetails: " + ex.getMessage(),
+                    "Dashboard Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void performLogin() {
@@ -154,15 +206,49 @@ public class LoginFrame extends JFrame {
             return;
         }
 
-        User user;
+        User user = null;
         try {
             user = userDAO.authenticate(username, password);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Database connection error!\n\nDetails: " + ex.getMessage() +
-                    "\n\nPlease ensure MySQL is running and configured correctly via Database Settings button.",
-                    "Connection Error", JOptionPane.ERROR_MESSAGE);
-            return;
+            String msg = ex.getMessage() != null ? ex.getMessage() : "";
+            boolean isConnRefused = msg.toLowerCase().contains("connection refused")
+                    || msg.toLowerCase().contains("communications link failure")
+                    || msg.toLowerCase().contains("can't connect to local mysql server");
+
+            boolean isDefaultAdmin = "admin".equalsIgnoreCase(username) && "admin123".equals(password);
+            boolean isDefaultStaff = "staff".equalsIgnoreCase(username) && "staff123".equals(password);
+
+            if (isDefaultAdmin || isDefaultStaff) {
+                String notice = "⚠️ MySQL DATABASE IS NOT RUNNING (Connection Refused on port 3306)!\n\n"
+                        + "👉 MySQL service start karne ke liye terminal me ye command chalayein:\n"
+                        + "   sudo systemctl start mysql\n"
+                        + "   (ya: sudo service mysql start)\n\n"
+                        + "Kya aap abhi ke liye OFFLINE / DEMO MODE me Login karna chahte hain?";
+
+                int choice = JOptionPane.showConfirmDialog(this, notice,
+                        "MySQL Offline - Demo Mode Available", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+                if (choice == JOptionPane.YES_OPTION) {
+                    if (isDefaultAdmin) {
+                        launchDashboard(new User(1, "admin", "admin123", "System Administrator (Demo/Offline)", "ADMIN"));
+                    } else {
+                        launchDashboard(new User(2, "staff", "staff123", "Cashier Desk (Demo/Offline)", "STAFF"));
+                    }
+                    return;
+                } else {
+                    return;
+                }
+            } else {
+                String reason = isConnRefused
+                        ? "MySQL Database server band hai (Connection Refused)!\n\n"
+                          + "👉 Terminal me MySQL start karein:\n"
+                          + "   sudo systemctl start mysql\n\n"
+                          + "Ya Default credentials use karein: admin / admin123"
+                        : "Database connection error!\n\nDetails: " + msg
+                          + "\n\nPlease ensure MySQL is running and credentials in 'DB Settings' are correct.";
+                JOptionPane.showMessageDialog(this, reason, "Database Connection Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
         }
 
         if (user == null) {
@@ -170,16 +256,7 @@ public class LoginFrame extends JFrame {
             return;
         }
 
-        try {
-            DashboardFrame dashboard = new DashboardFrame(user);
-            dashboard.setVisible(true);
-            dispose();
-        } catch (RuntimeException ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this,
-                    "Login succeeded, but the dashboard could not be opened.\n\nDetails: " + ex.getMessage(),
-                    "Dashboard Error", JOptionPane.ERROR_MESSAGE);
-        }
+        launchDashboard(user);
     }
 
     private void openForgotPasswordDialog() {
@@ -195,12 +272,29 @@ public class LoginFrame extends JFrame {
         JTextField userField = new JTextField(prop.getProperty("db.user", "root"));
         JPasswordField passField = new JPasswordField(prop.getProperty("db.password", ""));
 
-        JPanel panel = new JPanel(new GridLayout(5, 2, 8, 8));
+        JPanel panel = new JPanel(new GridLayout(6, 2, 8, 8));
         panel.add(new JLabel("MySQL Host:")); panel.add(hostField);
         panel.add(new JLabel("MySQL Port:")); panel.add(portField);
         panel.add(new JLabel("Database Name:")); panel.add(dbField);
         panel.add(new JLabel("Username:")); panel.add(userField);
         panel.add(new JLabel("Password:")); panel.add(passField);
+
+        JButton btnTestConn = new JButton("🔍 Test Connection");
+        panel.add(btnTestConn);
+        panel.add(new JLabel("(Click to test)"));
+
+        btnTestConn.addActionListener(e -> {
+            String testResult = DBConnection.testConnection(
+                    hostField.getText().trim(),
+                    portField.getText().trim(),
+                    dbField.getText().trim(),
+                    userField.getText().trim(),
+                    new String(passField.getPassword())
+            );
+            JOptionPane.showMessageDialog(this, testResult, "Database Test Result",
+                    testResult.startsWith("SUCCESS") || testResult.startsWith("CONNECTED")
+                            ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE);
+        });
 
         int res = JOptionPane.showConfirmDialog(this, panel, "MySQL Database Settings", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (res == JOptionPane.OK_OPTION) {

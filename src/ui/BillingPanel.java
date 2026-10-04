@@ -233,6 +233,19 @@ public class BillingPanel extends JPanel {
         });
         heldBillsPanel.add(btnHistory);
 
+        JButton btnSelfCheckout = new JButton("🛒 Self Checkout");
+        btnSelfCheckout.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnSelfCheckout.setBackground(new Color(16, 185, 129));
+        btnSelfCheckout.setForeground(Color.WHITE);
+        btnSelfCheckout.setMargin(new Insets(2, 8, 2, 8));
+        btnSelfCheckout.setFocusable(false);
+        btnSelfCheckout.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnSelfCheckout.setToolTipText("Launch Customer Self-Checkout Express Kiosk");
+        btnSelfCheckout.addActionListener(e -> {
+            new SelfCheckoutFrame(currentUser).setVisible(true);
+        });
+        heldBillsPanel.add(btnSelfCheckout);
+
         headerStrip.add(heldBillsPanel, BorderLayout.EAST);
         topContainer.add(headerStrip, BorderLayout.NORTH);
 
