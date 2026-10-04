@@ -53,6 +53,7 @@ public class DashboardFrame extends JFrame {
     private JComboBox<String> cmbBreakdownFilter;
 
     // Responsive Dashboard Components & State
+    private JPanel topBar;
     private JPanel sidebar;
     private JButton btnToggleSidebar;
     private JPanel statsGrid;
@@ -84,7 +85,7 @@ public class DashboardFrame extends JFrame {
         JPanel root = new JPanel(new BorderLayout());
 
         // 1. Top Bar
-        JPanel topBar = new JPanel(new BorderLayout());
+        topBar = new JPanel(new BorderLayout());
         topBar.setBackground(new Color(15, 23, 42));
         topBar.setPreferredSize(new Dimension(0, 56));
         topBar.setBorder(new EmptyBorder(10, 16, 10, 16));
@@ -130,14 +131,18 @@ public class DashboardFrame extends JFrame {
         userLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
         userLabel.setForeground(new Color(226, 232, 240));
 
-        JButton btnLaunchKiosk = new JButton("🛒 Kiosk Mode");
-        btnLaunchKiosk.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnLaunchKiosk.setBackground(new Color(16, 185, 129));
-        btnLaunchKiosk.setForeground(Color.WHITE);
-        btnLaunchKiosk.setFocusPainted(false);
-        btnLaunchKiosk.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnLaunchKiosk.setToolTipText("Launch Customer Self-Checkout Express Kiosk");
-        btnLaunchKiosk.addActionListener(e -> new SelfCheckoutFrame(currentUser).setVisible(true));
+        JButton btnLaunchSelfCheckout = new JButton("🛒 Self Checkout");
+        btnLaunchSelfCheckout.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnLaunchSelfCheckout.setBackground(new Color(16, 185, 129));
+        btnLaunchSelfCheckout.setForeground(Color.WHITE);
+        btnLaunchSelfCheckout.setFocusPainted(false);
+        btnLaunchSelfCheckout.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnLaunchSelfCheckout.setToolTipText("Open Customer Self-Checkout");
+        btnLaunchSelfCheckout.addActionListener(e -> {
+            showAdminChrome(false);
+            selfCheckoutPanel.focusScanInput();
+            cardLayout.show(contentPanel, "SELF_CHECKOUT");
+        });
 
         JButton btnLogout = new JButton("Logout");
         btnLogout.setFont(new Font("Segoe UI", Font.PLAIN, 12));
@@ -148,7 +153,7 @@ public class DashboardFrame extends JFrame {
         btnLogout.addActionListener(e -> logout());
 
         userSection.add(userLabel);
-        userSection.add(btnLaunchKiosk);
+        userSection.add(btnLaunchSelfCheckout);
         userSection.add(btnLogout);
         topBar.add(userSection, BorderLayout.EAST);
 
@@ -163,7 +168,7 @@ public class DashboardFrame extends JFrame {
 
         btnNavHome = createSidebarButton("🏠  Dashboard");
         btnNavBilling = createSidebarButton("🧾  New Sale / Billing");
-        btnNavSelfCheckout = createSidebarButton("🛒  Self Checkout Kiosk");
+        btnNavSelfCheckout = createSidebarButton("🛒  Self Checkout");
         btnNavBillHistory = createSidebarButton("📜  Bill History / Orders");
         btnNavCustomers = createSidebarButton("👨‍💼  Customers");
         btnNavProducts = createSidebarButton("📦  Products");
@@ -207,6 +212,7 @@ public class DashboardFrame extends JFrame {
         billingPanel = new BillingPanel(currentUser);
         billHistoryPanel = new BillHistoryPanel(currentUser);
         selfCheckoutPanel = new SelfCheckoutPanel(currentUser, () -> {
+            showAdminChrome(true);
             cardLayout.show(contentPanel, "HOME");
         });
         reportsPanel = new ReportsPanel();
@@ -227,46 +233,56 @@ public class DashboardFrame extends JFrame {
 
         // Navigation button actions
         btnNavHome.addActionListener(e -> {
+            showAdminChrome(true);
             loadDashboardStats();
-        updateUIVisibilityFromSettings();
+            updateUIVisibilityFromSettings();
             cardLayout.show(contentPanel, "HOME");
         });
         btnNavBilling.addActionListener(e -> {
+            showAdminChrome(true);
             billingPanel.resetBillingDesk();
             cardLayout.show(contentPanel, "BILLING");
             billingPanel.focusBarcodeField();
         });
         btnNavSelfCheckout.addActionListener(e -> {
+            showAdminChrome(false);
             selfCheckoutPanel.focusScanInput();
             cardLayout.show(contentPanel, "SELF_CHECKOUT");
         });
         btnNavBillHistory.addActionListener(e -> {
+            showAdminChrome(true);
             billHistoryPanel.loadBillHistory();
             cardLayout.show(contentPanel, "BILL_HISTORY");
         });
         btnNavProducts.addActionListener(e -> {
+            showAdminChrome(true);
             productPanel.loadProductTable();
             productPanel.loadCategories();
             cardLayout.show(contentPanel, "PRODUCTS");
         });
         btnNavInventory.addActionListener(e -> {
+            showAdminChrome(true);
             inventoryPanel.loadDropdownData();
             inventoryPanel.refreshData();
             cardLayout.show(contentPanel, "INVENTORY");
         });
         btnNavCustomers.addActionListener(e -> {
+            showAdminChrome(true);
             customerPanel.loadCustomerTable();
             cardLayout.show(contentPanel, "CUSTOMERS");
         });
         btnNavSuppliers.addActionListener(e -> {
+            showAdminChrome(true);
             supplierPanel.loadSupplierTable();
             cardLayout.show(contentPanel, "SUPPLIERS");
         });
         btnNavReports.addActionListener(e -> {
+            showAdminChrome(true);
             reportsPanel.loadReports();
             cardLayout.show(contentPanel, "REPORTS");
         });
         btnNavSettings.addActionListener(e -> {
+            showAdminChrome(true);
             settingsPanel.loadCurrentSettings();
             cardLayout.show(contentPanel, "SETTINGS");
         });
@@ -280,8 +296,16 @@ public class DashboardFrame extends JFrame {
         add(root);
     }
 
+    public void showAdminChrome(boolean visible) {
+        if (topBar != null) topBar.setVisible(visible);
+        if (sidebar != null) sidebar.setVisible(visible);
+        revalidate();
+        repaint();
+    }
+
     public void showBillHistory() {
         if (billHistoryPanel != null) {
+            showAdminChrome(true);
             billHistoryPanel.loadBillHistory();
             cardLayout.show(contentPanel, "BILL_HISTORY");
         }

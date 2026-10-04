@@ -240,7 +240,7 @@ public class BillingPanel extends JPanel {
         btnSelfCheckout.setMargin(new Insets(2, 8, 2, 8));
         btnSelfCheckout.setFocusable(false);
         btnSelfCheckout.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnSelfCheckout.setToolTipText("Launch Customer Self-Checkout Express Kiosk");
+        btnSelfCheckout.setToolTipText("Launch Customer Self-Checkout Express");
         btnSelfCheckout.addActionListener(e -> {
             new SelfCheckoutFrame(currentUser).setVisible(true);
         });

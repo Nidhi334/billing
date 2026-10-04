@@ -149,16 +149,16 @@ public class LoginFrame extends JFrame {
         footerBox.setOpaque(false);
         footerBox.setBorder(new EmptyBorder(6, 15, 12, 15));
 
-        JButton btnKioskMode = new JButton("🛒 Launch Customer Self-Checkout Kiosk");
-        btnKioskMode.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnKioskMode.setBackground(new Color(16, 185, 129));
-        btnKioskMode.setForeground(Color.WHITE);
-        btnKioskMode.setFocusPainted(false);
-        btnKioskMode.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btnKioskMode.setMaximumSize(new Dimension(360, 36));
-        btnKioskMode.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnKioskMode.setToolTipText("Open full-screen express self-service checkout kiosk");
-        btnKioskMode.addActionListener(e -> new SelfCheckoutFrame(null).setVisible(true));
+        JButton btnSelfCheckoutMode = new JButton("🛒 Open Customer Self-Checkout");
+        btnSelfCheckoutMode.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnSelfCheckoutMode.setBackground(new Color(16, 185, 129));
+        btnSelfCheckoutMode.setForeground(Color.WHITE);
+        btnSelfCheckoutMode.setFocusPainted(false);
+        btnSelfCheckoutMode.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnSelfCheckoutMode.setMaximumSize(new Dimension(360, 36));
+        btnSelfCheckoutMode.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnSelfCheckoutMode.setToolTipText("Open full-screen express customer self-service checkout");
+        btnSelfCheckoutMode.addActionListener(e -> new SelfCheckoutFrame(null).setVisible(true));
 
         JLabel footerNote = new JLabel("Default logins: admin/admin123 (Admin) | staff/staff123 (Staff)", SwingConstants.CENTER);
         footerNote.setFont(new Font("Segoe UI", Font.ITALIC, 11));
@@ -166,7 +166,7 @@ public class LoginFrame extends JFrame {
         footerNote.setAlignmentX(Component.CENTER_ALIGNMENT);
         footerNote.setBorder(new EmptyBorder(6, 0, 0, 0));
 
-        footerBox.add(btnKioskMode);
+        footerBox.add(btnSelfCheckoutMode);
         footerBox.add(footerNote);
         mainPanel.add(footerBox, BorderLayout.SOUTH);
 

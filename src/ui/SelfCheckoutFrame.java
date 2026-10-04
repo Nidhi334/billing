@@ -9,12 +9,12 @@ import java.awt.event.WindowEvent;
 
 public class SelfCheckoutFrame extends JFrame {
 
-    private final User kioskUser;
+    private final User checkoutUser;
     private final SelfCheckoutPanel selfCheckoutPanel;
 
     public SelfCheckoutFrame(User user) {
         super("SmartBilling Pro - Express Self-Checkout Station");
-        this.kioskUser = (user != null) ? user : new User(1, "kiosk", "", "Self Checkout Kiosk #1", "STAFF");
+        this.checkoutUser = (user != null) ? user : new User(1, "selfcheckout", "", "Self Checkout Express", "STAFF");
 
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setSize(1280, 800);
@@ -29,14 +29,14 @@ public class SelfCheckoutFrame extends JFrame {
             }
         });
 
-        selfCheckoutPanel = new SelfCheckoutPanel(kioskUser, this::confirmExit);
+        selfCheckoutPanel = new SelfCheckoutPanel(checkoutUser, this::confirmExit);
         setContentPane(selfCheckoutPanel);
     }
 
     private void confirmExit() {
         int res = JOptionPane.showConfirmDialog(this,
-                "Are you sure you want to exit Self-Checkout Kiosk mode?",
-                "Exit Kiosk", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                "Are you sure you want to exit Self-Checkout?",
+                "Exit Self-Checkout", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (res == JOptionPane.YES_OPTION) {
             dispose();
         }

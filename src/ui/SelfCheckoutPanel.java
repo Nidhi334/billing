@@ -23,7 +23,7 @@ import java.util.List;
 import javax.swing.Timer;
 
 /**
- * Self-Checkout Kiosk Panel for Retail / Supermarket customers.
+ * Self-Checkout Panel for Retail / Supermarket customers.
  * Provides a fast, intuitive, touch-screen friendly self-service billing experience:
  * - USB / Camera Barcode Scanning & Instant Search
  * - Visual Touch Product Catalog with Category Tabs
@@ -34,7 +34,7 @@ import javax.swing.Timer;
  */
 public class SelfCheckoutPanel extends JPanel {
 
-    private final User kioskUser;
+    private final User checkoutUser;
     private final Runnable exitCallback;
 
     private final ProductDAO productDAO = new ProductDAO();
@@ -79,8 +79,8 @@ public class SelfCheckoutPanel extends JPanel {
         }
     }
 
-    public SelfCheckoutPanel(User kioskUser, Runnable exitCallback) {
-        this.kioskUser = (kioskUser != null) ? kioskUser : new User(1, "kiosk", "", "Self Checkout Kiosk #1", "STAFF");
+    public SelfCheckoutPanel(User checkoutUser, Runnable exitCallback) {
+        this.checkoutUser = (checkoutUser != null) ? checkoutUser : new User(1, "selfcheckout", "", "Self Checkout Express", "STAFF");
         this.exitCallback = exitCallback;
 
         setLayout(new BorderLayout());
@@ -100,8 +100,8 @@ public class SelfCheckoutPanel extends JPanel {
     }
 
     private void initUI() {
-        // 1. Top Kiosk Header
-        add(createKioskHeader(), BorderLayout.NORTH);
+        // 1. Top Header
+        add(createHeader(), BorderLayout.NORTH);
 
         // 2. Main Content Split Pane (Left: Scanning & Catalog, Right: Live Cart & Summary)
         JPanel centerSplit = new JPanel(new BorderLayout(14, 0));
@@ -115,9 +115,9 @@ public class SelfCheckoutPanel extends JPanel {
     }
 
     // ==========================================
-    // 1. KIOSK HEADER
+    // 1. HEADER
     // ==========================================
-    private JPanel createKioskHeader() {
+    private JPanel createHeader() {
         JPanel header = new JPanel(new BorderLayout(15, 0));
         header.setBackground(new Color(15, 23, 42)); // Dark Slate
         header.setBorder(new EmptyBorder(12, 18, 12, 18));
@@ -133,7 +133,7 @@ public class SelfCheckoutPanel extends JPanel {
         JPanel titleTextPanel = new JPanel(new GridLayout(2, 1, 0, 2));
         titleTextPanel.setOpaque(false);
 
-        JLabel lblTitle = new JLabel("SmartBilling Self-Checkout Kiosk");
+        JLabel lblTitle = new JLabel("SmartBilling Self-Checkout");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
         lblTitle.setForeground(Color.WHITE);
 
@@ -147,14 +147,14 @@ public class SelfCheckoutPanel extends JPanel {
         brandBox.add(lblLogo);
         brandBox.add(titleTextPanel);
 
-        // Kiosk Live Clock & Status Badge
+        // Live Clock & Status Badge
         JPanel centerInfo = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 0));
         centerInfo.setOpaque(false);
 
-        JLabel lblKioskActive = new JLabel("🟢 KIOSK ACTIVE");
-        lblKioskActive.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        lblKioskActive.setForeground(new Color(34, 197, 94));
-        lblKioskActive.setBorder(BorderFactory.createCompoundBorder(
+        JLabel lblCheckoutActive = new JLabel("🟢 SELF CHECKOUT ACTIVE");
+        lblCheckoutActive.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblCheckoutActive.setForeground(new Color(34, 197, 94));
+        lblCheckoutActive.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(34, 197, 94), 1),
                 new EmptyBorder(3, 8, 3, 8)
         ));
@@ -163,26 +163,26 @@ public class SelfCheckoutPanel extends JPanel {
         lblLiveClock.setFont(new Font("Segoe UI", Font.BOLD, 13));
         lblLiveClock.setForeground(new Color(226, 232, 240));
 
-        centerInfo.add(lblKioskActive);
+        centerInfo.add(lblCheckoutActive);
         centerInfo.add(lblLiveClock);
 
-        // Action Buttons: Call Assistant, Fullscreen, Exit
+        // Action Buttons: Call Assistant, Fullscreen, Exit / Back
         JPanel actionBox = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionBox.setOpaque(false);
 
         JButton btnCallAssistant = createTouchHeaderButton("🛎️ Call Assistant", new Color(245, 158, 11));
         btnCallAssistant.addActionListener(e -> callStoreAssistant());
 
-        JButton btnFullscreen = createTouchHeaderButton("⛶ Kiosk Mode", new Color(59, 130, 246));
-        btnFullscreen.addActionListener(e -> launchFullscreenKioskWindow());
+        JButton btnFullscreen = createTouchHeaderButton("⛶ Fullscreen", new Color(59, 130, 246));
+        btnFullscreen.addActionListener(e -> launchFullscreenWindow());
 
-        JButton btnExit = createTouchHeaderButton("❌ Exit Kiosk", new Color(239, 68, 68));
+        JButton btnExit = createTouchHeaderButton("❌ Back to Dashboard", new Color(239, 68, 68));
         btnExit.addActionListener(e -> {
             if (!cartItems.isEmpty()) {
                 int res = JOptionPane.showConfirmDialog(this,
                         "Cart has items. Are you sure you want to exit self-checkout?",
                         "Exit Confirmation", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                if (res != JOptionPane.YES_OPTION) return;
+                if (res != JOptionPane.YES_NO_OPTION) return;
             }
             if (exitCallback != null) exitCallback.run();
         });
@@ -874,7 +874,7 @@ public class SelfCheckoutPanel extends JPanel {
         Frame parentFrame = (parentWindow instanceof Frame) ? (Frame) parentWindow : null;
 
         // Open Payment Modal Dialog
-        SelfCheckoutPaymentDialog dialog = new SelfCheckoutPaymentDialog(parentFrame, cartItems, subtotal, gstRate, gstAmount, grandTotal, kioskUser);
+        SelfCheckoutPaymentDialog dialog = new SelfCheckoutPaymentDialog(parentFrame, cartItems, subtotal, gstRate, gstAmount, grandTotal, checkoutUser);
         dialog.setVisible(true);
 
         if (dialog.isCompleted()) {
@@ -904,13 +904,13 @@ public class SelfCheckoutPanel extends JPanel {
         JOptionPane.showMessageDialog(this,
                 "🛎️ STORE ASSISTANT NOTIFIED!\n\nAn attendant is on their way to assist you with your checkout.\nPlease wait a moment.",
                 "Assistant Called", JOptionPane.INFORMATION_MESSAGE);
-        setToast("Store assistant has been summoned to Kiosk #1.", false);
+        setToast("Store assistant has been summoned to Self-Checkout #1.", false);
         focusScanInput();
     }
 
-    private void launchFullscreenKioskWindow() {
-        SelfCheckoutFrame kioskFrame = new SelfCheckoutFrame(kioskUser);
-        kioskFrame.setVisible(true);
+    private void launchFullscreenWindow() {
+        SelfCheckoutFrame fullscreenFrame = new SelfCheckoutFrame(checkoutUser);
+        fullscreenFrame.setVisible(true);
     }
 
     private void setToast(String message, boolean isError) {
@@ -1199,7 +1199,7 @@ public class SelfCheckoutPanel extends JPanel {
                 if (!phone.isEmpty()) {
                     Customer cust = customerDAO.getCustomerByPhone(phone);
                     if (cust == null) {
-                        cust = new Customer(0, "Kiosk Shopper " + phone, phone, "", "Self Checkout Express");
+                        cust = new Customer(0, "Customer " + phone, phone, "", "Self Checkout Express");
                         customerDAO.addCustomer(cust);
                     }
                     if (cust != null && cust.getId() > 0) {
