@@ -686,11 +686,11 @@ public class SelfCheckoutPanel extends JPanel {
         JPanel centerBox = new JPanel(new BorderLayout(0, 6));
         centerBox.setOpaque(false);
 
-        // Product Image (Height 80px, Width 120px)
+        // Product Image (Height 72px, Width 110px)
         JLabel lblImage = new JLabel();
         lblImage.setHorizontalAlignment(SwingConstants.CENTER);
-        lblImage.setIcon(ProductImageUtil.getProductIcon(p, 120, 80));
-        lblImage.setPreferredSize(new Dimension(120, 80));
+        lblImage.setIcon(ProductImageUtil.getProductIcon(p, 110, 72));
+        lblImage.setPreferredSize(new Dimension(110, 72));
 
         JPanel nameAndCode = new JPanel(new GridLayout(2, 1, 0, 2));
         nameAndCode.setOpaque(false);
