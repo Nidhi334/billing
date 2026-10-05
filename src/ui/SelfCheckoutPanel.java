@@ -287,7 +287,7 @@ public class SelfCheckoutPanel extends JPanel {
 
         // Category Sidebar Panel (WEST)
         JPanel categorySidebarCard = new JPanel(new BorderLayout(0, 8));
-        categorySidebarCard.setPreferredSize(new Dimension(175, 0));
+        categorySidebarCard.setPreferredSize(new Dimension(150, 0));
         categorySidebarCard.setBackground(Color.WHITE);
         categorySidebarCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
@@ -312,8 +312,8 @@ public class SelfCheckoutPanel extends JPanel {
         categoryScroll.getVerticalScrollBar().setUnitIncrement(16);
         categorySidebarCard.add(categoryScroll, BorderLayout.CENTER);
 
-        // Visual Catalog Grid (CENTER)
-        catalogGridPanel = new JPanel(new GridLayout(0, 3, 12, 12));
+        // Visual Catalog Grid (CENTER) - Exactly 4 Products Per Row
+        catalogGridPanel = new JPanel(new GridLayout(0, 4, 10, 10));
         catalogGridPanel.setOpaque(false);
 
         JScrollPane catalogScroll = new JScrollPane(catalogGridPanel);
@@ -323,7 +323,7 @@ public class SelfCheckoutPanel extends JPanel {
         catalogScroll.getVerticalScrollBar().setUnitIncrement(24);
 
         // Combine: Sidebar on WEST, Product grid on CENTER
-        JPanel catalogWrapper = new JPanel(new BorderLayout(12, 0));
+        JPanel catalogWrapper = new JPanel(new BorderLayout(10, 0));
         catalogWrapper.setOpaque(false);
         catalogWrapper.add(categorySidebarCard, BorderLayout.WEST);
         catalogWrapper.add(catalogScroll, BorderLayout.CENTER);
@@ -339,7 +339,7 @@ public class SelfCheckoutPanel extends JPanel {
     // ==========================================
     private JPanel createCartAndCheckoutSection() {
         JPanel right = new JPanel(new BorderLayout(0, 10));
-        right.setPreferredSize(new Dimension(420, 0));
+        right.setPreferredSize(new Dimension(380, 0));
         right.setBackground(Color.WHITE);
         right.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
@@ -648,7 +648,7 @@ public class SelfCheckoutPanel extends JPanel {
             catalogGridPanel.setLayout(new BorderLayout());
             catalogGridPanel.add(empty, BorderLayout.CENTER);
         } else {
-            catalogGridPanel.setLayout(new GridLayout(0, 3, 12, 12));
+            catalogGridPanel.setLayout(new GridLayout(0, 4, 10, 10));
             for (Product p : products) {
                 catalogGridPanel.add(createProductCard(p));
             }
@@ -659,73 +659,85 @@ public class SelfCheckoutPanel extends JPanel {
     }
 
     private JPanel createProductCard(Product p) {
-        JPanel card = new JPanel(new BorderLayout(8, 8));
+        JPanel card = new JPanel(new BorderLayout(0, 6));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                new EmptyBorder(10, 10, 10, 10)
+                new EmptyBorder(8, 8, 8, 8)
         ));
 
-        // Category Tag + Stock Status
+        // 1. TOP: Category Tag & Stock Status Row
         JPanel topInfo = new JPanel(new BorderLayout());
         topInfo.setOpaque(false);
 
-        JLabel lblCat = new JLabel(p.getCategoryName() != null ? p.getCategoryName().toUpperCase() : "GENERAL");
-        lblCat.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        String catName = p.getCategoryName() != null ? p.getCategoryName().toUpperCase() : "GENERAL";
+        JLabel lblCat = new JLabel(catName);
+        lblCat.setFont(new Font("Segoe UI", Font.BOLD, 9));
         lblCat.setForeground(new Color(100, 116, 139));
 
         boolean inStock = p.getQuantity() > 0;
-        JLabel lblStock = new JLabel(inStock ? "✓ In Stock (" + p.getQuantity() + ")" : "✕ Out of Stock");
-        lblStock.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        JLabel lblStock = new JLabel(inStock ? "✓ " + p.getQuantity() + " left" : "✕ Out of Stock");
+        lblStock.setFont(new Font("Segoe UI", Font.BOLD, 9));
         lblStock.setForeground(inStock ? new Color(16, 185, 129) : new Color(239, 68, 68));
 
         topInfo.add(lblCat, BorderLayout.WEST);
         topInfo.add(lblStock, BorderLayout.EAST);
 
-        // Center Content: Product Image + Product Name + Code
-        JPanel centerBox = new JPanel(new BorderLayout(0, 6));
+        // 2. CENTER: Fixed-size Image + Name & Code Details
+        JPanel centerBox = new JPanel(new BorderLayout(0, 4));
         centerBox.setOpaque(false);
 
-        // Product Image (Height 72px, Width 110px)
+        // Fixed-size Product Image Container (135x90px fixed)
+        JPanel imgBox = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        imgBox.setOpaque(false);
+
         JLabel lblImage = new JLabel();
         lblImage.setHorizontalAlignment(SwingConstants.CENTER);
-        lblImage.setIcon(ProductImageUtil.getProductIcon(p, 110, 72));
-        lblImage.setPreferredSize(new Dimension(110, 72));
+        lblImage.setPreferredSize(new Dimension(135, 90));
+        lblImage.setMaximumSize(new Dimension(135, 90));
+        lblImage.setMinimumSize(new Dimension(135, 90));
+        lblImage.setIcon(ProductImageUtil.getProductIcon(p, 135, 90));
+        imgBox.add(lblImage);
 
-        JPanel nameAndCode = new JPanel(new GridLayout(2, 1, 0, 2));
+        // Name and SKU Code
+        JPanel nameAndCode = new JPanel();
+        nameAndCode.setLayout(new BoxLayout(nameAndCode, BoxLayout.Y_AXIS));
         nameAndCode.setOpaque(false);
+        nameAndCode.setBorder(new EmptyBorder(3, 2, 2, 2));
 
-        JLabel lblName = new JLabel(p.getName());
-        lblName.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        lblName.setForeground(new Color(30, 41, 59));
+        JLabel lblName = new JLabel("<html><div style='width:125px; font-weight:600; font-size:12px; color:#1E293B;'>" + p.getName() + "</div></html>");
+        lblName.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         String codeStr = (p.getBarcode() != null && !p.getBarcode().isEmpty()) ? p.getBarcode() : p.getCode();
-        JLabel lblCode = new JLabel("Code: " + codeStr);
-        lblCode.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        JLabel lblCode = new JLabel("SKU: " + codeStr);
+        lblCode.setFont(new Font("Segoe UI", Font.PLAIN, 10));
         lblCode.setForeground(new Color(148, 163, 184));
+        lblCode.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         nameAndCode.add(lblName);
+        nameAndCode.add(Box.createVerticalStrut(2));
         nameAndCode.add(lblCode);
 
-        centerBox.add(lblImage, BorderLayout.NORTH);
+        centerBox.add(imgBox, BorderLayout.NORTH);
         centerBox.add(nameAndCode, BorderLayout.CENTER);
 
-        // Price & Add Button
-        JPanel bottomBox = new JPanel(new BorderLayout(8, 0));
+        // 3. BOTTOM: Price & Touch Add Button
+        JPanel bottomBox = new JPanel(new BorderLayout(4, 0));
         bottomBox.setOpaque(false);
+        bottomBox.setBorder(new EmptyBorder(4, 0, 0, 0));
 
         JLabel lblPrice = new JLabel(String.format("₹%.2f", p.getSellingPrice()));
-        lblPrice.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        lblPrice.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblPrice.setForeground(new Color(13, 148, 136));
 
         JButton btnAdd = new JButton("➕ Add");
-        btnAdd.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnAdd.setFont(new Font("Segoe UI", Font.BOLD, 11));
         btnAdd.setBackground(inStock ? new Color(37, 99, 235) : new Color(203, 213, 225));
         btnAdd.setForeground(Color.WHITE);
         btnAdd.setFocusPainted(false);
         btnAdd.setEnabled(inStock);
         btnAdd.setCursor(inStock ? new Cursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
-        btnAdd.setBorder(new EmptyBorder(6, 12, 6, 12));
+        btnAdd.setBorder(new EmptyBorder(5, 10, 5, 10));
         btnAdd.addActionListener(e -> addProductToCart(p));
 
         bottomBox.add(lblPrice, BorderLayout.WEST);
@@ -747,9 +759,10 @@ public class SelfCheckoutPanel extends JPanel {
             public void mouseEntered(MouseEvent e) {
                 if (inStock) {
                     card.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(new Color(59, 130, 246), 1),
-                            new EmptyBorder(10, 10, 10, 10)
+                            BorderFactory.createLineBorder(new Color(59, 130, 246), 2),
+                            new EmptyBorder(7, 7, 7, 7)
                     ));
+                    card.setBackground(new Color(248, 250, 252));
                 }
             }
 
@@ -757,8 +770,9 @@ public class SelfCheckoutPanel extends JPanel {
             public void mouseExited(MouseEvent e) {
                 card.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                        new EmptyBorder(10, 10, 10, 10)
+                        new EmptyBorder(8, 8, 8, 8)
                 ));
+                card.setBackground(Color.WHITE);
             }
         });
 
