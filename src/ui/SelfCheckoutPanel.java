@@ -285,11 +285,34 @@ public class SelfCheckoutPanel extends JPanel {
         topArea.add(searchBarWrapper, BorderLayout.NORTH);
         topArea.add(lblStatusToast, BorderLayout.SOUTH);
 
-        // Category Filter Tabs
-        categoryTabsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
-        categoryTabsPanel.setOpaque(false);
+        // Category Sidebar Panel (WEST)
+        JPanel categorySidebarCard = new JPanel(new BorderLayout(0, 8));
+        categorySidebarCard.setPreferredSize(new Dimension(175, 0));
+        categorySidebarCard.setBackground(Color.WHITE);
+        categorySidebarCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+                new EmptyBorder(10, 8, 10, 8)
+        ));
 
-        // Visual Catalog Grid
+        JLabel lblCategoryHeader = new JLabel("🏷️ CATEGORIES");
+        lblCategoryHeader.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblCategoryHeader.setForeground(new Color(100, 116, 139));
+        lblCategoryHeader.setBorder(new EmptyBorder(0, 4, 4, 4));
+        categorySidebarCard.add(lblCategoryHeader, BorderLayout.NORTH);
+
+        categoryTabsPanel = new JPanel();
+        categoryTabsPanel.setLayout(new BoxLayout(categoryTabsPanel, BoxLayout.Y_AXIS));
+        categoryTabsPanel.setBackground(Color.WHITE);
+
+        JScrollPane categoryScroll = new JScrollPane(categoryTabsPanel);
+        categoryScroll.setBorder(null);
+        categoryScroll.setBackground(Color.WHITE);
+        categoryScroll.getViewport().setBackground(Color.WHITE);
+        categoryScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        categoryScroll.getVerticalScrollBar().setUnitIncrement(16);
+        categorySidebarCard.add(categoryScroll, BorderLayout.CENTER);
+
+        // Visual Catalog Grid (CENTER)
         catalogGridPanel = new JPanel(new GridLayout(0, 3, 12, 12));
         catalogGridPanel.setOpaque(false);
 
@@ -299,10 +322,10 @@ public class SelfCheckoutPanel extends JPanel {
         catalogScroll.getViewport().setOpaque(false);
         catalogScroll.getVerticalScrollBar().setUnitIncrement(24);
 
-        // Combine
-        JPanel catalogWrapper = new JPanel(new BorderLayout(0, 8));
+        // Combine: Sidebar on WEST, Product grid on CENTER
+        JPanel catalogWrapper = new JPanel(new BorderLayout(12, 0));
         catalogWrapper.setOpaque(false);
-        catalogWrapper.add(categoryTabsPanel, BorderLayout.NORTH);
+        catalogWrapper.add(categorySidebarCard, BorderLayout.WEST);
         catalogWrapper.add(catalogScroll, BorderLayout.CENTER);
 
         left.add(topArea, BorderLayout.NORTH);
@@ -525,32 +548,55 @@ public class SelfCheckoutPanel extends JPanel {
         // "All Items" tab
         JButton btnAll = createCategoryTabButton("⭐ All Items", "ALL");
         categoryTabsPanel.add(btnAll);
+        categoryTabsPanel.add(Box.createVerticalStrut(6));
 
         try {
             List<Category> categories = categoryDAO.getAllCategories();
             for (Category cat : categories) {
-                JButton btnCat = createCategoryTabButton("🏷️ " + cat.getName(), cat.getName());
+                String emoji = getCategoryEmoji(cat.getName());
+                JButton btnCat = createCategoryTabButton(emoji + " " + cat.getName(), cat.getName());
                 categoryTabsPanel.add(btnCat);
+                categoryTabsPanel.add(Box.createVerticalStrut(6));
             }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
 
+        categoryTabsPanel.add(Box.createVerticalGlue());
         categoryTabsPanel.revalidate();
         categoryTabsPanel.repaint();
+    }
+
+    private String getCategoryEmoji(String catName) {
+        if (catName == null) return "🏷️";
+        String lower = catName.toLowerCase().trim();
+        if (lower.contains("dairy") || lower.contains("milk")) return "🥛";
+        if (lower.contains("fruit") || lower.contains("mango") || lower.contains("veg")) return "🍎";
+        if (lower.contains("electronic") || lower.contains("laptop") || lower.contains("tv")) return "💻";
+        if (lower.contains("accessories") || lower.contains("keyboard") || lower.contains("mouse")) return "⌨️";
+        if (lower.contains("stationery") || lower.contains("paper")) return "📄";
+        if (lower.contains("snack") || lower.contains("food") || lower.contains("bev")) return "🍪";
+        return "🏷️";
     }
 
     private JButton createCategoryTabButton(String label, String categoryKey) {
         JButton btn = new JButton(label);
         btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setHorizontalAlignment(SwingConstants.LEFT);
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        btn.setPreferredSize(new Dimension(155, 40));
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         boolean isSelected = selectedCategory.equalsIgnoreCase(categoryKey);
 
-        btn.setBackground(isSelected ? new Color(37, 99, 235) : Color.WHITE);
+        Color activeBg = new Color(37, 99, 235);
+        Color inactiveBg = new Color(248, 250, 252);
+
+        btn.setBackground(isSelected ? activeBg : inactiveBg);
         btn.setForeground(isSelected ? Color.WHITE : new Color(51, 65, 85));
         btn.setFocusPainted(false);
         btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(isSelected ? new Color(37, 99, 235) : new Color(203, 213, 225), 1),
-                new EmptyBorder(6, 12, 6, 12)
+                BorderFactory.createLineBorder(isSelected ? activeBg : new Color(226, 232, 240), 1),
+                new EmptyBorder(8, 10, 8, 10)
         ));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
