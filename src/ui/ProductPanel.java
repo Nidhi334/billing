@@ -58,8 +58,15 @@ public class ProductPanel extends JPanel {
         txtSearch = new JTextField(18);
         searchPanel.add(txtSearch);
         JButton btnSearch = new JButton("Find");
+        // btnSearch.setBackground(new Color(75, 75, 200));
+        btnSearch.setBackground(Color.BLUE);
+        btnSearch.setForeground(Color.WHITE);
         searchPanel.add(btnSearch);
         JButton btnRefresh = new JButton("Refresh");
+        // btnRefresh.setBackground(new Color(200, 75, 75));
+        btnRefresh.setBackground(Color.red);
+        btnRefresh.setForeground(Color.WHITE);
+
         searchPanel.add(btnRefresh);
         topPanel.add(searchPanel, BorderLayout.EAST);
 
@@ -69,7 +76,8 @@ public class ProductPanel extends JPanel {
         JPanel formCard = new JPanel(new GridBagLayout());
         formCard.setBackground(Color.LIGHT_GRAY);
         formCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+                // BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1),
                 new EmptyBorder(12, 14, 12, 14)));
         formCard.setPreferredSize(new Dimension(360, 0));
 
@@ -176,7 +184,7 @@ public class ProductPanel extends JPanel {
 
         // Action Buttons Grid
         JPanel btnPanel = new JPanel(new GridLayout(2, 2, 6, 6));
-        btnPanel.setBackground(Color.WHITE);
+        btnPanel.setBackground(Color.LIGHT_GRAY);
         btnAdd = new JButton("Add Product");
         btnAdd.setBackground(new Color(16, 185, 129));
         btnAdd.setForeground(Color.WHITE);

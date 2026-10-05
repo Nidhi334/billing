@@ -60,6 +60,8 @@ public class CustomerPanel extends JPanel {
 
         btnReset = new JButton("Reset");
         btnReset.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        btnReset.setBackground(new Color(205, 99, 75));
+        btnReset.setForeground(Color.WHITE);
         btnReset.setFocusPainted(false);
         searchPanel.add(btnReset);
 
@@ -71,8 +73,7 @@ public class CustomerPanel extends JPanel {
         formCard.setBackground(Color.WHITE);
         formCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                new EmptyBorder(14, 14, 14, 14)
-        ));
+                new EmptyBorder(14, 14, 14, 14)));
         formCard.setPreferredSize(new Dimension(340, 0));
 
         GridBagConstraints g = new GridBagConstraints();
@@ -82,7 +83,8 @@ public class CustomerPanel extends JPanel {
         g.weightx = 1.0;
 
         // 1. Full Name
-        g.gridx = 0; g.gridy = 0;
+        g.gridx = 0;
+        g.gridy = 0;
         formCard.add(createFieldHeader("Full Name:"), g);
         txtName = new JTextField();
         txtName.setFont(new Font("Segoe UI", Font.PLAIN, 13));
@@ -169,10 +171,12 @@ public class CustomerPanel extends JPanel {
         add(formScroll, BorderLayout.WEST);
 
         // CENTER: Table
-        String[] cols = {"ID", "Name", "Phone", "Email", "Address", "Registered Date"};
+        String[] cols = { "ID", "Name", "Phone", "Email", "Address", "Registered Date" };
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
         table = new JTable(tableModel);
         table.setRowHeight(28);
@@ -236,7 +240,7 @@ public class CustomerPanel extends JPanel {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
             for (Customer c : list) {
                 String regDate = c.getCreatedAt() != null ? sdf.format(c.getCreatedAt()) : "N/A";
-                tableModel.addRow(new Object[]{
+                tableModel.addRow(new Object[] {
                         c.getId(), c.getName(), c.getPhone(), c.getEmail(), c.getAddress(), regDate
                 });
             }
@@ -257,7 +261,7 @@ public class CustomerPanel extends JPanel {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
             for (Customer c : list) {
                 String regDate = c.getCreatedAt() != null ? sdf.format(c.getCreatedAt()) : "N/A";
-                tableModel.addRow(new Object[]{
+                tableModel.addRow(new Object[] {
                         c.getId(), c.getName(), c.getPhone(), c.getEmail(), c.getAddress(), regDate
                 });
             }
@@ -273,7 +277,8 @@ public class CustomerPanel extends JPanel {
         String addr = txtAddress.getText().trim();
 
         if (name.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Customer name is mandatory.", "Validation", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Customer name is mandatory.", "Validation",
+                    JOptionPane.WARNING_MESSAGE);
             txtName.requestFocus();
             return;
         }
@@ -281,12 +286,14 @@ public class CustomerPanel extends JPanel {
         try {
             Customer c = new Customer(0, name, phone, email, addr);
             if (customerDAO.addCustomer(c)) {
-                JOptionPane.showMessageDialog(this, "Customer added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Customer added successfully!", "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
                 clearForm();
                 loadCustomerTable();
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error adding customer: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error adding customer: " + e.getMessage(), "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -297,14 +304,17 @@ public class CustomerPanel extends JPanel {
         }
         String name = txtName.getText().trim();
         if (name.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Customer name cannot be empty.", "Validation", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Customer name cannot be empty.", "Validation",
+                    JOptionPane.WARNING_MESSAGE);
             txtName.requestFocus();
             return;
         }
         try {
-            Customer c = new Customer(selectedCustomerId, name, txtPhone.getText().trim(), txtEmail.getText().trim(), txtAddress.getText().trim());
+            Customer c = new Customer(selectedCustomerId, name, txtPhone.getText().trim(), txtEmail.getText().trim(),
+                    txtAddress.getText().trim());
             if (customerDAO.updateCustomer(c)) {
-                JOptionPane.showMessageDialog(this, "Customer updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Customer updated successfully!", "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
                 clearForm();
                 loadCustomerTable();
             }
@@ -318,7 +328,8 @@ public class CustomerPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Please select a customer to delete.");
             return;
         }
-        int c = JOptionPane.showConfirmDialog(this, "Are you sure to delete this customer?", "Confirm", JOptionPane.YES_NO_OPTION);
+        int c = JOptionPane.showConfirmDialog(this, "Are you sure to delete this customer?", "Confirm",
+                JOptionPane.YES_NO_OPTION);
         if (c == JOptionPane.YES_OPTION) {
             try {
                 if (customerDAO.deleteCustomer(selectedCustomerId)) {
@@ -326,7 +337,8 @@ public class CustomerPanel extends JPanel {
                     loadCustomerTable();
                 }
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Cannot delete customer (active billing history exists): " + e.getMessage());
+                JOptionPane.showMessageDialog(this,
+                        "Cannot delete customer (active billing history exists): " + e.getMessage());
             }
         }
     }

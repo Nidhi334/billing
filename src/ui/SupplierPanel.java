@@ -23,7 +23,9 @@ public class SupplierPanel extends JPanel {
 
     public SupplierPanel() {
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(248, 250, 252));
+        // setBackground(new Color(248, 250, 252));
+        setBackground(Color.LIGHT_GRAY);
+
         setBorder(new EmptyBorder(15, 15, 15, 15));
         initComponents();
         loadSupplierTable();
@@ -33,20 +35,24 @@ public class SupplierPanel extends JPanel {
         // ==========================================
         // 1. TOP BAR: Title & Search
         // ==========================================
-        JPanel topPanel = new JPanel(new BorderLayout(10, 10));
-        topPanel.setBackground(new Color(248, 250, 252));
+        JPanel topPanel = new JPanel(new BorderLayout(0, 0));
+        topPanel.setBackground(Color.BLUE);
+        // setBackground(new Color(248, 250, 252));
+        setBackground(Color.LIGHT_GRAY);
 
         JLabel lblTitle = new JLabel("🏢 Supplier & Vendor Management");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTitle.setForeground(new Color(30, 41, 59));
+        lblTitle.setForeground(Color.WHITE);
+
         topPanel.add(lblTitle, BorderLayout.WEST);
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        searchPanel.setBackground(new Color(248, 250, 252));
+        searchPanel.setBackground(Color.LIGHT_GRAY);
+        // searchPanel.setBackground(new Color(248, 250, 252));
 
         JLabel lblSearch = new JLabel("Search:");
         lblSearch.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        lblSearch.setForeground(new Color(71, 85, 105));
+        lblSearch.setForeground(Color.WHITE);
         searchPanel.add(lblSearch);
 
         txtSearch = new JTextField(16);
@@ -54,12 +60,11 @@ public class SupplierPanel extends JPanel {
         txtSearch.setPreferredSize(new Dimension(190, 30));
         txtSearch.setBorder(new CompoundBorder(
                 new LineBorder(new Color(203, 213, 225)),
-                new EmptyBorder(4, 8, 4, 8)
-        ));
+                new EmptyBorder(4, 8, 4, 8)));
         searchPanel.add(txtSearch);
 
         btnSearch = new JButton("Search");
-        btnSearch.setBackground(new Color(37, 99, 235));
+        btnSearch.setBackground(Color.BLUE);
         btnSearch.setForeground(Color.WHITE);
         btnSearch.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnSearch.setFocusPainted(false);
@@ -68,15 +73,15 @@ public class SupplierPanel extends JPanel {
         searchPanel.add(btnSearch);
 
         btnReset = new JButton("Reset");
-        btnReset.setBackground(Color.WHITE);
-        btnReset.setForeground(new Color(71, 85, 105));
+        btnReset.setBackground(Color.red);
+        // btnReset.setForeground(new Color(200, 75, 75));
+        btnReset.setForeground(Color.WHITE);
         btnReset.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         btnReset.setFocusPainted(false);
         btnReset.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnReset.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(new Color(203, 213, 225)),
-                new EmptyBorder(4, 10, 4, 10)
-        ));
+                new EmptyBorder(4, 10, 4, 10)));
         btnReset.setPreferredSize(new Dimension(70, 30));
         searchPanel.add(btnReset);
 
@@ -87,11 +92,11 @@ public class SupplierPanel extends JPanel {
         // 2. LEFT: Form Card
         // ==========================================
         JPanel formCard = new JPanel(new GridBagLayout());
-        formCard.setBackground(Color.WHITE);
+        formCard.setBackground(Color.LIGHT_GRAY);
         formCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                new EmptyBorder(16, 16, 16, 16)
-        ));
+                // BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1),
+                new EmptyBorder(16, 16, 16, 16)));
         formCard.setPreferredSize(new Dimension(340, 0));
 
         GridBagConstraints g = new GridBagConstraints();
@@ -104,7 +109,8 @@ public class SupplierPanel extends JPanel {
         JLabel lblFormTitle = new JLabel("📝 Supplier Details");
         lblFormTitle.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblFormTitle.setForeground(new Color(30, 41, 59));
-        g.gridx = 0; g.gridy = 0;
+        g.gridx = 0;
+        g.gridy = 0;
         g.insets = new Insets(2, 4, 10, 4);
         formCard.add(lblFormTitle, g);
 
@@ -148,7 +154,7 @@ public class SupplierPanel extends JPanel {
 
         // Action Buttons Grid (2x2)
         JPanel btnPanel = new JPanel(new GridLayout(2, 2, 8, 8));
-        btnPanel.setBackground(Color.WHITE);
+        btnPanel.setBackground(Color.LIGHT_GRAY);
 
         btnAdd = new JButton("Add Supplier");
         btnAdd.setBackground(new Color(16, 185, 129));
@@ -182,8 +188,7 @@ public class SupplierPanel extends JPanel {
         btnClear.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnClear.setBorder(BorderFactory.createCompoundBorder(
                 new LineBorder(new Color(203, 213, 225)),
-                new EmptyBorder(4, 6, 4, 6)
-        ));
+                new EmptyBorder(4, 6, 4, 6)));
         btnClear.setPreferredSize(new Dimension(0, 34));
 
         btnPanel.add(btnAdd);
@@ -212,10 +217,12 @@ public class SupplierPanel extends JPanel {
         // ==========================================
         // 3. CENTER: Table
         // ==========================================
-        String[] cols = {"ID", "Contact Person", "Company / Vendor", "Phone", "Email", "Address"};
+        String[] cols = { "ID", "Contact Person", "Company / Vendor", "Phone", "Email", "Address" };
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
         table = new JTable(tableModel);
         table.setRowHeight(28);
@@ -235,16 +242,17 @@ public class SupplierPanel extends JPanel {
 
         DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
+                JLabel l = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row,
+                        column);
                 l.setFont(new Font("Segoe UI", Font.BOLD, 12));
                 l.setForeground(new Color(51, 65, 85));
                 l.setBackground(new Color(241, 245, 249));
                 l.setOpaque(true);
                 l.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(226, 232, 240)),
-                        new EmptyBorder(6, 10, 6, 10)
-                ));
+                        new EmptyBorder(6, 10, 6, 10)));
                 if (column == 0) {
                     l.setHorizontalAlignment(SwingConstants.CENTER);
                 } else {
@@ -265,7 +273,8 @@ public class SupplierPanel extends JPanel {
 
         DefaultTableCellRenderer centerRender = new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (!isSelected) {
                     c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 250, 252));
@@ -278,7 +287,8 @@ public class SupplierPanel extends JPanel {
 
         DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (!isSelected) {
                     c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 250, 252));
@@ -336,8 +346,7 @@ public class SupplierPanel extends JPanel {
         tf.setPreferredSize(new Dimension(0, 30));
         tf.setBorder(new CompoundBorder(
                 new LineBorder(new Color(203, 213, 225)),
-                new EmptyBorder(4, 8, 4, 8)
-        ));
+                new EmptyBorder(4, 8, 4, 8)));
         return tf;
     }
 
@@ -346,7 +355,7 @@ public class SupplierPanel extends JPanel {
             tableModel.setRowCount(0);
             List<Supplier> list = supplierDAO.getAllSuppliers();
             for (Supplier s : list) {
-                tableModel.addRow(new Object[]{
+                tableModel.addRow(new Object[] {
                         s.getId(), s.getName(), s.getCompanyName(), s.getPhone(), s.getEmail(), s.getAddress()
                 });
             }
@@ -365,12 +374,13 @@ public class SupplierPanel extends JPanel {
             tableModel.setRowCount(0);
             List<Supplier> list = supplierDAO.searchSuppliers(q);
             for (Supplier s : list) {
-                tableModel.addRow(new Object[]{
+                tableModel.addRow(new Object[] {
                         s.getId(), s.getName(), s.getCompanyName(), s.getPhone(), s.getEmail(), s.getAddress()
                 });
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error searching suppliers: " + e.getMessage(), "Search Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error searching suppliers: " + e.getMessage(), "Search Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -378,68 +388,80 @@ public class SupplierPanel extends JPanel {
         String name = txtName.getText().trim();
         String company = txtCompany.getText().trim();
         if (name.isEmpty() && company.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter at least Contact Person Name or Company Name.", "Validation", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please enter at least Contact Person Name or Company Name.",
+                    "Validation", JOptionPane.WARNING_MESSAGE);
             txtName.requestFocus();
             return;
         }
         try {
-            Supplier s = new Supplier(0, name, company, txtPhone.getText().trim(), txtEmail.getText().trim(), txtAddress.getText().trim());
+            Supplier s = new Supplier(0, name, company, txtPhone.getText().trim(), txtEmail.getText().trim(),
+                    txtAddress.getText().trim());
             if (supplierDAO.addSupplier(s)) {
-                JOptionPane.showMessageDialog(this, "Supplier added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Supplier added successfully!", "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
                 clearForm();
                 loadSupplierTable();
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error adding supplier: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error adding supplier: " + e.getMessage(), "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void updateSupplier() {
         if (selectedSupplierId <= 0) {
-            JOptionPane.showMessageDialog(this, "Please select a supplier from table to update.", "Selection Required", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select a supplier from table to update.", "Selection Required",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
         String name = txtName.getText().trim();
         String company = txtCompany.getText().trim();
         if (name.isEmpty() && company.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Contact Person Name or Company Name cannot be empty.", "Validation", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Contact Person Name or Company Name cannot be empty.", "Validation",
+                    JOptionPane.WARNING_MESSAGE);
             txtName.requestFocus();
             return;
         }
         try {
-            Supplier s = new Supplier(selectedSupplierId, name, company, txtPhone.getText().trim(), txtEmail.getText().trim(), txtAddress.getText().trim());
+            Supplier s = new Supplier(selectedSupplierId, name, company, txtPhone.getText().trim(),
+                    txtEmail.getText().trim(), txtAddress.getText().trim());
             if (supplierDAO.updateSupplier(s)) {
-                JOptionPane.showMessageDialog(this, "Supplier updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Supplier updated successfully!", "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
                 clearForm();
                 loadSupplierTable();
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error updating supplier: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error updating supplier: " + e.getMessage(), "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void deleteSupplier() {
         if (selectedSupplierId <= 0) {
-            JOptionPane.showMessageDialog(this, "Please select a supplier from table to delete.", "Selection Required", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select a supplier from table to delete.", "Selection Required",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
-        String displayName = !txtName.getText().trim().isEmpty() ? txtName.getText().trim() : txtCompany.getText().trim();
+        String displayName = !txtName.getText().trim().isEmpty() ? txtName.getText().trim()
+                : txtCompany.getText().trim();
         int confirm = JOptionPane.showConfirmDialog(
                 this,
                 "Are you sure you want to delete supplier '" + displayName + "'?",
                 "Confirm Delete",
                 JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE
-        );
+                JOptionPane.WARNING_MESSAGE);
         if (confirm == JOptionPane.YES_OPTION) {
             try {
                 if (supplierDAO.deleteSupplier(selectedSupplierId)) {
-                    JOptionPane.showMessageDialog(this, "Supplier deleted successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Supplier deleted successfully.", "Success",
+                            JOptionPane.INFORMATION_MESSAGE);
                     clearForm();
                     loadSupplierTable();
                 }
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Cannot delete supplier: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Cannot delete supplier: " + e.getMessage(), "Database Error",
+                        JOptionPane.ERROR_MESSAGE);
             }
         }
     }
