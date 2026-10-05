@@ -6,6 +6,7 @@ import dao.CategoryDAO;
 import dao.CustomerDAO;
 import dao.ProductDAO;
 import model.*;
+import util.ProductImageUtil;
 import util.QrCodeGenerator;
 
 import javax.swing.*;
@@ -612,11 +613,11 @@ public class SelfCheckoutPanel extends JPanel {
     }
 
     private JPanel createProductCard(Product p) {
-        JPanel card = new JPanel(new BorderLayout(8, 6));
+        JPanel card = new JPanel(new BorderLayout(8, 8));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                new EmptyBorder(12, 12, 10, 12)
+                new EmptyBorder(10, 10, 10, 10)
         ));
 
         // Category Tag + Stock Status
@@ -635,9 +636,18 @@ public class SelfCheckoutPanel extends JPanel {
         topInfo.add(lblCat, BorderLayout.WEST);
         topInfo.add(lblStock, BorderLayout.EAST);
 
-        // Product Name & Code
-        JPanel centerBox = new JPanel(new GridLayout(2, 1, 0, 2));
+        // Center Content: Product Image + Product Name + Code
+        JPanel centerBox = new JPanel(new BorderLayout(0, 6));
         centerBox.setOpaque(false);
+
+        // Product Image (Height 72px, Width 110px)
+        JLabel lblImage = new JLabel();
+        lblImage.setHorizontalAlignment(SwingConstants.CENTER);
+        lblImage.setIcon(ProductImageUtil.getProductIcon(p, 110, 72));
+        lblImage.setPreferredSize(new Dimension(110, 72));
+
+        JPanel nameAndCode = new JPanel(new GridLayout(2, 1, 0, 2));
+        nameAndCode.setOpaque(false);
 
         JLabel lblName = new JLabel(p.getName());
         lblName.setFont(new Font("Segoe UI", Font.BOLD, 13));
@@ -648,8 +658,11 @@ public class SelfCheckoutPanel extends JPanel {
         lblCode.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lblCode.setForeground(new Color(148, 163, 184));
 
-        centerBox.add(lblName);
-        centerBox.add(lblCode);
+        nameAndCode.add(lblName);
+        nameAndCode.add(lblCode);
+
+        centerBox.add(lblImage, BorderLayout.NORTH);
+        centerBox.add(nameAndCode, BorderLayout.CENTER);
 
         // Price & Add Button
         JPanel bottomBox = new JPanel(new BorderLayout(8, 0));
@@ -676,12 +689,30 @@ public class SelfCheckoutPanel extends JPanel {
         card.add(centerBox, BorderLayout.CENTER);
         card.add(bottomBox, BorderLayout.SOUTH);
 
-        // Card touch click
+        // Card touch click & hover styling
         card.setCursor(inStock ? new Cursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
         card.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (inStock) addProductToCart(p);
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (inStock) {
+                    card.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(new Color(59, 130, 246), 1),
+                            new EmptyBorder(10, 10, 10, 10)
+                    ));
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                card.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+                        new EmptyBorder(10, 10, 10, 10)
+                ));
             }
         });
 

@@ -11,6 +11,7 @@ public class Product {
     private double sellingPrice;
     private int quantity;
     private int minStockLevel;
+    private String imagePath;
 
     public Product() {}
 
@@ -24,6 +25,11 @@ public class Product {
         this.sellingPrice = sellingPrice;
         this.quantity = quantity;
         this.minStockLevel = minStockLevel;
+    }
+
+    public Product(int id, String code, String barcode, String name, int categoryId, double purchasePrice, double sellingPrice, int quantity, int minStockLevel, String imagePath) {
+        this(id, code, barcode, name, categoryId, purchasePrice, sellingPrice, quantity, minStockLevel);
+        this.imagePath = imagePath;
     }
 
     public Product(int id, String code, String name, int categoryId, double purchasePrice, double sellingPrice, int quantity, int minStockLevel) {
@@ -59,6 +65,9 @@ public class Product {
 
     public int getMinStockLevel() { return minStockLevel; }
     public void setMinStockLevel(int minStockLevel) { this.minStockLevel = minStockLevel; }
+
+    public String getImagePath() { return imagePath; }
+    public void setImagePath(String imagePath) { this.imagePath = imagePath; }
 
     public boolean isLowStock() {
         return quantity <= minStockLevel;

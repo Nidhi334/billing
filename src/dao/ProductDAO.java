@@ -9,14 +9,25 @@ import java.util.List;
 
 public class ProductDAO {
     private static boolean barcodeColChecked = false;
-    private synchronized void ensureBarcodeColumn(Connection conn) {
-        if (barcodeColChecked) return;
-        try (Statement st = conn.createStatement()) {
-            st.execute("ALTER TABLE products ADD COLUMN barcode VARCHAR(100) NULL AFTER code");
-        } catch (Exception ignored) {
-            // Column already exists
+    private static boolean imageColChecked = false;
+
+    private synchronized void ensureColumns(Connection conn) {
+        if (!barcodeColChecked) {
+            try (Statement st = conn.createStatement()) {
+                st.execute("ALTER TABLE products ADD COLUMN barcode VARCHAR(100) NULL AFTER code");
+            } catch (Exception ignored) {
+                // Column already exists
+            }
+            barcodeColChecked = true;
         }
-        barcodeColChecked = true;
+        if (!imageColChecked) {
+            try (Statement st = conn.createStatement()) {
+                st.execute("ALTER TABLE products ADD COLUMN image_path VARCHAR(255) NULL");
+            } catch (Exception ignored) {
+                // Column already exists
+            }
+            imageColChecked = true;
+        }
     }
 
 
@@ -92,11 +103,28 @@ public class ProductDAO {
         return null;
     }
 
+    public Product getProductById(int id) throws SQLException {
+        if (id <= 0) return null;
+        String sql = "SELECT p.*, c.name AS category_name FROM products p " +
+                     "LEFT JOIN categories c ON p.category_id = c.id " +
+                     "WHERE p.id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapProduct(rs);
+                }
+            }
+        }
+        return null;
+    }
+
     public boolean addProduct(Product p) throws SQLException {
         try (Connection conn = DBConnection.getConnection()) {
-            ensureBarcodeColumn(conn);
-            String sql = "INSERT INTO products (code, barcode, name, category_id, purchase_price, selling_price, quantity, min_stock_level) " +
-                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            ensureColumns(conn);
+            String sql = "INSERT INTO products (code, barcode, name, category_id, purchase_price, selling_price, quantity, min_stock_level, image_path) " +
+                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 ps.setString(1, p.getCode());
                 ps.setString(2, p.getBarcode());
@@ -110,6 +138,7 @@ public class ProductDAO {
                 ps.setDouble(6, p.getSellingPrice());
                 ps.setInt(7, p.getQuantity());
                 ps.setInt(8, p.getMinStockLevel());
+                ps.setString(9, p.getImagePath());
                 int affected = ps.executeUpdate();
                 if (affected > 0) {
                     try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -126,9 +155,9 @@ public class ProductDAO {
 
     public boolean updateProduct(Product p) throws SQLException {
         try (Connection conn = DBConnection.getConnection()) {
-            ensureBarcodeColumn(conn);
+            ensureColumns(conn);
             String sql = "UPDATE products SET code = ?, barcode = ?, name = ?, category_id = ?, purchase_price = ?, selling_price = ?, " +
-                         "quantity = ?, min_stock_level = ? WHERE id = ?";
+                         "quantity = ?, min_stock_level = ?, image_path = ? WHERE id = ?";
             try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, p.getCode());
                 ps.setString(2, p.getBarcode());
@@ -142,7 +171,8 @@ public class ProductDAO {
                 ps.setDouble(6, p.getSellingPrice());
                 ps.setInt(7, p.getQuantity());
                 ps.setInt(8, p.getMinStockLevel());
-                ps.setInt(9, p.getId());
+                ps.setString(9, p.getImagePath());
+                ps.setInt(10, p.getId());
                 return ps.executeUpdate() > 0;
             }
         }
@@ -185,6 +215,9 @@ public class ProductDAO {
         p.setSellingPrice(rs.getDouble("selling_price"));
         p.setQuantity(rs.getInt("quantity"));
         p.setMinStockLevel(rs.getInt("min_stock_level"));
+        try {
+            p.setImagePath(rs.getString("image_path"));
+        } catch (Exception ignored) {}
         return p;
     }
 }

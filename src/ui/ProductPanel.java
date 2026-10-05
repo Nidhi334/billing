@@ -4,15 +4,18 @@ import dao.CategoryDAO;
 import dao.ProductDAO;
 import model.Category;
 import model.Product;
+import util.ProductImageUtil;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.List;
 
 public class ProductPanel extends JPanel {
@@ -27,6 +30,11 @@ public class ProductPanel extends JPanel {
     private JButton btnAdd, btnUpdate, btnDelete, btnClear, btnManageCategories;
     private JButton btnViewBarcode, btnPrintBarcode;
     private int selectedProductId = -1;
+
+    // Product Image support
+    private String selectedImagePath = null;
+    private JLabel lblImagePreview;
+    private JButton btnChooseImage, btnRemoveImage;
 
     public ProductPanel() {
         setLayout(new BorderLayout(15, 15));
@@ -157,6 +165,50 @@ public class ProductPanel extends JPanel {
         stockRow.add(pMin);
         g.gridy = 11; formCard.add(stockRow, g);
 
+        // Product Image Row (Preview + Choose / Remove buttons)
+        JPanel imageSection = new JPanel(new BorderLayout(10, 6));
+        imageSection.setOpaque(false);
+        imageSection.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+                "🖼️ Product Image",
+                0, 0,
+                new Font("Segoe UI", Font.BOLD, 11),
+                new Color(71, 85, 105)
+        ));
+
+        lblImagePreview = new JLabel();
+        lblImagePreview.setPreferredSize(new Dimension(80, 56));
+        lblImagePreview.setOpaque(true);
+        lblImagePreview.setBackground(new Color(248, 250, 252));
+        lblImagePreview.setHorizontalAlignment(SwingConstants.CENTER);
+        lblImagePreview.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240), 1));
+        imageSection.add(lblImagePreview, BorderLayout.WEST);
+
+        JPanel imageBtnStack = new JPanel(new GridLayout(2, 1, 0, 4));
+        imageBtnStack.setOpaque(false);
+
+        btnChooseImage = new JButton("📁 Choose Image...");
+        btnChooseImage.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        btnChooseImage.setMargin(new Insets(2, 6, 2, 6));
+        btnChooseImage.addActionListener(e -> chooseProductImage());
+
+        btnRemoveImage = new JButton("✖ Remove Image");
+        btnRemoveImage.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        btnRemoveImage.setMargin(new Insets(2, 6, 2, 6));
+        btnRemoveImage.setForeground(new Color(220, 38, 38));
+        btnRemoveImage.setEnabled(false);
+        btnRemoveImage.addActionListener(e -> {
+            selectedImagePath = null;
+            updateImagePreview();
+        });
+
+        imageBtnStack.add(btnChooseImage);
+        imageBtnStack.add(btnRemoveImage);
+        imageSection.add(imageBtnStack, BorderLayout.CENTER);
+
+        g.gridy = 12;
+        formCard.add(imageSection, g);
+
         // Action Buttons Grid
         JPanel btnPanel = new JPanel(new GridLayout(2, 2, 6, 6));
         btnPanel.setBackground(Color.WHITE);
@@ -181,7 +233,7 @@ public class ProductPanel extends JPanel {
         btnPanel.add(btnDelete);
         btnPanel.add(btnClear);
 
-        g.gridy = 12;
+        g.gridy = 13;
         g.insets = new Insets(10, 5, 4, 5);
         formCard.add(btnPanel, g);
 
@@ -202,7 +254,7 @@ public class ProductPanel extends JPanel {
         barcodeToolsRow.add(btnViewBarcode);
         barcodeToolsRow.add(btnPrintBarcode);
 
-        g.gridy = 13;
+        g.gridy = 14;
         formCard.add(barcodeToolsRow, g);
 
         JScrollPane formScroll = new JScrollPane(formCard);
@@ -292,9 +344,29 @@ public class ProductPanel extends JPanel {
                 txtSellingPrice.setText(tableModel.getValueAt(r, 6).toString().replace("₹", "").trim());
                 txtQty.setText(tableModel.getValueAt(r, 7).toString());
                 txtMinStock.setText(tableModel.getValueAt(r, 8).toString());
+
+                try {
+                    Product p = productDAO.getProductById(selectedProductId);
+                    selectedImagePath = (p != null) ? p.getImagePath() : null;
+                } catch (Exception ex) {
+                    selectedImagePath = null;
+                }
+                updateImagePreview();
                 updateLiveBarcodePreview();
             }
         });
+
+        cmbCategory.addActionListener(e -> {
+            if (selectedImagePath == null) updateImagePreview();
+        });
+
+        txtName.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { if (selectedImagePath == null) updateImagePreview(); }
+            public void removeUpdate(DocumentEvent e) { if (selectedImagePath == null) updateImagePreview(); }
+            public void changedUpdate(DocumentEvent e) { if (selectedImagePath == null) updateImagePreview(); }
+        });
+
+        updateImagePreview();
     }
 
     private void syncCodeToBarcode() {
@@ -510,7 +582,7 @@ public class ProductPanel extends JPanel {
             Category cat = (Category) cmbCategory.getSelectedItem();
             int catId = cat != null ? cat.getId() : 0;
 
-            return new Product(0, code, barcode, name, catId, buy, sell, qty, minStock);
+            return new Product(0, code, barcode, name, catId, buy, sell, qty, minStock, selectedImagePath);
         } catch (NumberFormatException nfe) {
             JOptionPane.showMessageDialog(this, "Price and Quantity must be valid numbers.", "Validation", JOptionPane.WARNING_MESSAGE);
             return null;
@@ -519,6 +591,7 @@ public class ProductPanel extends JPanel {
 
     private void clearForm() {
         selectedProductId = -1;
+        selectedImagePath = null;
         txtCode.setText("");
         txtBarcode.setText("");
         lblBarcodePreview.setIcon(null);
@@ -528,7 +601,42 @@ public class ProductPanel extends JPanel {
         txtSellingPrice.setText("");
         txtQty.setText("");
         txtMinStock.setText("5");
+        updateImagePreview();
         table.clearSelection();
+    }
+
+    private void chooseProductImage() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Select Product Image");
+        chooser.setFileFilter(new FileNameExtensionFilter("Image Files (*.jpg, *.png, *.webp, *.jpeg)", "jpg", "jpeg", "png", "webp"));
+        int res = chooser.showOpenDialog(this);
+        if (res == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            String code = txtCode.getText().trim();
+            if (code.isEmpty()) {
+                code = "prod_" + System.currentTimeMillis();
+            }
+            String savedPath = ProductImageUtil.saveProductImage(file, code);
+            if (savedPath != null) {
+                selectedImagePath = savedPath;
+                updateImagePreview();
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to save product image.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private void updateImagePreview() {
+        String catName = cmbCategory.getSelectedItem() != null ? cmbCategory.getSelectedItem().toString() : "";
+        String prodName = txtName != null ? txtName.getText().trim() : "";
+        ImageIcon icon = ProductImageUtil.getProductIcon(selectedImagePath, catName, prodName, 76, 52);
+        if (lblImagePreview != null) {
+            lblImagePreview.setIcon(icon);
+            lblImagePreview.setText("");
+        }
+        if (btnRemoveImage != null) {
+            btnRemoveImage.setEnabled(selectedImagePath != null && !selectedImagePath.trim().isEmpty());
+        }
     }
 
     private void manageCategories() {

@@ -40,12 +40,14 @@ CREATE TABLE IF NOT EXISTS suppliers (
 CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(50) NOT NULL UNIQUE,
+    barcode VARCHAR(50) NULL,
     name VARCHAR(150) NOT NULL,
     category_id INT,
     purchase_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     selling_price DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
     quantity INT NOT NULL DEFAULT 0,
     min_stock_level INT NOT NULL DEFAULT 5,
+    image_path VARCHAR(255) NULL,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 );
 
