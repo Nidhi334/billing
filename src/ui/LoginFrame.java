@@ -149,7 +149,7 @@ public class LoginFrame extends JFrame {
         footerBox.setOpaque(false);
         footerBox.setBorder(new EmptyBorder(6, 15, 12, 15));
 
-        JButton btnSelfCheckoutMode = new JButton("🛒 Open Customer Self-Checkout");
+        JButton btnSelfCheckoutMode = new JButton("🛒 Self Checkout");
         btnSelfCheckoutMode.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnSelfCheckoutMode.setBackground(new Color(16, 185, 129));
         btnSelfCheckoutMode.setForeground(Color.WHITE);
@@ -157,7 +157,7 @@ public class LoginFrame extends JFrame {
         btnSelfCheckoutMode.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnSelfCheckoutMode.setMaximumSize(new Dimension(360, 36));
         btnSelfCheckoutMode.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnSelfCheckoutMode.setToolTipText("Open full-screen express customer self-service checkout");
+        btnSelfCheckoutMode.setToolTipText("Open Self-Checkout");
         btnSelfCheckoutMode.addActionListener(e -> new SelfCheckoutFrame(null).setVisible(true));
 
         JLabel footerNote = new JLabel("Default logins: admin/admin123 (Admin) | staff/staff123 (Staff)", SwingConstants.CENTER);
