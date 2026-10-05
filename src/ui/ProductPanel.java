@@ -33,7 +33,7 @@ public class ProductPanel extends JPanel {
         // setBackground(new Color(248, 250, 252));
         setBackground(Color.LIGHT_GRAY);
         // setBorder(new EmptyBorder(15, 15, 15, 15));
-        setBorder(new EmptyBorder(0, 0, 0, 0));
+        setBorder(new EmptyBorder(15, 15, 15, 15));
         initComponents();
         loadCategories();
         loadProductTable();
@@ -41,7 +41,8 @@ public class ProductPanel extends JPanel {
 
     private void initComponents() {
         // TOP: Title & Search bar
-        JPanel topPanel = new JPanel(new BorderLayout(10, 10));
+        // JPanel topPanel = new JPanel(new BorderLayout(10, 10));
+        JPanel topPanel = new JPanel(new BorderLayout(0, 0));
         // topPanel.setBackground(new Color(248, 250, 252));
         topPanel.setBackground(Color.BLUE);
         JLabel lblTitle = new JLabel("📦 Product Management & Barcode Hub");
