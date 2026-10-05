@@ -65,9 +65,15 @@ public class DashboardFrame extends JFrame {
     private int currentChartsLayoutMode = -1;
 
     private ReportDAO reportDAO = new ReportDAO();
+    private final boolean offlineDemo;
 
     public DashboardFrame(User user) {
+        this(user, false);
+    }
+
+    public DashboardFrame(User user, boolean offlineDemo) {
         this.currentUser = user;
+        this.offlineDemo = offlineDemo;
         setTitle("SmartBilling Pro - " + (user.isAdmin() ? "Admin Portal" : "Staff Desk") + " [" + user.getFullName() + "]");
         setSize(1280, 800);
         setMinimumSize(new Dimension(850, 600));
@@ -654,6 +660,9 @@ public class DashboardFrame extends JFrame {
     }
 
     private void loadDashboardStats() {
+        if (offlineDemo) {
+            return;
+        }
         try {
             Map<String, Object> stats = reportDAO.getDashboardStats();
             double todaySales = (double) stats.getOrDefault("todaySalesAmount", 0.0);
@@ -738,4 +747,3 @@ public class DashboardFrame extends JFrame {
         }
     }
 }
-

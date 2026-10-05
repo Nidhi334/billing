@@ -30,8 +30,10 @@ public class ProductPanel extends JPanel {
 
     public ProductPanel() {
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(248, 250, 252));
-        setBorder(new EmptyBorder(15, 15, 15, 15));
+        // setBackground(new Color(248, 250, 252));
+        setBackground(Color.LIGHT_GRAY);
+        // setBorder(new EmptyBorder(15, 15, 15, 15));
+        setBorder(new EmptyBorder(0, 0, 0, 0));
         initComponents();
         loadCategories();
         loadProductTable();
@@ -40,15 +42,17 @@ public class ProductPanel extends JPanel {
     private void initComponents() {
         // TOP: Title & Search bar
         JPanel topPanel = new JPanel(new BorderLayout(10, 10));
-        topPanel.setBackground(new Color(248, 250, 252));
-
+        // topPanel.setBackground(new Color(248, 250, 252));
+        topPanel.setBackground(Color.BLUE);
         JLabel lblTitle = new JLabel("📦 Product Management & Barcode Hub");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTitle.setForeground(new Color(30, 41, 59));
+        // lblTitle.setForeground(new Color(30, 41, 59));
+        lblTitle.setForeground(Color.WHITE);
         topPanel.add(lblTitle, BorderLayout.WEST);
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        searchPanel.setBackground(new Color(248, 250, 252));
+        // searchPanel.setBackground(new Color(248, 250, 252));
+        searchPanel.setBackground(Color.LIGHT_GRAY);
         searchPanel.add(new JLabel("Search (Code/Barcode/Name):"));
         txtSearch = new JTextField(18);
         searchPanel.add(txtSearch);
@@ -62,11 +66,10 @@ public class ProductPanel extends JPanel {
 
         // LEFT: Form Card
         JPanel formCard = new JPanel(new GridBagLayout());
-        formCard.setBackground(Color.WHITE);
+        formCard.setBackground(Color.LIGHT_GRAY);
         formCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                new EmptyBorder(12, 14, 12, 14)
-        ));
+                new EmptyBorder(12, 14, 12, 14)));
         formCard.setPreferredSize(new Dimension(360, 0));
 
         GridBagConstraints g = new GridBagConstraints();
@@ -75,9 +78,12 @@ public class ProductPanel extends JPanel {
         g.anchor = GridBagConstraints.WEST;
 
         // Code
-        g.gridx = 0; g.gridy = 0; formCard.add(new JLabel("Product Code / SKU:"), g);
+        g.gridx = 0;
+        g.gridy = 0;
+        formCard.add(new JLabel("Product Code / SKU:"), g);
         txtCode = new JTextField();
-        g.gridy = 1; formCard.add(txtCode, g);
+        g.gridy = 1;
+        formCard.add(txtCode, g);
 
         // Barcode (Auto-generate & custom barcode entry)
         JPanel barcodeLabelRow = new JPanel(new BorderLayout());
@@ -90,12 +96,14 @@ public class ProductPanel extends JPanel {
         btnGenBarcode.addActionListener(e -> generateRandomBarcode());
         barcodeLabelRow.add(btnGenBarcode, BorderLayout.EAST);
 
-        g.gridy = 2; formCard.add(barcodeLabelRow, g);
+        g.gridy = 2;
+        formCard.add(barcodeLabelRow, g);
 
         txtBarcode = new JTextField();
         txtBarcode.setFont(new Font("Monospaced", Font.BOLD, 13));
         txtBarcode.setToolTipText("Enter any custom barcode value (e.g. 8901234567890)");
-        g.gridy = 3; formCard.add(txtBarcode, g);
+        g.gridy = 3;
+        formCard.add(txtBarcode, g);
 
         // Live Barcode Preview Component
         lblBarcodePreview = new JLabel("Barcode Preview", SwingConstants.CENTER);
@@ -103,21 +111,27 @@ public class ProductPanel extends JPanel {
         lblBarcodePreview.setOpaque(true);
         lblBarcodePreview.setBackground(new Color(248, 250, 252));
         lblBarcodePreview.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240), 1));
-        g.gridy = 4; formCard.add(lblBarcodePreview, g);
+        g.gridy = 4;
+        formCard.add(lblBarcodePreview, g);
 
         // Name
-        g.gridy = 5; formCard.add(new JLabel("Product Name:"), g);
+        g.gridy = 5;
+        formCard.add(new JLabel("Product Name:"), g);
         txtName = new JTextField();
-        g.gridy = 6; formCard.add(txtName, g);
+        g.gridy = 6;
+        formCard.add(txtName, g);
 
         // Category
-        g.gridy = 7; formCard.add(new JLabel("Category:"), g);
+        g.gridy = 7;
+        formCard.add(new JLabel("Category:"), g);
         cmbCategory = new JComboBox<>();
-        g.gridy = 8; formCard.add(cmbCategory, g);
+        g.gridy = 8;
+        formCard.add(cmbCategory, g);
 
         btnManageCategories = new JButton("+ Manage Categories");
         btnManageCategories.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        g.gridy = 9; formCard.add(btnManageCategories, g);
+        g.gridy = 9;
+        formCard.add(btnManageCategories, g);
 
         // Price Row (Buy & Sell)
         JPanel priceRow = new JPanel(new GridLayout(1, 2, 8, 0));
@@ -136,7 +150,8 @@ public class ProductPanel extends JPanel {
 
         priceRow.add(pBuy);
         priceRow.add(pSell);
-        g.gridy = 10; formCard.add(priceRow, g);
+        g.gridy = 10;
+        formCard.add(priceRow, g);
 
         // Stock Row (Initial Qty & Min Stock)
         JPanel stockRow = new JPanel(new GridLayout(1, 2, 8, 0));
@@ -155,7 +170,8 @@ public class ProductPanel extends JPanel {
 
         stockRow.add(pQty);
         stockRow.add(pMin);
-        g.gridy = 11; formCard.add(stockRow, g);
+        g.gridy = 11;
+        formCard.add(stockRow, g);
 
         // Action Buttons Grid
         JPanel btnPanel = new JPanel(new GridLayout(2, 2, 6, 6));
@@ -211,10 +227,13 @@ public class ProductPanel extends JPanel {
         add(formScroll, BorderLayout.WEST);
 
         // CENTER: Products Table (Added Barcode column)
-        String[] cols = {"ID", "Code", "Barcode", "Name", "Category", "Buy Price", "Sell Price", "Stock", "Min Stock", "Status"};
+        String[] cols = { "ID", "Code", "Barcode", "Name", "Category", "Buy Price", "Sell Price", "Stock", "Min Stock",
+                "Status" };
         tableModel = new DefaultTableModel(cols, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
         };
         table = new JTable(tableModel);
         table.setRowHeight(28);
@@ -224,8 +243,10 @@ public class ProductPanel extends JPanel {
         // Custom status renderer to highlight low stock
         table.getColumnModel().getColumn(9).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
+                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row,
+                        column);
                 label.setHorizontalAlignment(SwingConstants.CENTER);
                 String val = String.valueOf(value);
                 if ("OUT OF STOCK".equals(val)) {
@@ -247,15 +268,31 @@ public class ProductPanel extends JPanel {
 
         // Document Listener on txtBarcode to automatically update live barcode image
         txtBarcode.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { updateLiveBarcodePreview(); }
-            public void removeUpdate(DocumentEvent e) { updateLiveBarcodePreview(); }
-            public void changedUpdate(DocumentEvent e) { updateLiveBarcodePreview(); }
+            public void insertUpdate(DocumentEvent e) {
+                updateLiveBarcodePreview();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                updateLiveBarcodePreview();
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                updateLiveBarcodePreview();
+            }
         });
 
         txtCode.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { syncCodeToBarcode(); }
-            public void removeUpdate(DocumentEvent e) { syncCodeToBarcode(); }
-            public void changedUpdate(DocumentEvent e) { syncCodeToBarcode(); }
+            public void insertUpdate(DocumentEvent e) {
+                syncCodeToBarcode();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                syncCodeToBarcode();
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                syncCodeToBarcode();
+            }
         });
 
         // Listeners
@@ -335,7 +372,8 @@ public class ProductPanel extends JPanel {
     private void viewSelectedBarcode() {
         Product p = getSelectedOrBuiltProduct();
         if (p == null) {
-            JOptionPane.showMessageDialog(this, "Please select a product from the table or fill in barcode/code.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select a product from the table or fill in barcode/code.",
+                    "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
         Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
@@ -345,7 +383,8 @@ public class ProductPanel extends JPanel {
     private void printSelectedBarcode() {
         Product p = getSelectedOrBuiltProduct();
         if (p == null) {
-            JOptionPane.showMessageDialog(this, "Please select a product from the table or fill in barcode/code.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select a product from the table or fill in barcode/code.",
+                    "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
         BufferedImage img = BarcodeUtil.generateBarcodeImage(p.getBarcode(), 300, 100, true);
@@ -356,7 +395,8 @@ public class ProductPanel extends JPanel {
         if (selectedProductId > 0) {
             try {
                 return productDAO.getProductByCode(txtCode.getText().trim());
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
         return validateAndBuildProduct();
     }
@@ -379,7 +419,7 @@ public class ProductPanel extends JPanel {
             List<Product> products = productDAO.getAllProducts();
             for (Product p : products) {
                 String status = p.isOutOfStock() ? "OUT OF STOCK" : (p.isLowStock() ? "LOW STOCK" : "IN STOCK");
-                tableModel.addRow(new Object[]{
+                tableModel.addRow(new Object[] {
                         p.getId(),
                         p.getCode(),
                         p.getBarcode(),
@@ -393,7 +433,8 @@ public class ProductPanel extends JPanel {
                 });
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Failed to load products: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Failed to load products: " + e.getMessage(), "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -408,7 +449,7 @@ public class ProductPanel extends JPanel {
             List<Product> products = productDAO.searchProducts(query);
             for (Product p : products) {
                 String status = p.isOutOfStock() ? "OUT OF STOCK" : (p.isLowStock() ? "LOW STOCK" : "IN STOCK");
-                tableModel.addRow(new Object[]{
+                tableModel.addRow(new Object[] {
                         p.getId(),
                         p.getCode(),
                         p.getBarcode(),
@@ -429,59 +470,72 @@ public class ProductPanel extends JPanel {
     private void addProduct() {
         try {
             Product p = validateAndBuildProduct();
-            if (p == null) return;
+            if (p == null)
+                return;
 
             if (productDAO.addProduct(p)) {
-                JOptionPane.showMessageDialog(this, "Product added successfully with generated barcode!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Product added successfully with generated barcode!", "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
                 clearForm();
                 loadProductTable();
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to add product.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error adding product: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error adding product: " + e.getMessage(), "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void updateProduct() {
         if (selectedProductId <= 0) {
-            JOptionPane.showMessageDialog(this, "Please select a product from the table first.", "Warning", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select a product from the table first.", "Warning",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
         try {
             Product p = validateAndBuildProduct();
-            if (p == null) return;
+            if (p == null)
+                return;
             p.setId(selectedProductId);
 
             if (productDAO.updateProduct(p)) {
-                JOptionPane.showMessageDialog(this, "Product and barcode updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Product and barcode updated successfully!", "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
                 clearForm();
                 loadProductTable();
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to update product.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error updating product: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error updating product: " + e.getMessage(), "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void deleteProduct() {
         if (selectedProductId <= 0) {
-            JOptionPane.showMessageDialog(this, "Please select a product from the table to delete.", "Warning", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select a product from the table to delete.", "Warning",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
-        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this product?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this product?",
+                "Confirm Delete", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             try {
                 if (productDAO.deleteProduct(selectedProductId)) {
-                    JOptionPane.showMessageDialog(this, "Product deleted successfully!", "Deleted", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Product deleted successfully!", "Deleted",
+                            JOptionPane.INFORMATION_MESSAGE);
                     clearForm();
                     loadProductTable();
                 } else {
-                    JOptionPane.showMessageDialog(this, "Could not delete product.", "Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Could not delete product.", "Error",
+                            JOptionPane.ERROR_MESSAGE);
                 }
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Delete failed (it may be referenced by existing sales/purchases): " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Delete failed (it may be referenced by existing sales/purchases): " + e.getMessage(), "Error",
+                        JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -489,7 +543,8 @@ public class ProductPanel extends JPanel {
     private Product validateAndBuildProduct() {
         String code = txtCode.getText().trim();
         String barcode = txtBarcode.getText().trim();
-        if (barcode.isEmpty()) barcode = code;
+        if (barcode.isEmpty())
+            barcode = code;
         String name = txtName.getText().trim();
         String buyStr = txtPurchasePrice.getText().trim();
         String sellStr = txtSellingPrice.getText().trim();
@@ -497,7 +552,8 @@ public class ProductPanel extends JPanel {
         String minStr = txtMinStock.getText().trim();
 
         if (code.isEmpty() || name.isEmpty() || buyStr.isEmpty() || sellStr.isEmpty() || qtyStr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please fill in all mandatory fields (Code, Name, Prices, Qty).", "Validation", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please fill in all mandatory fields (Code, Name, Prices, Qty).",
+                    "Validation", JOptionPane.WARNING_MESSAGE);
             return null;
         }
 
@@ -512,7 +568,8 @@ public class ProductPanel extends JPanel {
 
             return new Product(0, code, barcode, name, catId, buy, sell, qty, minStock);
         } catch (NumberFormatException nfe) {
-            JOptionPane.showMessageDialog(this, "Price and Quantity must be valid numbers.", "Validation", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Price and Quantity must be valid numbers.", "Validation",
+                    JOptionPane.WARNING_MESSAGE);
             return null;
         }
     }

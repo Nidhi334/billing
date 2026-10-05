@@ -181,12 +181,16 @@ public class LoginFrame extends JFrame {
 
     private void launchDemoAdmin() {
         User demoAdmin = new User(1, "admin", "admin123", "System Administrator (Demo/Offline)", "ADMIN");
-        launchDashboard(demoAdmin);
+        launchDashboard(demoAdmin, true);
     }
 
     private void launchDashboard(User user) {
+        launchDashboard(user, false);
+    }
+
+    private void launchDashboard(User user, boolean offlineDemo) {
         try {
-            DashboardFrame dashboard = new DashboardFrame(user);
+            DashboardFrame dashboard = new DashboardFrame(user, offlineDemo);
             dashboard.setVisible(true);
             dispose();
         } catch (Exception ex) {
@@ -218,7 +222,7 @@ public class LoginFrame extends JFrame {
             boolean isDefaultAdmin = "admin".equalsIgnoreCase(username) && "admin123".equals(password);
             boolean isDefaultStaff = "staff".equalsIgnoreCase(username) && "staff123".equals(password);
 
-            if (isDefaultAdmin || isDefaultStaff) {
+            if (isConnRefused && (isDefaultAdmin || isDefaultStaff)) {
                 String notice = "⚠️ MySQL DATABASE IS NOT RUNNING (Connection Refused on port 3306)!\n\n"
                         + "👉 MySQL service start karne ke liye terminal me ye command chalayein:\n"
                         + "   sudo systemctl start mysql\n"
@@ -230,9 +234,9 @@ public class LoginFrame extends JFrame {
 
                 if (choice == JOptionPane.YES_OPTION) {
                     if (isDefaultAdmin) {
-                        launchDashboard(new User(1, "admin", "admin123", "System Administrator (Demo/Offline)", "ADMIN"));
+                        launchDashboard(new User(1, "admin", "admin123", "System Administrator (Demo/Offline)", "ADMIN"), true);
                     } else {
-                        launchDashboard(new User(2, "staff", "staff123", "Cashier Desk (Demo/Offline)", "STAFF"));
+                        launchDashboard(new User(2, "staff", "staff123", "Cashier Desk (Demo/Offline)", "STAFF"), true);
                     }
                     return;
                 } else {
@@ -309,4 +313,3 @@ public class LoginFrame extends JFrame {
         }
     }
 }
-
