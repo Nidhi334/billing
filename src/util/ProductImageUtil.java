@@ -55,11 +55,24 @@ public class ProductImageUtil {
             }
         }
 
-        // 1b. Fallback: Check if an image named by product code/barcode exists in data/product_images
+        // 1b. Fallback: Check if an image named by product code/barcode/name/keyword exists in data/product_images
         if (icon == null && p != null) {
+            String nameLower = (p.getName() != null) ? p.getName().toLowerCase() : "";
+            String keywordName = null;
+            if (nameLower.contains("milk") || nameLower.contains("dairy")) keywordName = "milk";
+            else if (nameLower.contains("laptop") || nameLower.contains("dell")) keywordName = "laptop";
+            else if (nameLower.contains("mouse")) keywordName = "mouse";
+            else if (nameLower.contains("keyboard")) keywordName = "keyboard";
+            else if (nameLower.contains("paper") || nameLower.contains("ream")) keywordName = "paper";
+            else if (nameLower.contains("mango")) keywordName = "mango";
+            else if (nameLower.contains("tv") || nameLower.contains("television")) keywordName = "tv";
+            else if (nameLower.contains("mob") || nameLower.contains("phone")) keywordName = "mob";
+
             String[] testNames = {
                 (p.getCode() != null) ? p.getCode().replaceAll("[^a-zA-Z0-9_-]", "_") : null,
-                (p.getBarcode() != null) ? p.getBarcode().replaceAll("[^a-zA-Z0-9_-]", "_") : null
+                (p.getBarcode() != null) ? p.getBarcode().replaceAll("[^a-zA-Z0-9_-]", "_") : null,
+                (p.getName() != null) ? p.getName().toLowerCase().replaceAll("[^a-zA-Z0-9_-]", "_") : null,
+                keywordName
             };
             for (String tName : testNames) {
                 if (tName == null || tName.isEmpty()) continue;
@@ -184,11 +197,13 @@ public class ProductImageUtil {
         int drawY = 0;
 
         if (srcRatio > targetRatio) {
-            drawH = (int) (targetW / srcRatio);
-            drawY = (targetH - drawH) / 2;
-        } else {
+            drawH = targetH;
             drawW = (int) (targetH * srcRatio);
             drawX = (targetW - drawW) / 2;
+        } else {
+            drawW = targetW;
+            drawH = (int) (targetW / srcRatio);
+            drawY = (targetH - drawH) / 2;
         }
 
         g2.drawImage(src, drawX, drawY, drawW, drawH, null);
