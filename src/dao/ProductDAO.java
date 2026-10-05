@@ -178,6 +178,18 @@ public class ProductDAO {
         }
     }
 
+    public boolean updateProductImage(int productId, String imagePath) throws SQLException {
+        try (Connection conn = DBConnection.getConnection()) {
+            ensureColumns(conn);
+            String sql = "UPDATE products SET image_path = ? WHERE id = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, imagePath);
+                ps.setInt(2, productId);
+                return ps.executeUpdate() > 0;
+            }
+        }
+    }
+
     public boolean deleteProduct(int id) throws SQLException {
         String sql = "DELETE FROM products WHERE id = ?";
         try (Connection conn = DBConnection.getConnection();

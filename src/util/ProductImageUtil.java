@@ -55,6 +55,30 @@ public class ProductImageUtil {
             }
         }
 
+        // 1b. Fallback: Check if an image named by product code/barcode exists in data/product_images
+        if (icon == null && p != null) {
+            String[] testNames = {
+                (p.getCode() != null) ? p.getCode().replaceAll("[^a-zA-Z0-9_-]", "_") : null,
+                (p.getBarcode() != null) ? p.getBarcode().replaceAll("[^a-zA-Z0-9_-]", "_") : null
+            };
+            for (String tName : testNames) {
+                if (tName == null || tName.isEmpty()) continue;
+                for (String ext : new String[]{".png", ".jpg", ".jpeg", ".webp"}) {
+                    File candidate = new File(IMAGES_DIR, tName + ext);
+                    if (candidate.exists() && candidate.canRead()) {
+                        try {
+                            BufferedImage bImg = ImageIO.read(candidate);
+                            if (bImg != null) {
+                                icon = createScaledIcon(bImg, width, height);
+                                break;
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                }
+                if (icon != null) break;
+            }
+        }
+
         // 2. Fallback: generate high-quality visual placeholder
         if (icon == null) {
             String cat = (p != null && p.getCategoryName() != null) ? p.getCategoryName() : "";

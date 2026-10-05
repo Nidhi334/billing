@@ -12,11 +12,13 @@ import util.QrCodeGenerator;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -640,11 +642,55 @@ public class SelfCheckoutPanel extends JPanel {
         JPanel centerBox = new JPanel(new BorderLayout(0, 6));
         centerBox.setOpaque(false);
 
-        // Product Image (Height 72px, Width 110px)
+        // Product Image (Height 72px, Width 110px) with Quick Image Upload overlay
+        JPanel imageContainer = new JPanel(null);
+        imageContainer.setPreferredSize(new Dimension(110, 72));
+        imageContainer.setOpaque(false);
+
         JLabel lblImage = new JLabel();
         lblImage.setHorizontalAlignment(SwingConstants.CENTER);
         lblImage.setIcon(ProductImageUtil.getProductIcon(p, 110, 72));
-        lblImage.setPreferredSize(new Dimension(110, 72));
+        lblImage.setBounds(0, 0, 110, 72);
+        lblImage.setToolTipText("Right-click or click 📷 to change product photo");
+
+        JButton btnChangeImg = new JButton("📷");
+        btnChangeImg.setToolTipText("Upload / Change Image for " + p.getName());
+        btnChangeImg.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 10));
+        btnChangeImg.setMargin(new Insets(1, 4, 1, 4));
+        btnChangeImg.setBackground(new Color(255, 255, 255, 220));
+        btnChangeImg.setBorder(BorderFactory.createLineBorder(new Color(203, 213, 225), 1));
+        btnChangeImg.setFocusPainted(false);
+        btnChangeImg.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnChangeImg.setBounds(84, 3, 24, 20);
+        btnChangeImg.addActionListener(e -> promptChangeProductImage(p));
+
+        imageContainer.add(btnChangeImg);
+        imageContainer.add(lblImage);
+
+        // Right-click context menu on the card and image container
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem miChange = new JMenuItem("📷 Set / Change Product Image...");
+        miChange.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        miChange.addActionListener(e -> promptChangeProductImage(p));
+        popupMenu.add(miChange);
+
+        if (p.getImagePath() != null && !p.getImagePath().trim().isEmpty()) {
+            JMenuItem miRemove = new JMenuItem("✖ Remove Image");
+            miRemove.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            miRemove.addActionListener(e -> {
+                try {
+                    p.setImagePath(null);
+                    productDAO.updateProductImage(p.getId(), null);
+                    loadCatalog();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Failed to remove image: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+            popupMenu.add(miRemove);
+        }
+        card.setComponentPopupMenu(popupMenu);
+        lblImage.setComponentPopupMenu(popupMenu);
+        imageContainer.setComponentPopupMenu(popupMenu);
 
         JPanel nameAndCode = new JPanel(new GridLayout(2, 1, 0, 2));
         nameAndCode.setOpaque(false);
@@ -661,7 +707,7 @@ public class SelfCheckoutPanel extends JPanel {
         nameAndCode.add(lblName);
         nameAndCode.add(lblCode);
 
-        centerBox.add(lblImage, BorderLayout.NORTH);
+        centerBox.add(imageContainer, BorderLayout.NORTH);
         centerBox.add(nameAndCode, BorderLayout.CENTER);
 
         // Price & Add Button
@@ -717,6 +763,33 @@ public class SelfCheckoutPanel extends JPanel {
         });
 
         return card;
+    }
+
+    private void promptChangeProductImage(Product p) {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Select Image for \"" + p.getName() + "\"");
+        chooser.setFileFilter(new FileNameExtensionFilter("Image Files (*.jpg, *.png, *.webp, *.jpeg)", "jpg", "jpeg", "png", "webp"));
+        int res = chooser.showOpenDialog(this);
+        if (res == JFileChooser.APPROVE_OPTION) {
+            File file = chooser.getSelectedFile();
+            String savedPath = ProductImageUtil.saveProductImage(file, p.getCode());
+            if (savedPath != null) {
+                p.setImagePath(savedPath);
+                try {
+                    productDAO.updateProductImage(p.getId(), savedPath);
+                    loadCatalog();
+                    JOptionPane.showMessageDialog(this,
+                            "Product image updated successfully for \"" + p.getName() + "\"!",
+                            "Image Updated", JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this,
+                            "Failed to update image in database: " + ex.getMessage(),
+                            "Database Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to save selected image file.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     // ==========================================
