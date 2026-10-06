@@ -47,7 +47,8 @@ public class BillHistoryPanel extends JPanel {
     public BillHistoryPanel(User user) {
         this.currentUser = user;
         setLayout(new BorderLayout(12, 12));
-        setBackground(new Color(248, 250, 252));
+        // setBackground(new Color(248, 250, 252));
+        setBackground(Color.LIGHT_GRAY);
         setBorder(new EmptyBorder(16, 18, 16, 18));
 
         initUI();
@@ -65,7 +66,8 @@ public class BillHistoryPanel extends JPanel {
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
         lblTitle.setForeground(new Color(15, 23, 42));
 
-        JLabel lblSub = new JLabel("Complete ledger of all customer bills, sales history, search, and reprint receipts");
+        JLabel lblSub = new JLabel(
+                "Complete ledger of all customer bills, sales history, search, and reprint receipts");
         lblSub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblSub.setForeground(new Color(100, 116, 139));
         headerPanel.add(lblTitle, BorderLayout.NORTH);
@@ -84,7 +86,8 @@ public class BillHistoryPanel extends JPanel {
 
         JButton btnRefresh = new JButton("🔄 Refresh");
         btnRefresh.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        btnRefresh.setBackground(Color.WHITE);
+        btnRefresh.setBackground(new Color(200, 99, 100));
+         btnRefresh.setForeground(Color.WHITE);
         btnRefresh.setFocusPainted(false);
         btnRefresh.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnRefresh.addActionListener(e -> loadBillHistory());
@@ -99,10 +102,14 @@ public class BillHistoryPanel extends JPanel {
         JPanel kpiGrid = new JPanel(new GridLayout(1, 4, 12, 0));
         kpiGrid.setOpaque(false);
 
-        kpiGrid.add(createKpiCard("TOTAL ORDERS / BILLS", "0 Bills", new Color(37, 99, 235), new Color(239, 246, 255), (lbl) -> lblTotalBillsVal = lbl));
-        kpiGrid.add(createKpiCard("TOTAL REVENUE", "₹0.00", new Color(22, 163, 74), new Color(240, 253, 244), (lbl) -> lblTotalRevenueVal = lbl));
-        kpiGrid.add(createKpiCard("CASH COLLECTED", "₹0.00", new Color(217, 119, 6), new Color(254, 243, 199), (lbl) -> lblTotalCashVal = lbl));
-        kpiGrid.add(createKpiCard("UPI / ONLINE / CARD", "₹0.00", new Color(147, 51, 234), new Color(250, 245, 255), (lbl) -> lblTotalOnlineVal = lbl));
+        kpiGrid.add(createKpiCard("TOTAL ORDERS / BILLS", "0 Bills", new Color(37, 99, 235), new Color(239, 246, 255),
+                (lbl) -> lblTotalBillsVal = lbl));
+        kpiGrid.add(createKpiCard("TOTAL REVENUE", "₹0.00", new Color(22, 163, 74), new Color(240, 253, 244),
+                (lbl) -> lblTotalRevenueVal = lbl));
+        kpiGrid.add(createKpiCard("CASH COLLECTED", "₹0.00", new Color(217, 119, 6), new Color(254, 243, 199),
+                (lbl) -> lblTotalCashVal = lbl));
+        kpiGrid.add(createKpiCard("UPI / ONLINE / CARD", "₹0.00", new Color(147, 51, 234), new Color(250, 245, 255),
+                (lbl) -> lblTotalOnlineVal = lbl));
 
         JPanel northPanel = new JPanel(new BorderLayout(0, 12));
         northPanel.setOpaque(false);
@@ -111,11 +118,11 @@ public class BillHistoryPanel extends JPanel {
 
         // 3. Filter Bar
         JPanel filterCard = new JPanel(new BorderLayout(8, 8));
-        filterCard.setBackground(Color.WHITE);
+        // filterCard.setBackground(Color.WHITE);
+        filterCard.setBackground(Color.LIGHT_GRAY);
         filterCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1, true),
-                new EmptyBorder(10, 14, 10, 14)
-        ));
+                new EmptyBorder(10, 14, 10, 14)));
 
         JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 4));
         filterRow.setOpaque(false);
@@ -140,7 +147,7 @@ public class BillHistoryPanel extends JPanel {
         filterRow.add(txtToDate);
 
         filterRow.add(new JLabel("Payment:"));
-        cmbPaymentMode = new JComboBox<>(new String[]{"ALL", "CASH", "UPI", "CARD", "CREDIT"});
+        cmbPaymentMode = new JComboBox<>(new String[] { "ALL", "CASH", "UPI", "CARD", "CREDIT" });
         cmbPaymentMode.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         cmbPaymentMode.addActionListener(e -> loadBillHistory());
         filterRow.add(cmbPaymentMode);
@@ -206,7 +213,9 @@ public class BillHistoryPanel extends JPanel {
         };
         model = new DefaultTableModel(cols, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
         };
 
         table = new JTable(model);
@@ -219,18 +228,18 @@ public class BillHistoryPanel extends JPanel {
         table.setGridColor(new Color(226, 232, 240));
 
         // Column widths
-        table.getColumnModel().getColumn(0).setPreferredWidth(35);   // #
-        table.getColumnModel().getColumn(1).setPreferredWidth(140);  // Inv
-        table.getColumnModel().getColumn(2).setPreferredWidth(125);  // Date
-        table.getColumnModel().getColumn(3).setPreferredWidth(140);  // Cust
-        table.getColumnModel().getColumn(4).setPreferredWidth(100);  // Phone
-        table.getColumnModel().getColumn(5).setPreferredWidth(70);   // Mode
-        table.getColumnModel().getColumn(6).setPreferredWidth(50);   // Items
-        table.getColumnModel().getColumn(7).setPreferredWidth(45);   // Qty
-        table.getColumnModel().getColumn(8).setPreferredWidth(90);   // Subtotal
-        table.getColumnModel().getColumn(9).setPreferredWidth(75);   // GST
+        table.getColumnModel().getColumn(0).setPreferredWidth(35); // #
+        table.getColumnModel().getColumn(1).setPreferredWidth(140); // Inv
+        table.getColumnModel().getColumn(2).setPreferredWidth(125); // Date
+        table.getColumnModel().getColumn(3).setPreferredWidth(140); // Cust
+        table.getColumnModel().getColumn(4).setPreferredWidth(100); // Phone
+        table.getColumnModel().getColumn(5).setPreferredWidth(70); // Mode
+        table.getColumnModel().getColumn(6).setPreferredWidth(50); // Items
+        table.getColumnModel().getColumn(7).setPreferredWidth(45); // Qty
+        table.getColumnModel().getColumn(8).setPreferredWidth(90); // Subtotal
+        table.getColumnModel().getColumn(9).setPreferredWidth(75); // GST
         table.getColumnModel().getColumn(10).setPreferredWidth(110); // Total
-        table.getColumnModel().getColumn(11).setPreferredWidth(90);  // Cashier
+        table.getColumnModel().getColumn(11).setPreferredWidth(90); // Cashier
 
         // Renderers: align amounts right
         DefaultTableCellRenderer rightRender = new DefaultTableCellRenderer();
@@ -241,11 +250,13 @@ public class BillHistoryPanel extends JPanel {
         // Grand total column bold colored
         DefaultTableCellRenderer totalRender = new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
+            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r,
+                    int c) {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(t, val, sel, focus, r, c);
                 l.setHorizontalAlignment(SwingConstants.RIGHT);
                 l.setFont(new Font("Segoe UI", Font.BOLD, 12));
-                if (!sel) l.setForeground(new Color(22, 101, 52));
+                if (!sel)
+                    l.setForeground(new Color(22, 101, 52));
                 return l;
             }
         };
@@ -265,8 +276,7 @@ public class BillHistoryPanel extends JPanel {
         table.registerKeyboardAction(
                 e -> viewSelectedBill(),
                 KeyStroke.getKeyStroke("ENTER"),
-                JComponent.WHEN_FOCUSED
-        );
+                JComponent.WHEN_FOCUSED);
 
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240), 1));
@@ -288,13 +298,14 @@ public class BillHistoryPanel extends JPanel {
         add(bottomBar, BorderLayout.SOUTH);
     }
 
-    private JPanel createKpiCard(String title, String initialVal, Color accentColor, Color bgColor, java.util.function.Consumer<JLabel> labelConsumer) {
+    private JPanel createKpiCard(String title, String initialVal, Color accentColor, Color bgColor,
+            java.util.function.Consumer<JLabel> labelConsumer) {
         JPanel card = new JPanel(new BorderLayout(4, 4));
         card.setBackground(bgColor);
         card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(accentColor.getRed(), accentColor.getGreen(), accentColor.getBlue(), 60), 1, true),
-                new EmptyBorder(10, 14, 10, 14)
-        ));
+                BorderFactory.createLineBorder(
+                        new Color(accentColor.getRed(), accentColor.getGreen(), accentColor.getBlue(), 60), 1, true),
+                new EmptyBorder(10, 14, 10, 14)));
 
         JLabel lblTitle = new JLabel(title);
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 10));
@@ -336,10 +347,11 @@ public class BillHistoryPanel extends JPanel {
 
                 String dateStr = s.getSaleDate() != null ? sdf.format(s.getSaleDate()) : "-";
                 String cust = s.getCustomerName() != null ? s.getCustomerName() : "Walk-in Customer";
-                String phone = s.getCustomerPhone() != null && !s.getCustomerPhone().isEmpty() ? s.getCustomerPhone() : "-";
+                String phone = s.getCustomerPhone() != null && !s.getCustomerPhone().isEmpty() ? s.getCustomerPhone()
+                        : "-";
                 String cashier = s.getCashierName() != null ? s.getCashierName() : "Admin";
 
-                model.addRow(new Object[]{
+                model.addRow(new Object[] {
                         i + 1,
                         s.getInvoiceNo(),
                         dateStr,
@@ -361,18 +373,21 @@ public class BillHistoryPanel extends JPanel {
             lblTotalCashVal.setText(String.format("₹%.2f", totalCash));
             lblTotalOnlineVal.setText(String.format("₹%.2f", totalOnline));
 
-            lblTableStatus.setText("Showing " + currentSalesList.size() + " bill(s) | Total Amount: " + String.format("₹%.2f", totalRev));
+            lblTableStatus.setText("Showing " + currentSalesList.size() + " bill(s) | Total Amount: "
+                    + String.format("₹%.2f", totalRev));
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error loading bill history: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error loading bill history: " + ex.getMessage(), "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void viewSelectedBill() {
         int r = table.getSelectedRow();
         if (r == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a bill from the table to view or print.", "Select Bill", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select a bill from the table to view or print.", "Select Bill",
+                    JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -380,7 +395,8 @@ public class BillHistoryPanel extends JPanel {
         try {
             Sale fullSale = billingDAO.getSaleByInvoice(invNo);
             if (fullSale == null) {
-                JOptionPane.showMessageDialog(this, "Could not load invoice data for: " + invNo, "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Could not load invoice data for: " + invNo, "Error",
+                        JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -388,7 +404,8 @@ public class BillHistoryPanel extends JPanel {
             InvoiceDialog dlg = new InvoiceDialog(owner, fullSale);
             dlg.setVisible(true);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error fetching bill details: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error fetching bill details: " + ex.getMessage(), "Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 }
