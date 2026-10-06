@@ -302,8 +302,7 @@ public class SelfCheckoutPanel extends JPanel {
         categoryTabsPanel.setBackground(Color.WHITE);
 
         JScrollPane categoryScroll = new JScrollPane(categoryTabsPanel);
-        categoryScroll.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        categoryScroll.setViewportBorder(null);
+        categoryScroll.setBorder(null);
         categoryScroll.setBackground(Color.WHITE);
         categoryScroll.getViewport().setBackground(Color.WHITE);
         categoryScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -320,8 +319,7 @@ public class SelfCheckoutPanel extends JPanel {
         catalogScrollContent.add(catalogGridPanel, BorderLayout.NORTH);
 
         JScrollPane catalogScroll = new JScrollPane(catalogScrollContent);
-        catalogScroll.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        catalogScroll.setViewportBorder(null);
+        catalogScroll.setBorder(null);
         catalogScroll.setOpaque(false);
         catalogScroll.getViewport().setOpaque(false);
         catalogScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -432,7 +430,6 @@ public class SelfCheckoutPanel extends JPanel {
 
         JScrollPane cartScroll = new JScrollPane(cartTable);
         cartScroll.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        cartScroll.setViewportBorder(null);
         cartScroll.getViewport().setBackground(Color.WHITE);
 
         // Touch Quantity Adjustment Bar below Cart Table
@@ -551,10 +548,8 @@ public class SelfCheckoutPanel extends JPanel {
     private void loadCategories() {
         categoryTabsPanel.removeAll();
 
-        Font btnFont = new Font("Segoe UI", Font.BOLD, 12);
-
         // "All Items" tab
-        JButton btnAll = createCategoryTabButton("★ All Items", "ALL");
+        JButton btnAll = createCategoryTabButton("⭐ All Items", "ALL");
         categoryTabsPanel.add(btnAll);
         categoryTabsPanel.add(Box.createVerticalStrut(6));
 
@@ -572,10 +567,8 @@ public class SelfCheckoutPanel extends JPanel {
         }
 
         for (Category cat : categories) {
-            String rawName = (cat.getName() != null) ? cat.getName().trim() : "General";
-            String capitalized = rawName.substring(0, 1).toUpperCase() + (rawName.length() > 1 ? rawName.substring(1).toLowerCase() : "");
-            String icon = getCategoryIconPrefix(rawName, btnFont);
-            JButton btnCat = createCategoryTabButton(icon + " " + capitalized, rawName);
+            String emoji = getCategoryEmoji(cat.getName());
+            JButton btnCat = createCategoryTabButton(emoji + " " + cat.getName(), cat.getName());
             categoryTabsPanel.add(btnCat);
             categoryTabsPanel.add(Box.createVerticalStrut(6));
         }
@@ -589,66 +582,33 @@ public class SelfCheckoutPanel extends JPanel {
         if (catName == null) return "🏷️";
         String lower = catName.toLowerCase().trim();
         if (lower.contains("dairy") || lower.contains("milk")) return "🥛";
-        if (lower.contains("fruit") || lower.contains("mango") || lower.contains("veg") || lower.contains("fresh")) return "🍎";
+        if (lower.contains("fruit") || lower.contains("mango") || lower.contains("veg")) return "🍎";
         if (lower.contains("electronic") || lower.contains("laptop") || lower.contains("tv")) return "💻";
-        if (lower.contains("accessories") || lower.contains("keyboard") || lower.contains("mouse") || lower.contains("headphone")) return "🎧";
+        if (lower.contains("accessories") || lower.contains("keyboard") || lower.contains("mouse")) return "⌨️";
         if (lower.contains("stationery") || lower.contains("paper")) return "📄";
         if (lower.contains("snack") || lower.contains("food") || lower.contains("bev")) return "🍪";
         return "🏷️";
     }
 
-    private String getCategoryIconPrefix(String name, Font font) {
-        String emoji = getCategoryEmoji(name);
-        try {
-            java.awt.font.FontRenderContext frc = new java.awt.font.FontRenderContext(null, true, true);
-            if (font != null && font.getStringBounds(emoji, frc).getWidth() <= 0.0) {
-                String lower = (name != null) ? name.toLowerCase() : "";
-                if (lower.contains("dairy") || lower.contains("milk")) return "☕";
-                if (lower.contains("fruit") || lower.contains("mango") || lower.contains("veg") || lower.contains("fresh")) return "☘️";
-                if (lower.contains("accessories") || lower.contains("keyboard") || lower.contains("mouse") || lower.contains("headphone")) return "🎧";
-                if (lower.contains("stationery") || lower.contains("paper")) return "📋";
-                if (lower.contains("all")) return "★";
-                return "🏷️";
-            }
-        } catch (Exception ignored) {}
-        return emoji;
-    }
-
     private JButton createCategoryTabButton(String label, String categoryKey) {
-        JButton btn = new JButton(label) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-                boolean isSelected = selectedCategory.equalsIgnoreCase(categoryKey);
-                Color bg = isSelected ? new Color(37, 99, 235) : (getModel().isRollover() ? new Color(239, 246, 255) : new Color(248, 250, 252));
-                Color border = isSelected ? new Color(29, 78, 216) : (getModel().isRollover() ? new Color(147, 197, 253) : new Color(226, 232, 240));
-
-                g2.setColor(bg);
-                g2.fillRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 8, 8);
-                g2.setColor(border);
-                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 8, 8);
-
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setOpaque(false);
+        JButton btn = new JButton(label);
         btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        btn.setPreferredSize(new Dimension(145, 38));
-        btn.setMinimumSize(new Dimension(130, 38));
-        btn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btn.setMargin(new Insets(0, 0, 0, 0));
-        btn.setBorder(new EmptyBorder(6, 14, 6, 14));
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        btn.setPreferredSize(new Dimension(135, 40));
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         boolean isSelected = selectedCategory.equalsIgnoreCase(categoryKey);
+
+        Color activeBg = new Color(37, 99, 235);
+        Color inactiveBg = new Color(248, 250, 252);
+
+        btn.setBackground(isSelected ? activeBg : inactiveBg);
         btn.setForeground(isSelected ? Color.WHITE : new Color(51, 65, 85));
+        btn.setFocusPainted(false);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(isSelected ? activeBg : new Color(226, 232, 240), 1),
+                new EmptyBorder(8, 10, 8, 10)
+        ));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         btn.addActionListener(e -> {
