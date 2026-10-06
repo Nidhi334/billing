@@ -140,6 +140,7 @@ public class DashboardFrame extends JFrame {
         btnLaunchSelfCheckout.setToolTipText("Open Customer Self-Checkout");
         btnLaunchSelfCheckout.addActionListener(e -> {
             showAdminChrome(false);
+            selfCheckoutPanel.loadCatalog();
             selfCheckoutPanel.focusScanInput();
             cardLayout.show(contentPanel, "SELF_CHECKOUT");
         });
@@ -246,6 +247,7 @@ public class DashboardFrame extends JFrame {
         });
         btnNavSelfCheckout.addActionListener(e -> {
             showAdminChrome(false);
+            selfCheckoutPanel.loadCatalog();
             selfCheckoutPanel.focusScanInput();
             cardLayout.show(contentPanel, "SELF_CHECKOUT");
         });

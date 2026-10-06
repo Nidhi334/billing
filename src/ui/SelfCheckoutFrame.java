@@ -45,7 +45,12 @@ public class SelfCheckoutFrame extends JFrame {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                    if ("Nimbus".equals(info.getName())) {
+                        UIManager.setLookAndFeel(info.getClassName());
+                        break;
+                    }
+                }
             } catch (Exception ignored) {}
             new SelfCheckoutFrame(null).setVisible(true);
         });
