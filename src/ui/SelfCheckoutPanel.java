@@ -287,7 +287,7 @@ public class SelfCheckoutPanel extends JPanel {
 
         // Category Sidebar Panel (WEST)
         JPanel categorySidebarCard = new JPanel(new BorderLayout(0, 8));
-        categorySidebarCard.setPreferredSize(new Dimension(140, 0));
+        categorySidebarCard.setPreferredSize(new Dimension(165, 0));
         categorySidebarCard.setBackground(Color.WHITE);
         categorySidebarCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
@@ -318,6 +318,7 @@ public class SelfCheckoutPanel extends JPanel {
 
         JPanel catalogScrollContent = new JPanel(new BorderLayout());
         catalogScrollContent.setOpaque(false);
+        catalogScrollContent.setBorder(new EmptyBorder(2, 2, 8, 2));
         catalogScrollContent.add(catalogGridPanel, BorderLayout.NORTH);
 
         JScrollPane catalogScroll = new JScrollPane(catalogScrollContent);
@@ -344,7 +345,7 @@ public class SelfCheckoutPanel extends JPanel {
     // ==========================================
     private JPanel createCartAndCheckoutSection() {
         JPanel right = new JPanel(new BorderLayout(0, 10));
-        right.setPreferredSize(new Dimension(370, 0));
+        right.setPreferredSize(new Dimension(360, 0));
         right.setBackground(Color.WHITE);
         right.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
@@ -569,8 +570,10 @@ public class SelfCheckoutPanel extends JPanel {
         }
 
         for (Category cat : categories) {
-            String emoji = getCategoryEmoji(cat.getName());
-            JButton btnCat = createCategoryTabButton(emoji + " " + cat.getName(), cat.getName());
+            String rawName = (cat.getName() != null) ? cat.getName().trim() : "General";
+            String capitalized = rawName.substring(0, 1).toUpperCase() + (rawName.length() > 1 ? rawName.substring(1).toLowerCase() : "");
+            String emoji = getCategoryEmoji(rawName);
+            JButton btnCat = createCategoryTabButton(emoji + " " + capitalized, rawName);
             categoryTabsPanel.add(btnCat);
             categoryTabsPanel.add(Box.createVerticalStrut(6));
         }
@@ -586,7 +589,7 @@ public class SelfCheckoutPanel extends JPanel {
         if (lower.contains("dairy") || lower.contains("milk")) return "🥛";
         if (lower.contains("fruit") || lower.contains("mango") || lower.contains("veg")) return "🍎";
         if (lower.contains("electronic") || lower.contains("laptop") || lower.contains("tv")) return "💻";
-        if (lower.contains("accessories") || lower.contains("keyboard") || lower.contains("mouse")) return "⌨️";
+        if (lower.contains("accessories") || lower.contains("keyboard") || lower.contains("mouse") || lower.contains("headphone")) return "🎧";
         if (lower.contains("stationery") || lower.contains("paper")) return "📄";
         if (lower.contains("snack") || lower.contains("food") || lower.contains("bev")) return "🍪";
         return "🏷️";
@@ -596,9 +599,12 @@ public class SelfCheckoutPanel extends JPanel {
         JButton btn = new JButton(label);
         btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        btn.setPreferredSize(new Dimension(135, 40));
-        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        btn.setPreferredSize(new Dimension(145, 38));
+        btn.setMinimumSize(new Dimension(130, 38));
+        btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btn.setFocusPainted(false);
+        btn.setMargin(new Insets(0, 0, 0, 0));
         boolean isSelected = selectedCategory.equalsIgnoreCase(categoryKey);
 
         Color activeBg = new Color(37, 99, 235);
@@ -606,10 +612,9 @@ public class SelfCheckoutPanel extends JPanel {
 
         btn.setBackground(isSelected ? activeBg : inactiveBg);
         btn.setForeground(isSelected ? Color.WHITE : new Color(51, 65, 85));
-        btn.setFocusPainted(false);
         btn.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(isSelected ? activeBg : new Color(226, 232, 240), 1),
-                new EmptyBorder(8, 10, 8, 10)
+                new EmptyBorder(6, 12, 6, 12)
         ));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
@@ -716,9 +721,9 @@ public class SelfCheckoutPanel extends JPanel {
         JPanel card = new JPanel(new BorderLayout(0, 0));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240), 1));
-        card.setPreferredSize(new Dimension(170, 230));
+        card.setPreferredSize(new Dimension(0, 220));
 
-        // 1. TOP: Full Edge-to-Edge Image Banner (Height 120px)
+        // 1. TOP: Full Edge-to-Edge Image Banner (Height 115px)
         JPanel imageBanner = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -730,6 +735,7 @@ public class SelfCheckoutPanel extends JPanel {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
                 // Clean soft background fill
                 g2.setColor(new Color(248, 250, 252));
@@ -740,13 +746,19 @@ public class SelfCheckoutPanel extends JPanel {
                     int imgW = raw.getWidth(null);
                     int imgH = raw.getHeight(null);
                     if (imgW > 0 && imgH > 0) {
-                        // Center-crop fill (cover) to make image 100% full width and height
-                        double scale = Math.max((double) w / imgW, (double) h / imgH);
-                        int drawW = (int) Math.round(imgW * scale);
-                        int drawH = (int) Math.round(imgH * scale);
-                        int drawX = (w - drawW) / 2;
-                        int drawY = (h - drawH) / 2;
-                        g2.drawImage(raw, drawX, drawY, drawW, drawH, null);
+                        // Natural aspect-ratio fit: entire product is shown cleanly without stretching or cropping
+                        int padX = 12;
+                        int padY = 8;
+                        int availW = w - (padX * 2);
+                        int availH = h - (padY * 2);
+                        if (availW > 0 && availH > 0) {
+                            double scale = Math.min((double) availW / imgW, (double) availH / imgH);
+                            int drawW = Math.max(1, (int) Math.round(imgW * scale));
+                            int drawH = Math.max(1, (int) Math.round(imgH * scale));
+                            int drawX = (w - drawW) / 2;
+                            int drawY = (h - drawH) / 2;
+                            g2.drawImage(raw, drawX, drawY, drawW, drawH, null);
+                        }
                     }
                 } else {
                     ImageIcon icon = ProductImageUtil.getProductIcon(p, w, h);
@@ -762,7 +774,7 @@ public class SelfCheckoutPanel extends JPanel {
                 g2.dispose();
             }
         };
-        imageBanner.setPreferredSize(new Dimension(0, 120));
+        imageBanner.setPreferredSize(new Dimension(0, 115));
         imageBanner.setOpaque(false);
 
         card.add(imageBanner, BorderLayout.NORTH);
