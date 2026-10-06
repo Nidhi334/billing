@@ -29,7 +29,8 @@ public class InventoryPanel extends JPanel {
 
     public InventoryPanel() {
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(248, 250, 252));
+        // setBackground(new Color(248, 250, 252));
+        setBackground(Color.LIGHT_GRAY);
         setBorder(new EmptyBorder(15, 15, 15, 15));
         initComponents();
         loadDropdownData();
@@ -39,25 +40,32 @@ public class InventoryPanel extends JPanel {
     private void initComponents() {
 
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(new Color(248, 250, 252));
+        // topPanel.setBackground(new Color(248, 250, 252));
+        topPanel.setBackground(new Color(75, 75, 175));
+        topPanel.setPreferredSize(new Dimension(200, 40));
 
         JLabel title = new JLabel("📊 Inventory & Stock Management");
         title.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        title.setForeground(new Color(30, 41, 59));
+        title.setForeground(Color.WHITE);
         topPanel.add(title, BorderLayout.WEST);
 
         btnRefresh = new JButton("Refresh Inventory");
+        btnRefresh.setBackground(new Color(200, 75, 75));
+        btnRefresh.setForeground(Color.WHITE);
         topPanel.add(btnRefresh, BorderLayout.EAST);
         add(topPanel, BorderLayout.NORTH);
 
-        // Center split: Stock-In Form on top, Tabs (Low Stock Alerts & Transaction History) below
+        // Center split: Stock-In Form on top, Tabs (Low Stock Alerts & Transaction
+        // History) below
         JPanel centerPanel = new JPanel(new BorderLayout(12, 12));
-        centerPanel.setBackground(new Color(248, 250, 252));
-
+        // centerPanel.setBackground(new Color(248, 250, 252));
+        centerPanel.setBackground(Color.LIGHT_GRAY);
         // Card: Stock-In (Purchase Quick Entry)
         JPanel stockInCard = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 12));
-        stockInCard.setBackground(Color.WHITE);
-        stockInCard.setBorder(BorderFactory.createTitledBorder("📦 Quick Stock-In / Purchase Entry (Supplier → Purchase → Stock Increases)"));
+        // stockInCard.setBackground(Color.WHITE);
+        stockInCard.setBackground(Color.lightGray);
+        stockInCard.setBorder(BorderFactory
+                .createTitledBorder("📦 Quick Stock-In / Purchase Entry (Supplier → Purchase → Stock Increases)"));
 
         stockInCard.add(new JLabel("Product:"));
         cmbProducts = new JComboBox<>();
@@ -91,10 +99,15 @@ public class InventoryPanel extends JPanel {
 
         // Tab 1: Low Stock Products
         JPanel lowStockPanel = new JPanel(new BorderLayout());
-        String[] lowCols = {"Product Code", "Product Name", "Category", "Current Stock", "Min Alert Level", "Unit Sell Price"};
+
+        lowStockPanel.setBackground(new Color(75, 75, 200));
+        String[] lowCols = { "Product Code", "Product Name", "Category", "Current Stock", "Min Alert Level",
+                "Unit Sell Price" };
         lowStockModel = new DefaultTableModel(lowCols, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
         lowStockTable = new JTable(lowStockModel);
         lowStockTable.setRowHeight(26);
@@ -102,8 +115,10 @@ public class InventoryPanel extends JPanel {
         // Highlight stock
         lowStockTable.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                JLabel lbl = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
+                JLabel lbl = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row,
+                        column);
                 lbl.setForeground(new Color(220, 38, 38));
                 lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
                 lbl.setHorizontalAlignment(SwingConstants.CENTER);
@@ -116,10 +131,13 @@ public class InventoryPanel extends JPanel {
 
         // Tab 2: Stock Transactions Log
         JPanel historyPanel = new JPanel(new BorderLayout());
-        String[] histCols = {"Date & Time", "Product Code", "Product Name", "Type", "Qty", "Ref / Invoice", "Notes"};
+        historyPanel.setBackground(Color.LIGHT_GRAY);
+        String[] histCols = { "Date & Time", "Product Code", "Product Name", "Type", "Qty", "Ref / Invoice", "Notes" };
         historyModel = new DefaultTableModel(histCols, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
         historyTable = new JTable(historyModel);
         historyTable.setRowHeight(24);
@@ -127,8 +145,10 @@ public class InventoryPanel extends JPanel {
         // Format Type column (IN vs OUT)
         historyTable.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                JLabel lbl = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
+                JLabel lbl = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row,
+                        column);
                 String t = String.valueOf(value);
                 lbl.setHorizontalAlignment(SwingConstants.CENTER);
                 if ("IN".equalsIgnoreCase(t)) {
@@ -186,7 +206,7 @@ public class InventoryPanel extends JPanel {
             lowStockModel.setRowCount(0);
             List<Product> lowStock = productDAO.getLowStockProducts();
             for (Product p : lowStock) {
-                lowStockModel.addRow(new Object[]{
+                lowStockModel.addRow(new Object[] {
                         p.getCode(),
                         p.getName(),
                         p.getCategoryName() != null ? p.getCategoryName() : "General",
@@ -218,7 +238,8 @@ public class InventoryPanel extends JPanel {
         String costStr = txtCostPrice.getText().trim();
 
         if (selectedProd == null || qtyStr.isEmpty() || costStr.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please select a product, quantity, and cost price.", "Validation", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select a product, quantity, and cost price.", "Validation",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -226,7 +247,8 @@ public class InventoryPanel extends JPanel {
             int qty = Integer.parseInt(qtyStr);
             double cost = Double.parseDouble(costStr);
             if (qty <= 0 || cost < 0) {
-                JOptionPane.showMessageDialog(this, "Quantity must be positive and cost valid.", "Validation", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Quantity must be positive and cost valid.", "Validation",
+                        JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
@@ -235,7 +257,8 @@ public class InventoryPanel extends JPanel {
 
             boolean success = purchaseDAO.recordPurchase(invoiceNo, supplierId, selectedProd.getId(), qty, cost);
             if (success) {
-                JOptionPane.showMessageDialog(this, "Stock added successfully! Invoice: " + invoiceNo, "Success", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Stock added successfully! Invoice: " + invoiceNo, "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
                 txtQty.setText("");
                 refreshData();
                 loadDropdownData();
@@ -243,10 +266,11 @@ public class InventoryPanel extends JPanel {
                 JOptionPane.showMessageDialog(this, "Failed to update stock.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Invalid number format for Quantity or Cost.", "Validation", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Invalid number format for Quantity or Cost.", "Validation",
+                    JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 }
-
