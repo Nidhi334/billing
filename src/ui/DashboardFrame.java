@@ -422,7 +422,7 @@ public class DashboardFrame extends JFrame {
         // Welcome banner
         JPanel banner = new JPanel(new BorderLayout(10, 10));
         // banner.setBackground(Color.WHITE);
-        banner.setBackground(new Color(99, 99, 252));
+        banner.setBackground(new Color(99, 99, 150));
         banner.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240)),
                 new EmptyBorder(14, 18, 14, 18)));
