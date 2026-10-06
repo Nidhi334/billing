@@ -28,7 +28,8 @@ public class LoginFrame extends JFrame {
 
     private void initComponents() {
         JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(new Color(245, 247, 250));
+        // mainPanel.setBackground(new Color(245, 247, 250));
+        mainPanel.setBackground(Color.LIGHT_GRAY);
 
         // Header Banner
         JPanel headerPanel = new JPanel();
@@ -55,11 +56,11 @@ public class LoginFrame extends JFrame {
 
         // Form Card
         JPanel formCard = new JPanel();
-        formCard.setBackground(Color.WHITE);
+        formCard.setBackground(Color.LIGHT_GRAY);
         formCard.setBorder(BorderFactory.createCompoundBorder(
                 new EmptyBorder(25, 35, 25, 35),
-                BorderFactory.createLineBorder(new Color(226, 232, 240), 1, true)
-        ));
+                // BorderFactory.createLineBorder(new Color(226, 232, 240), 1, true)));
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1, true)));
         formCard.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 10, 8, 10);
@@ -68,11 +69,14 @@ public class LoginFrame extends JFrame {
         JLabel lblSignIn = new JLabel("Sign In to your account");
         lblSignIn.setFont(new Font("Segoe UI", Font.BOLD, 16));
         lblSignIn.setForeground(new Color(30, 41, 59));
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
         formCard.add(lblSignIn, gbc);
 
         // Username
-        gbc.gridy = 1; gbc.gridwidth = 2;
+        gbc.gridy = 1;
+        gbc.gridwidth = 2;
         formCard.add(new JLabel("Username:"), gbc);
 
         txtUsername = new JTextField("admin");
@@ -106,8 +110,8 @@ public class LoginFrame extends JFrame {
         // Offline / Demo Login Button
         JButton btnDemoLogin = new JButton("⚡ Quick Offline / Demo Login");
         btnDemoLogin.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnDemoLogin.setBackground(new Color(241, 245, 249));
-        btnDemoLogin.setForeground(new Color(30, 41, 59));
+        btnDemoLogin.setBackground(new Color(200, 75, 75));
+        btnDemoLogin.setForeground(Color.WHITE);
         btnDemoLogin.setFocusPainted(false);
         btnDemoLogin.setPreferredSize(new Dimension(320, 34));
         btnDemoLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -160,7 +164,8 @@ public class LoginFrame extends JFrame {
         btnSelfCheckoutMode.setToolTipText("Open full-screen express customer self-service checkout");
         btnSelfCheckoutMode.addActionListener(e -> new SelfCheckoutFrame(null).setVisible(true));
 
-        JLabel footerNote = new JLabel("Default logins: admin/admin123 (Admin) | staff/staff123 (Staff)", SwingConstants.CENTER);
+        JLabel footerNote = new JLabel("Default logins: admin/admin123 (Admin) | staff/staff123 (Staff)",
+                SwingConstants.CENTER);
         footerNote.setFont(new Font("Segoe UI", Font.ITALIC, 11));
         footerNote.setForeground(new Color(100, 116, 139));
         footerNote.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -206,7 +211,8 @@ public class LoginFrame extends JFrame {
         String password = new String(txtPassword.getPassword()).trim();
 
         if (username.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter both username and password.", "Input Required", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please enter both username and password.", "Input Required",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -234,7 +240,8 @@ public class LoginFrame extends JFrame {
 
                 if (choice == JOptionPane.YES_OPTION) {
                     if (isDefaultAdmin) {
-                        launchDashboard(new User(1, "admin", "admin123", "System Administrator (Demo/Offline)", "ADMIN"), true);
+                        launchDashboard(
+                                new User(1, "admin", "admin123", "System Administrator (Demo/Offline)", "ADMIN"), true);
                     } else {
                         launchDashboard(new User(2, "staff", "staff123", "Cashier Desk (Demo/Offline)", "STAFF"), true);
                     }
@@ -245,18 +252,19 @@ public class LoginFrame extends JFrame {
             } else {
                 String reason = isConnRefused
                         ? "MySQL Database server band hai (Connection Refused)!\n\n"
-                          + "👉 Terminal me MySQL start karein:\n"
-                          + "   sudo systemctl start mysql\n\n"
-                          + "Ya Default credentials use karein: admin / admin123"
+                                + "👉 Terminal me MySQL start karein:\n"
+                                + "   sudo systemctl start mysql\n\n"
+                                + "Ya Default credentials use karein: admin / admin123"
                         : "Database connection error!\n\nDetails: " + msg
-                          + "\n\nPlease ensure MySQL is running and credentials in 'DB Settings' are correct.";
+                                + "\n\nPlease ensure MySQL is running and credentials in 'DB Settings' are correct.";
                 JOptionPane.showMessageDialog(this, reason, "Database Connection Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
         }
 
         if (user == null) {
-            JOptionPane.showMessageDialog(this, "Invalid username or password!", "Authentication Failed", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Invalid username or password!", "Authentication Failed",
+                    JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -277,11 +285,16 @@ public class LoginFrame extends JFrame {
         JPasswordField passField = new JPasswordField(prop.getProperty("db.password", ""));
 
         JPanel panel = new JPanel(new GridLayout(6, 2, 8, 8));
-        panel.add(new JLabel("MySQL Host:")); panel.add(hostField);
-        panel.add(new JLabel("MySQL Port:")); panel.add(portField);
-        panel.add(new JLabel("Database Name:")); panel.add(dbField);
-        panel.add(new JLabel("Username:")); panel.add(userField);
-        panel.add(new JLabel("Password:")); panel.add(passField);
+        panel.add(new JLabel("MySQL Host:"));
+        panel.add(hostField);
+        panel.add(new JLabel("MySQL Port:"));
+        panel.add(portField);
+        panel.add(new JLabel("Database Name:"));
+        panel.add(dbField);
+        panel.add(new JLabel("Username:"));
+        panel.add(userField);
+        panel.add(new JLabel("Password:"));
+        panel.add(passField);
 
         JButton btnTestConn = new JButton("🔍 Test Connection");
         panel.add(btnTestConn);
@@ -293,23 +306,24 @@ public class LoginFrame extends JFrame {
                     portField.getText().trim(),
                     dbField.getText().trim(),
                     userField.getText().trim(),
-                    new String(passField.getPassword())
-            );
+                    new String(passField.getPassword()));
             JOptionPane.showMessageDialog(this, testResult, "Database Test Result",
                     testResult.startsWith("SUCCESS") || testResult.startsWith("CONNECTED")
-                            ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE);
+                            ? JOptionPane.INFORMATION_MESSAGE
+                            : JOptionPane.ERROR_MESSAGE);
         });
 
-        int res = JOptionPane.showConfirmDialog(this, panel, "MySQL Database Settings", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        int res = JOptionPane.showConfirmDialog(this, panel, "MySQL Database Settings", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
         if (res == JOptionPane.OK_OPTION) {
             DBConnection.saveConfig(
                     hostField.getText().trim(),
                     portField.getText().trim(),
                     dbField.getText().trim(),
                     userField.getText().trim(),
-                    new String(passField.getPassword())
-            );
-            JOptionPane.showMessageDialog(this, "Database settings saved successfully!", "Saved", JOptionPane.INFORMATION_MESSAGE);
+                    new String(passField.getPassword()));
+            JOptionPane.showMessageDialog(this, "Database settings saved successfully!", "Saved",
+                    JOptionPane.INFORMATION_MESSAGE);
         }
     }
 }

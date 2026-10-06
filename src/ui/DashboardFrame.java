@@ -422,13 +422,14 @@ public class DashboardFrame extends JFrame {
         // Welcome banner
         JPanel banner = new JPanel(new BorderLayout(10, 10));
         // banner.setBackground(Color.WHITE);
-        banner.setBackground(new Color(99, 99, 150));
+        banner.setBackground(new Color(75, 75, 175));
         banner.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240)),
                 new EmptyBorder(14, 18, 14, 18)));
         JLabel welcomeMsg = new JLabel("Welcome back, " + currentUser.getFullName() + "! Here is your shop overview:");
         welcomeMsg.setFont(new Font("Segoe UI", Font.BOLD, 17));
-        welcomeMsg.setForeground(new Color(30, 41, 59));
+        //welcomeMsg.setForeground(new Color(30, 41, 59));
+        welcomeMsg.setForeground( Color.WHITE);
         banner.add(welcomeMsg, BorderLayout.WEST);
 
         JButton btnRefreshStats = new JButton("🔄 Refresh Metrics");
