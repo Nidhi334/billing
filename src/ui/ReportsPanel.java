@@ -20,7 +20,8 @@ public class ReportsPanel extends JPanel {
 
     public ReportsPanel() {
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(248, 250, 252));
+        // setBackground(new Color(248, 250, 252));
+        setBackground(Color.LIGHT_GRAY);
         setBorder(new EmptyBorder(15, 15, 15, 15));
         initComponents();
         loadReports();
@@ -29,14 +30,18 @@ public class ReportsPanel extends JPanel {
     private void initComponents() {
         // TOP Header
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(new Color(248, 250, 252));
+        // topPanel.setBackground(new Color(248, 250, 252));
+        topPanel.setBackground(new Color(75, 75, 175));
 
         JLabel lblTitle = new JLabel("📈 Sales & Profit Analysis Reports");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTitle.setForeground(new Color(30, 41, 59));
+        // lblTitle.setForeground(new Color(30, 41, 59));
+        lblTitle.setForeground(Color.WHITE);
         topPanel.add(lblTitle, BorderLayout.WEST);
 
         btnRefreshAll = new JButton("🔄 Refresh Data");
+        btnRefreshAll.setBackground(new Color(175, 75, 75));
+        btnRefreshAll.setForeground(Color.WHITE);
         topPanel.add(btnRefreshAll, BorderLayout.EAST);
 
         add(topPanel, BorderLayout.NORTH);
@@ -51,7 +56,7 @@ public class ReportsPanel extends JPanel {
 
         // Filter Bar
         JPanel filterBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 10));
-        filterBar.setBackground(Color.WHITE);
+        filterBar.setBackground(Color.lightGray);
         filterBar.setBorder(BorderFactory.createTitledBorder("Filter Invoices by Date (YYYY-MM-DD)"));
 
         filterBar.add(new JLabel("From Date:"));
@@ -68,14 +73,18 @@ public class ReportsPanel extends JPanel {
         filterBar.add(btnFilterSales);
 
         JButton btnResetFilter = new JButton("Show All");
+        btnResetFilter.setBackground(new Color(99, 155, 75));
+        btnResetFilter.setForeground(Color.WHITE);
         filterBar.add(btnResetFilter);
 
         salesPanel.add(filterBar, BorderLayout.NORTH);
 
-        String[] salesCols = {"Invoice No", "Date & Time", "Customer", "Subtotal", "GST", "Total Amount", "Mode"};
+        String[] salesCols = { "Invoice No", "Date & Time", "Customer", "Subtotal", "GST", "Total Amount", "Mode" };
         salesModel = new DefaultTableModel(salesCols, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
         salesTable = new JTable(salesModel);
         salesTable.setRowHeight(25);
@@ -85,10 +94,13 @@ public class ReportsPanel extends JPanel {
 
         // TAB 2: Profit & Loss per Product
         JPanel profitPanel = new JPanel(new BorderLayout());
-        String[] profitCols = {"Product Code", "Product Name", "Units Sold", "Total Sales (₹)", "Cost of Goods (₹)", "Estimated Profit (₹)"};
+        String[] profitCols = { "Product Code", "Product Name", "Units Sold", "Total Sales (₹)", "Cost of Goods (₹)",
+                "Estimated Profit (₹)" };
         profitModel = new DefaultTableModel(profitCols, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            public boolean isCellEditable(int r, int c) {
+                return false;
+            }
         };
         profitTable = new JTable(profitModel);
         profitTable.setRowHeight(25);
@@ -98,7 +110,8 @@ public class ReportsPanel extends JPanel {
 
         // TAB 3: Visual Revenue Analytics
         JPanel analyticsPanel = new JPanel(new GridLayout(1, 2, 15, 15));
-        analyticsPanel.setBackground(new Color(248, 250, 252));
+        // analyticsPanel.setBackground(new Color(248, 250, 252));
+        analyticsPanel.setBackground(Color.LIGHT_GRAY);
         analyticsPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
         reportBarChart = new DailySalesBarChartPanel();
@@ -125,8 +138,10 @@ public class ReportsPanel extends JPanel {
         loadSalesReport();
         loadProfitReport();
         try {
-            if (reportBarChart != null) reportBarChart.setData(reportDAO.getDailySalesTrend(7));
-            if (reportPieChart != null) reportPieChart.setData(reportDAO.getCategorySalesBreakdown());
+            if (reportBarChart != null)
+                reportBarChart.setData(reportDAO.getDailySalesTrend(7));
+            if (reportPieChart != null)
+                reportPieChart.setData(reportDAO.getCategorySalesBreakdown());
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -156,4 +171,3 @@ public class ReportsPanel extends JPanel {
         }
     }
 }
-
