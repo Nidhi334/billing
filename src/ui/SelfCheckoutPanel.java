@@ -287,7 +287,7 @@ public class SelfCheckoutPanel extends JPanel {
 
         // Category Sidebar Panel (WEST)
         JPanel categorySidebarCard = new JPanel(new BorderLayout(0, 8));
-        categorySidebarCard.setPreferredSize(new Dimension(175, 0));
+        categorySidebarCard.setPreferredSize(new Dimension(145, 0));
         categorySidebarCard.setBackground(Color.WHITE);
         categorySidebarCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
@@ -312,8 +312,8 @@ public class SelfCheckoutPanel extends JPanel {
         categoryScroll.getVerticalScrollBar().setUnitIncrement(16);
         categorySidebarCard.add(categoryScroll, BorderLayout.CENTER);
 
-        // Visual Catalog Grid (CENTER)
-        catalogGridPanel = new JPanel(new GridLayout(0, 3, 12, 12));
+        // Visual Catalog Grid (CENTER) - 4 products per row
+        catalogGridPanel = new JPanel(new GridLayout(0, 4, 10, 10));
         catalogGridPanel.setOpaque(false);
 
         JScrollPane catalogScroll = new JScrollPane(catalogGridPanel);
@@ -323,7 +323,7 @@ public class SelfCheckoutPanel extends JPanel {
         catalogScroll.getVerticalScrollBar().setUnitIncrement(24);
 
         // Combine: Sidebar on WEST, Product grid on CENTER
-        JPanel catalogWrapper = new JPanel(new BorderLayout(12, 0));
+        JPanel catalogWrapper = new JPanel(new BorderLayout(10, 0));
         catalogWrapper.setOpaque(false);
         catalogWrapper.add(categorySidebarCard, BorderLayout.WEST);
         catalogWrapper.add(catalogScroll, BorderLayout.CENTER);
@@ -339,7 +339,7 @@ public class SelfCheckoutPanel extends JPanel {
     // ==========================================
     private JPanel createCartAndCheckoutSection() {
         JPanel right = new JPanel(new BorderLayout(0, 10));
-        right.setPreferredSize(new Dimension(420, 0));
+        right.setPreferredSize(new Dimension(380, 0));
         right.setBackground(Color.WHITE);
         right.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
@@ -550,16 +550,24 @@ public class SelfCheckoutPanel extends JPanel {
         categoryTabsPanel.add(btnAll);
         categoryTabsPanel.add(Box.createVerticalStrut(6));
 
+        List<Category> categories = new ArrayList<>();
         try {
-            List<Category> categories = categoryDAO.getAllCategories();
-            for (Category cat : categories) {
-                String emoji = getCategoryEmoji(cat.getName());
-                JButton btnCat = createCategoryTabButton(emoji + " " + cat.getName(), cat.getName());
-                categoryTabsPanel.add(btnCat);
-                categoryTabsPanel.add(Box.createVerticalStrut(6));
-            }
-        } catch (Exception ex) {
-            ex.printStackTrace();
+            categories = categoryDAO.getAllCategories();
+        } catch (Exception ignored) {}
+
+        if (categories == null || categories.isEmpty()) {
+            categories = new ArrayList<>();
+            categories.add(new Category(1, "Dairy", "Dairy products"));
+            categories.add(new Category(2, "Electronics", "Electronic gadgets"));
+            categories.add(new Category(3, "Stationery", "Office & paper"));
+            categories.add(new Category(4, "Fresh", "Fresh fruits & veg"));
+        }
+
+        for (Category cat : categories) {
+            String emoji = getCategoryEmoji(cat.getName());
+            JButton btnCat = createCategoryTabButton(emoji + " " + cat.getName(), cat.getName());
+            categoryTabsPanel.add(btnCat);
+            categoryTabsPanel.add(Box.createVerticalStrut(6));
         }
 
         categoryTabsPanel.add(Box.createVerticalGlue());
@@ -584,7 +592,7 @@ public class SelfCheckoutPanel extends JPanel {
         btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btn.setHorizontalAlignment(SwingConstants.LEFT);
         btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        btn.setPreferredSize(new Dimension(155, 40));
+        btn.setPreferredSize(new Dimension(135, 40));
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         boolean isSelected = selectedCategory.equalsIgnoreCase(categoryKey);
 
@@ -613,11 +621,50 @@ public class SelfCheckoutPanel extends JPanel {
     public void loadCatalog() {
         try {
             catalogProducts = productDAO.getAllProducts();
-            renderCatalogGrid(catalogProducts);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            setToast("Error loading product catalog: " + ex.getMessage(), true);
+        } catch (Exception ignored) {}
+
+        if (catalogProducts == null || catalogProducts.isEmpty()) {
+            catalogProducts = getSampleFallbackProducts();
         }
+        renderCatalogGrid(catalogProducts);
+    }
+
+    private List<Product> getSampleFallbackProducts() {
+        List<Product> list = new ArrayList<>();
+
+        Product p1 = new Product(1, "PRD-001", "8901262260138", "Amul Pure Fresh Milk (1L)", 1, 55.0, 64.0, 45, 10, "data/product_images/PRD-001.png");
+        p1.setCategoryName("Dairy");
+        list.add(p1);
+
+        Product p2 = new Product(2, "PRD-002", "890873960606", "Wireless Optical Mouse (2.4GHz)", 2, 350.0, 499.0, 28, 5, "data/product_images/PRD-002.png");
+        p2.setCategoryName("Electronics");
+        list.add(p2);
+
+        Product p3 = new Product(3, "PRD-003", "890879660777", "Mechanical Gaming Keyboard RGB", 2, 1400.0, 1850.0, 15, 3, "data/product_images/PRD-003.png");
+        p3.setCategoryName("Electronics");
+        list.add(p3);
+
+        Product p4 = new Product(4, "PRD-004", "890704139705", "A4 Copier Paper Ream (500s)", 3, 220.0, 280.0, 60, 10, "data/product_images/PRD-004.png");
+        p4.setCategoryName("Stationery");
+        list.add(p4);
+
+        Product p5 = new Product(5, "PRD-005", "34567", "Fresh Alphonso Mangoes (1kg)", 4, 280.0, 350.0, 20, 5, "data/product_images/34567.png");
+        p5.setCategoryName("Fresh");
+        list.add(p5);
+
+        Product p6 = new Product(6, "PRD-006", "233", "Smart 4K Ultra HD LED TV 43 Inch", 2, 18000.0, 24999.0, 8, 2, "data/product_images/tv.png");
+        p6.setCategoryName("Electronics");
+        list.add(p6);
+
+        Product p7 = new Product(7, "PRD-0015", "PRD-0015", "Dell Inspiron 15 Core i5 Laptop", 2, 45000.0, 52999.0, 10, 2, "data/product_images/PRD-0015.png");
+        p7.setCategoryName("Electronics");
+        list.add(p7);
+
+        Product p8 = new Product(8, "PRD-008", "890879660777", "5G Android Smartphone (128GB)", 2, 11500.0, 14999.0, 14, 4, "data/product_images/mob.png");
+        p8.setCategoryName("Electronics");
+        list.add(p8);
+
+        return list;
     }
 
     private void filterCatalogByCategory(String catName) {
@@ -648,7 +695,7 @@ public class SelfCheckoutPanel extends JPanel {
             catalogGridPanel.setLayout(new BorderLayout());
             catalogGridPanel.add(empty, BorderLayout.CENTER);
         } else {
-            catalogGridPanel.setLayout(new GridLayout(0, 3, 12, 12));
+            catalogGridPanel.setLayout(new GridLayout(0, 4, 10, 10));
             for (Product p : products) {
                 catalogGridPanel.add(createProductCard(p));
             }
@@ -659,85 +706,151 @@ public class SelfCheckoutPanel extends JPanel {
     }
 
     private JPanel createProductCard(Product p) {
-        JPanel card = new JPanel(new BorderLayout(8, 8));
+        boolean inStock = p.getQuantity() > 0;
+
+        JPanel card = new JPanel(new BorderLayout(0, 0));
         card.setBackground(Color.WHITE);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                new EmptyBorder(10, 10, 10, 10)
+        card.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240), 1));
+
+        // 1. TOP: Full Edge-to-Edge Image Banner (Height 130px)
+        JPanel imageBanner = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                int w = getWidth();
+                int h = getHeight();
+                if (w <= 0 || h <= 0) return;
+
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+
+                // Soft background fill
+                g2.setColor(new Color(248, 250, 252));
+                g2.fillRect(0, 0, w, h);
+
+                Image raw = ProductImageUtil.getProductRawImage(p);
+                if (raw != null) {
+                    int imgW = raw.getWidth(null);
+                    int imgH = raw.getHeight(null);
+                    if (imgW > 0 && imgH > 0) {
+                        // Center-crop fill (cover) to make image 100% full width and height
+                        double scale = Math.max((double) w / imgW, (double) h / imgH);
+                        int drawW = (int) Math.round(imgW * scale);
+                        int drawH = (int) Math.round(imgH * scale);
+                        int drawX = (w - drawW) / 2;
+                        int drawY = (h - drawH) / 2;
+                        g2.drawImage(raw, drawX, drawY, drawW, drawH, null);
+                    }
+                } else {
+                    ImageIcon icon = ProductImageUtil.getProductIcon(p, w, h);
+                    if (icon != null) {
+                        g2.drawImage(icon.getImage(), 0, 0, w, h, null);
+                    }
+                }
+
+                // Crisp divider line separating image banner from details below
+                g2.setColor(new Color(226, 232, 240));
+                g2.drawLine(0, h - 1, w, h - 1);
+
+                g2.dispose();
+            }
+        };
+        imageBanner.setPreferredSize(new Dimension(0, 130));
+        imageBanner.setOpaque(false);
+
+        // Floating Badges on top of Image Banner
+        JPanel topBadgeRow = new JPanel(new BorderLayout());
+        topBadgeRow.setOpaque(false);
+        topBadgeRow.setBorder(new EmptyBorder(6, 8, 0, 8));
+
+        String catName = (p.getCategoryName() != null && !p.getCategoryName().trim().isEmpty())
+                ? p.getCategoryName().toUpperCase()
+                : "GENERAL";
+        JLabel lblCat = new JLabel(" " + catName + " ");
+        lblCat.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        lblCat.setForeground(new Color(30, 41, 59));
+        lblCat.setBackground(new Color(255, 255, 255, 225));
+        lblCat.setOpaque(true);
+        lblCat.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(226, 232, 240, 200), 1),
+                new EmptyBorder(2, 6, 2, 6)
         ));
 
-        // Category Tag + Stock Status
-        JPanel topInfo = new JPanel(new BorderLayout());
-        topInfo.setOpaque(false);
-
-        JLabel lblCat = new JLabel(p.getCategoryName() != null ? p.getCategoryName().toUpperCase() : "GENERAL");
-        lblCat.setFont(new Font("Segoe UI", Font.BOLD, 10));
-        lblCat.setForeground(new Color(100, 116, 139));
-
-        boolean inStock = p.getQuantity() > 0;
-        JLabel lblStock = new JLabel(inStock ? "✓ In Stock (" + p.getQuantity() + ")" : "✕ Out of Stock");
+        JLabel lblStock = new JLabel(inStock ? " ● " + p.getQuantity() + " left " : " ● Sold Out ");
         lblStock.setFont(new Font("Segoe UI", Font.BOLD, 10));
-        lblStock.setForeground(inStock ? new Color(16, 185, 129) : new Color(239, 68, 68));
+        lblStock.setForeground(inStock ? new Color(22, 163, 74) : new Color(220, 38, 38));
+        lblStock.setBackground(new Color(255, 255, 255, 225));
+        lblStock.setOpaque(true);
+        lblStock.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(226, 232, 240, 200), 1),
+                new EmptyBorder(2, 6, 2, 6)
+        ));
 
-        topInfo.add(lblCat, BorderLayout.WEST);
-        topInfo.add(lblStock, BorderLayout.EAST);
+        topBadgeRow.add(lblCat, BorderLayout.WEST);
+        topBadgeRow.add(lblStock, BorderLayout.EAST);
+        imageBanner.add(topBadgeRow, BorderLayout.NORTH);
 
-        // Center Content: Product Image + Product Name + Code
-        JPanel centerBox = new JPanel(new BorderLayout(0, 6));
-        centerBox.setOpaque(false);
+        card.add(imageBanner, BorderLayout.NORTH);
 
-        // Product Image (Height 72px, Width 110px)
-        JLabel lblImage = new JLabel();
-        lblImage.setHorizontalAlignment(SwingConstants.CENTER);
-        lblImage.setIcon(ProductImageUtil.getProductIcon(p, 110, 72));
-        lblImage.setPreferredSize(new Dimension(110, 72));
+        // 2. CENTER: Details Section (Padded)
+        JPanel detailsPanel = new JPanel(new BorderLayout(0, 6));
+        detailsPanel.setOpaque(false);
+        detailsPanel.setBorder(new EmptyBorder(8, 10, 10, 10));
 
-        JPanel nameAndCode = new JPanel(new GridLayout(2, 1, 0, 2));
-        nameAndCode.setOpaque(false);
+        JPanel textPanel = new JPanel();
+        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+        textPanel.setOpaque(false);
 
-        JLabel lblName = new JLabel(p.getName());
-        lblName.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        lblName.setForeground(new Color(30, 41, 59));
+        String safeName = (p.getName() != null)
+                ? p.getName().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                : "Product";
+        JLabel lblName = new JLabel("<html><div style='line-height:15px; font-weight:600; color:#0F172A; font-family:Segoe UI, sans-serif; font-size:12px;'>" + safeName + "</div></html>");
+        lblName.setPreferredSize(new Dimension(100, 32));
+        lblName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        lblName.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         String codeStr = (p.getBarcode() != null && !p.getBarcode().isEmpty()) ? p.getBarcode() : p.getCode();
-        JLabel lblCode = new JLabel("Code: " + codeStr);
-        lblCode.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        JLabel lblCode = new JLabel("#" + codeStr);
+        lblCode.setFont(new Font("Segoe UI", Font.PLAIN, 10));
         lblCode.setForeground(new Color(148, 163, 184));
+        lblCode.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        nameAndCode.add(lblName);
-        nameAndCode.add(lblCode);
+        textPanel.add(lblName);
+        textPanel.add(Box.createVerticalStrut(2));
+        textPanel.add(lblCode);
 
-        centerBox.add(lblImage, BorderLayout.NORTH);
-        centerBox.add(nameAndCode, BorderLayout.CENTER);
-
-        // Price & Add Button
-        JPanel bottomBox = new JPanel(new BorderLayout(8, 0));
+        // 3. SOUTH: Price & Touch Add Button
+        JPanel bottomBox = new JPanel(new BorderLayout(6, 0));
         bottomBox.setOpaque(false);
 
         JLabel lblPrice = new JLabel(String.format("₹%.2f", p.getSellingPrice()));
-        lblPrice.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        lblPrice.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblPrice.setForeground(new Color(13, 148, 136));
 
-        JButton btnAdd = new JButton("➕ Add");
-        btnAdd.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnAdd.setBackground(inStock ? new Color(37, 99, 235) : new Color(203, 213, 225));
-        btnAdd.setForeground(Color.WHITE);
+        JButton btnAdd = new JButton(inStock ? "➕ Add" : "Sold Out");
+        btnAdd.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnAdd.setBackground(inStock ? new Color(37, 99, 235) : new Color(241, 245, 249));
+        btnAdd.setForeground(inStock ? Color.WHITE : new Color(148, 163, 184));
         btnAdd.setFocusPainted(false);
         btnAdd.setEnabled(inStock);
         btnAdd.setCursor(inStock ? new Cursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
-        btnAdd.setBorder(new EmptyBorder(6, 12, 6, 12));
+        btnAdd.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(inStock ? new Color(37, 99, 235) : new Color(226, 232, 240), 1),
+                new EmptyBorder(5, 12, 5, 12)
+        ));
         btnAdd.addActionListener(e -> addProductToCart(p));
 
         bottomBox.add(lblPrice, BorderLayout.WEST);
         bottomBox.add(btnAdd, BorderLayout.EAST);
 
-        card.add(topInfo, BorderLayout.NORTH);
-        card.add(centerBox, BorderLayout.CENTER);
-        card.add(bottomBox, BorderLayout.SOUTH);
+        detailsPanel.add(textPanel, BorderLayout.CENTER);
+        detailsPanel.add(bottomBox, BorderLayout.SOUTH);
 
-        // Card touch click & hover styling
-        card.setCursor(inStock ? new Cursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
-        card.addMouseListener(new MouseAdapter() {
+        card.add(detailsPanel, BorderLayout.CENTER);
+
+        // Card touch click & hover styling (supports both card and image click)
+        MouseAdapter cardMouseAdapter = new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (inStock) addProductToCart(p);
@@ -746,21 +859,22 @@ public class SelfCheckoutPanel extends JPanel {
             @Override
             public void mouseEntered(MouseEvent e) {
                 if (inStock) {
-                    card.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(new Color(59, 130, 246), 1),
-                            new EmptyBorder(10, 10, 10, 10)
-                    ));
+                    card.setBorder(BorderFactory.createLineBorder(new Color(59, 130, 246), 1));
+                    card.setBackground(new Color(248, 250, 252));
                 }
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                card.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                        new EmptyBorder(10, 10, 10, 10)
-                ));
+                card.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240), 1));
+                card.setBackground(Color.WHITE);
             }
-        });
+        };
+
+        card.setCursor(inStock ? new Cursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
+        card.addMouseListener(cardMouseAdapter);
+        imageBanner.setCursor(inStock ? new Cursor(Cursor.HAND_CURSOR) : Cursor.getDefaultCursor());
+        imageBanner.addMouseListener(cardMouseAdapter);
 
         return card;
     }

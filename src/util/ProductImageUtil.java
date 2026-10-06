@@ -21,6 +21,7 @@ public class ProductImageUtil {
 
     private static final String IMAGES_DIR = "data/product_images";
     private static final Map<String, ImageIcon> iconCache = new HashMap<>();
+    private static final Map<String, BufferedImage> rawImageCache = new HashMap<>();
 
     static {
         File dir = new File(IMAGES_DIR);
@@ -30,8 +31,68 @@ public class ProductImageUtil {
     }
 
     /**
+     * Get the unscaled raw BufferedImage for a product (from imagePath, code, barcode, or name/keyword).
+     * Returns null if no image file is found.
+     */
+    public static BufferedImage getProductRawImage(Product p) {
+        if (p == null) return null;
+        String cacheKey = (p.getId() + "_" + p.getCode() + "_" + p.getImagePath() + "_" + p.getName());
+        if (rawImageCache.containsKey(cacheKey)) {
+            return rawImageCache.get(cacheKey);
+        }
+
+        BufferedImage bImg = null;
+
+        // 1. Try loading from file if path is specified
+        if (p.getImagePath() != null && !p.getImagePath().trim().isEmpty()) {
+            File imgFile = resolveImageFile(p.getImagePath());
+            if (imgFile != null && imgFile.exists() && imgFile.canRead()) {
+                try {
+                    bImg = ImageIO.read(imgFile);
+                } catch (Exception ignored) {}
+            }
+        }
+
+        // 2. Fallback: match by code, barcode, sanitized name, or common product keywords in IMAGES_DIR
+        if (bImg == null) {
+            java.util.List<String> candidates = new java.util.ArrayList<>();
+            if (p.getCode() != null) candidates.add(p.getCode().replaceAll("[^a-zA-Z0-9_-]", "_"));
+            if (p.getBarcode() != null) candidates.add(p.getBarcode().replaceAll("[^a-zA-Z0-9_-]", "_"));
+
+            String pName = (p.getName() != null) ? p.getName().toLowerCase() : "";
+            String sanitizedName = pName.replaceAll("[^a-z0-9]", "_").replaceAll("_+", "_").trim();
+            if (sanitizedName.startsWith("_")) sanitizedName = sanitizedName.substring(1);
+            if (sanitizedName.endsWith("_")) sanitizedName = sanitizedName.substring(0, sanitizedName.length() - 1);
+            if (!sanitizedName.isEmpty()) candidates.add(sanitizedName);
+
+            for (String kw : new String[]{"milk", "laptop", "mouse", "keyboard", "paper", "mango", "tv", "mobile", "mob", "amul", "dell"}) {
+                if (pName.contains(kw)) candidates.add(kw);
+            }
+
+            for (String cName : candidates) {
+                if (cName == null || cName.isEmpty()) continue;
+                for (String ext : new String[]{".png", ".jpg", ".jpeg", ".webp"}) {
+                    File candidateFile = new File(IMAGES_DIR, cName + ext);
+                    if (candidateFile.exists() && candidateFile.canRead()) {
+                        try {
+                            bImg = ImageIO.read(candidateFile);
+                            if (bImg != null) break;
+                        } catch (Exception ignored) {}
+                    }
+                }
+                if (bImg != null) break;
+            }
+        }
+
+        if (bImg != null) {
+            rawImageCache.put(cacheKey, bImg);
+        }
+        return bImg;
+    }
+
+    /**
      * Get an ImageIcon for a product scaled to target dimensions.
-     * If the product has a valid image path, it loads the image.
+     * If the product has a valid image path or matching file, it loads and scales the image.
      * Otherwise, generates an elegant visual placeholder based on category and name.
      */
     public static ImageIcon getProductIcon(Product p, int width, int height) {
@@ -41,45 +102,12 @@ public class ProductImageUtil {
         }
 
         ImageIcon icon = null;
-
-        // 1. Try loading from file if path is specified
-        if (p != null && p.getImagePath() != null && !p.getImagePath().trim().isEmpty()) {
-            File imgFile = resolveImageFile(p.getImagePath());
-            if (imgFile != null && imgFile.exists() && imgFile.canRead()) {
-                try {
-                    BufferedImage bImg = ImageIO.read(imgFile);
-                    if (bImg != null) {
-                        icon = createScaledIcon(bImg, width, height);
-                    }
-                } catch (Exception ignored) {}
-            }
+        BufferedImage bImg = getProductRawImage(p);
+        if (bImg != null) {
+            icon = createScaledIcon(bImg, width, height);
         }
 
-        // 1b. Fallback: Check if an image named by product code/barcode exists in data/product_images
-        if (icon == null && p != null) {
-            String[] testNames = {
-                (p.getCode() != null) ? p.getCode().replaceAll("[^a-zA-Z0-9_-]", "_") : null,
-                (p.getBarcode() != null) ? p.getBarcode().replaceAll("[^a-zA-Z0-9_-]", "_") : null
-            };
-            for (String tName : testNames) {
-                if (tName == null || tName.isEmpty()) continue;
-                for (String ext : new String[]{".png", ".jpg", ".jpeg", ".webp"}) {
-                    File candidate = new File(IMAGES_DIR, tName + ext);
-                    if (candidate.exists() && candidate.canRead()) {
-                        try {
-                            BufferedImage bImg = ImageIO.read(candidate);
-                            if (bImg != null) {
-                                icon = createScaledIcon(bImg, width, height);
-                                break;
-                            }
-                        } catch (Exception ignored) {}
-                    }
-                }
-                if (icon != null) break;
-            }
-        }
-
-        // 2. Fallback: generate high-quality visual placeholder
+        // Fallback: generate high-quality visual placeholder
         if (icon == null) {
             String cat = (p != null && p.getCategoryName() != null) ? p.getCategoryName() : "";
             String name = (p != null && p.getName() != null) ? p.getName() : "Product";
@@ -157,6 +185,7 @@ public class ProductImageUtil {
      */
     public static void clearCache() {
         iconCache.clear();
+        rawImageCache.clear();
     }
 
     /**
