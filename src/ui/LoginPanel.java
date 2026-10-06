@@ -177,24 +177,24 @@ public class LoginPanel extends JPanel {
             g2.fillRect(0, 0, w, h);
         }
 
-        // 2. Cinematic Dark Frosted Overlay (Allows the video to shine through while keeping text 100% legible)
+        // 2. Light & Crisp Ambient Overlay (Lightened significantly for a bright, vibrant, welcoming feel)
         GradientPaint overlay = new GradientPaint(
-                0, 0, new Color(11, 19, 43, 140),
-                0, h, new Color(15, 23, 42, 185)
+                0, 0, new Color(15, 23, 42, 40),
+                0, h, new Color(15, 23, 42, 65)
         );
         g2.setPaint(overlay);
         g2.fillRect(0, 0, w, h);
 
-        // Subtle radial vignette in center to focus eye on the login card
+        // Soft ambient focus around the center card (very light vignette, never muddy)
         try {
             RadialGradientPaint vignette = new RadialGradientPaint(
                     new Point(w / 2, h / 2),
-                    (float) Math.max(w, h) * 0.75f,
-                    new float[]{0.0f, 0.6f, 1.0f},
+                    (float) Math.max(w, h) * 0.70f,
+                    new float[]{0.0f, 0.7f, 1.0f},
                     new Color[]{
-                            new Color(11, 19, 43, 40),
-                            new Color(11, 19, 43, 120),
-                            new Color(8, 12, 28, 220)
+                            new Color(15, 23, 42, 10),
+                            new Color(15, 23, 42, 35),
+                            new Color(11, 19, 43, 75)
                     }
             );
             g2.setPaint(vignette);
@@ -240,9 +240,22 @@ public class LoginPanel extends JPanel {
         bar.setOpaque(false);
         bar.setBorder(new EmptyBorder(18, 32, 10, 32));
 
-        // Left Brand Header
-        JPanel brandLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
-        brandLeft.setOpaque(false);
+        // Left Brand Header wrapped in sleek frosted badge
+        JPanel brandBadge = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(15, 23, 42, 175));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
+                g2.setColor(new Color(255, 255, 255, 30));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 16, 16);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        brandBadge.setOpaque(false);
+        brandBadge.setBorder(new EmptyBorder(4, 10, 4, 16));
 
         JLabel lblLogoIcon = new JLabel("⚡", SwingConstants.CENTER) {
             @Override
@@ -264,7 +277,7 @@ public class LoginPanel extends JPanel {
         JPanel brandTexts = new JPanel(new GridLayout(2, 1, 0, 1));
         brandTexts.setOpaque(false);
         JLabel lblTitle = new JLabel("SmartBilling Pro");
-        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 17));
         lblTitle.setForeground(Color.WHITE);
 
         JLabel lblSub = new JLabel("Enterprise Point of Sale & Smart Inventory Suite");
@@ -273,8 +286,8 @@ public class LoginPanel extends JPanel {
         brandTexts.add(lblTitle);
         brandTexts.add(lblSub);
 
-        brandLeft.add(lblLogoIcon);
-        brandLeft.add(brandTexts);
+        brandBadge.add(lblLogoIcon);
+        brandBadge.add(brandTexts);
 
         // Right Video Controls & Edition Badge
         JPanel barRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
@@ -286,7 +299,7 @@ public class LoginPanel extends JPanel {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(15, 23, 42, 180));
+                g2.setColor(new Color(15, 23, 42, 175));
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
                 g2.setColor(new Color(56, 189, 248, 100));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 16, 16);
@@ -300,7 +313,7 @@ public class LoginPanel extends JPanel {
         btnVideoToggle.setBorderPainted(false);
         btnVideoToggle.setFocusPainted(false);
         btnVideoToggle.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnVideoToggle.setBorder(new EmptyBorder(6, 14, 6, 14));
+        btnVideoToggle.setBorder(new EmptyBorder(8, 16, 8, 16));
         btnVideoToggle.addActionListener(e -> toggleVideoPlayback());
 
         JLabel lblBadge = new JLabel("● v2.4 ENTERPRISE");
@@ -308,13 +321,13 @@ public class LoginPanel extends JPanel {
         lblBadge.setForeground(new Color(52, 211, 153));
         lblBadge.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(16, 185, 129, 120), 1, true),
-                new EmptyBorder(4, 10, 4, 10)
+                new EmptyBorder(6, 12, 6, 12)
         ));
 
         barRight.add(btnVideoToggle);
         barRight.add(lblBadge);
 
-        bar.add(brandLeft, BorderLayout.WEST);
+        bar.add(brandBadge, BorderLayout.WEST);
         bar.add(barRight, BorderLayout.EAST);
         return bar;
     }
@@ -330,12 +343,30 @@ public class LoginPanel extends JPanel {
     private JPanel createBottomBar() {
         JPanel bar = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 8));
         bar.setOpaque(false);
-        bar.setBorder(new EmptyBorder(4, 16, 14, 16));
+        bar.setBorder(new EmptyBorder(4, 16, 16, 16));
+
+        JPanel pill = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 4)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(15, 23, 42, 160));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 14, 14);
+                g2.setColor(new Color(255, 255, 255, 25));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        pill.setOpaque(false);
+        pill.setBorder(new EmptyBorder(4, 16, 4, 16));
 
         JLabel lblSec = new JLabel("Enterprise Grade Security  •  Offline-First Architecture  •  Instant MySQL Sync");
-        lblSec.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblSec.setForeground(new Color(148, 163, 184, 210));
-        bar.add(lblSec);
+        lblSec.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblSec.setForeground(new Color(241, 245, 249));
+        pill.add(lblSec);
+
+        bar.add(pill);
         return bar;
     }
 
@@ -350,17 +381,22 @@ public class LoginPanel extends JPanel {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                // Subtle Outer Card Shadow
-                g2.setColor(new Color(0, 0, 0, 70));
-                g2.fillRoundRect(4, 4, getWidth() - 8, getHeight() - 8, 22, 22);
+                int cw = getWidth();
+                int ch = getHeight();
 
-                // Crisp White Glassmorphism Card
-                g2.setColor(new Color(255, 255, 255, 248)); // 97% opaque crisp white
-                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+                // Multi-stage soft diffused shadow for clean floating elevation
+                g2.setColor(new Color(0, 0, 0, 15));
+                g2.fillRoundRect(6, 6, cw - 12, ch - 10, 24, 24);
+                g2.setColor(new Color(0, 0, 0, 25));
+                g2.fillRoundRect(3, 3, cw - 6, ch - 5, 22, 22);
 
-                // Card Outline Border
-                g2.setColor(new Color(226, 232, 240, 220));
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+                // Crisp Pure White Elevated Card
+                g2.setColor(Color.WHITE);
+                g2.fillRoundRect(0, 0, cw - 1, ch - 1, 20, 20);
+
+                // Soft Modern Border
+                g2.setColor(new Color(226, 232, 240));
+                g2.drawRoundRect(0, 0, cw - 1, ch - 1, 20, 20);
 
                 g2.dispose();
             }
