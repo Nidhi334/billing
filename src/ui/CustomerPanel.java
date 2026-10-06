@@ -24,7 +24,8 @@ public class CustomerPanel extends JPanel {
 
     public CustomerPanel() {
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(248, 250, 252));
+        // setBackground(new Color(248, 250, 252));
+        setBackground(Color.LIGHT_GRAY);
         setBorder(new EmptyBorder(15, 15, 15, 15));
         initComponents();
         loadCustomerTable();
@@ -33,15 +34,18 @@ public class CustomerPanel extends JPanel {
     private void initComponents() {
         // TOP: Header & Search
         JPanel topPanel = new JPanel(new BorderLayout(10, 10));
-        topPanel.setBackground(new Color(248, 250, 252));
+        // topPanel.setBackground(new Color(248, 250, 252));
+        topPanel.setBackground(Color.blue);
 
         JLabel lblTitle = new JLabel("👨‍💼 Customer Management");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTitle.setForeground(new Color(30, 41, 59));
+        // lblTitle.setForeground(new Color(30, 41, 59));
+        lblTitle.setForeground(Color.WHITE);
         topPanel.add(lblTitle, BorderLayout.WEST);
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        searchPanel.setBackground(new Color(248, 250, 252));
+        // searchPanel.setBackground(new Color(248, 250, 252));
+        searchPanel.setBackground(Color.LIGHT_GRAY);
 
         JLabel lblSearch = new JLabel("Search:");
         lblSearch.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -70,7 +74,9 @@ public class CustomerPanel extends JPanel {
 
         // LEFT: Form Card
         JPanel formCard = new JPanel(new GridBagLayout());
-        formCard.setBackground(Color.WHITE);
+        // formCard.setBackground(Color.WHITE);
+        formCard.setBackground(Color.LIGHT_GRAY);
+
         formCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
                 new EmptyBorder(14, 14, 14, 14)));
@@ -121,7 +127,7 @@ public class CustomerPanel extends JPanel {
 
         // 5. Action Buttons Grid
         JPanel btnPanel = new JPanel(new GridLayout(2, 2, 6, 6));
-        btnPanel.setBackground(Color.WHITE);
+        btnPanel.setBackground(Color.LIGHT_GRAY);
 
         btnAdd = new JButton("Add Customer");
         btnAdd.setBackground(new Color(16, 185, 129));

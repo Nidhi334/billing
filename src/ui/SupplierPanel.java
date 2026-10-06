@@ -52,7 +52,7 @@ public class SupplierPanel extends JPanel {
 
         JLabel lblSearch = new JLabel("Search:");
         lblSearch.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        lblSearch.setForeground(Color.WHITE);
+        lblSearch.setForeground(Color.BLACK);
         searchPanel.add(lblSearch);
 
         txtSearch = new JTextField(16);
