@@ -17,3 +17,4 @@ public class BillDetailDialog extends JDialog {
         setContentPane(new BillDetailPanel(this, sale));
     }
 }
+
