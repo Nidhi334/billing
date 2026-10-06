@@ -221,15 +221,15 @@ public class SelfCheckoutPanel extends JPanel {
         JPanel searchBarWrapper = new JPanel(new BorderLayout(8, 0));
         searchBarWrapper.setBackground(Color.WHITE);
         searchBarWrapper.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(203, 213, 225), 1),
-                new EmptyBorder(6, 12, 6, 12)
+                BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
+                new EmptyBorder(8, 14, 8, 14)
         ));
 
         JLabel lblScanIcon = new JLabel("🔍");
         lblScanIcon.setFont(new Font("Segoe UI", Font.PLAIN, 18));
 
         txtSearchScan = new JTextField();
-        txtSearchScan.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        txtSearchScan.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         txtSearchScan.setBorder(null);
         txtSearchScan.putClientProperty("JTextField.placeholderText", "Scan barcode with handheld scanner or type product name/code...");
         txtSearchScan.addActionListener(e -> handleScanOrSearch());
@@ -285,14 +285,11 @@ public class SelfCheckoutPanel extends JPanel {
         topArea.add(searchBarWrapper, BorderLayout.NORTH);
         topArea.add(lblStatusToast, BorderLayout.SOUTH);
 
-        // Category Sidebar Panel (WEST)
+        // Category Sidebar Panel (WEST) - borderless clean floating sidebar
         JPanel categorySidebarCard = new JPanel(new BorderLayout(0, 8));
         categorySidebarCard.setPreferredSize(new Dimension(165, 0));
         categorySidebarCard.setBackground(Color.WHITE);
-        categorySidebarCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(226, 232, 240), 1),
-                new EmptyBorder(10, 8, 10, 8)
-        ));
+        categorySidebarCard.setBorder(new EmptyBorder(12, 10, 12, 10));
 
         JLabel lblCategoryHeader = new JLabel("🏷️ CATEGORIES");
         lblCategoryHeader.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -312,13 +309,13 @@ public class SelfCheckoutPanel extends JPanel {
         categoryScroll.getVerticalScrollBar().setUnitIncrement(16);
         categorySidebarCard.add(categoryScroll, BorderLayout.CENTER);
 
-        // Visual Catalog Grid (CENTER) - 4 products per row
-        catalogGridPanel = new JPanel(new GridLayout(0, 4, 10, 10));
+        // Visual Catalog Grid (CENTER) - 4 products per row, seamless canvas
+        catalogGridPanel = new JPanel(new GridLayout(0, 4, 12, 12));
         catalogGridPanel.setOpaque(false);
 
         JPanel catalogScrollContent = new JPanel(new BorderLayout());
         catalogScrollContent.setOpaque(false);
-        catalogScrollContent.setBorder(new EmptyBorder(2, 2, 8, 2));
+        catalogScrollContent.setBorder(new EmptyBorder(2, 4, 8, 4));
         catalogScrollContent.add(catalogGridPanel, BorderLayout.NORTH);
 
         JScrollPane catalogScroll = new JScrollPane(catalogScrollContent);
@@ -329,7 +326,7 @@ public class SelfCheckoutPanel extends JPanel {
         catalogScroll.getVerticalScrollBar().setUnitIncrement(24);
 
         // Combine: Sidebar on WEST, Product grid on CENTER
-        JPanel catalogWrapper = new JPanel(new BorderLayout(10, 0));
+        JPanel catalogWrapper = new JPanel(new BorderLayout(12, 0));
         catalogWrapper.setOpaque(false);
         catalogWrapper.add(categorySidebarCard, BorderLayout.WEST);
         catalogWrapper.add(catalogScroll, BorderLayout.CENTER);
@@ -432,13 +429,13 @@ public class SelfCheckoutPanel extends JPanel {
         });
 
         JScrollPane cartScroll = new JScrollPane(cartTable);
-        cartScroll.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240)));
+        cartScroll.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         cartScroll.getViewport().setBackground(Color.WHITE);
 
         // Touch Quantity Adjustment Bar below Cart Table
         JPanel touchQtyBar = new JPanel(new GridLayout(1, 3, 8, 0));
         touchQtyBar.setOpaque(false);
-        touchQtyBar.setBorder(new EmptyBorder(4, 0, 4, 0));
+        touchQtyBar.setBorder(new EmptyBorder(6, 0, 6, 0));
 
         JButton btnQtyMinus = new JButton("➖ Decrease (-1)");
         btnQtyMinus.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -480,12 +477,12 @@ public class SelfCheckoutPanel extends JPanel {
         touchQtyBar.add(btnQtyPlus);
         touchQtyBar.add(btnRemoveSelected);
 
-        // Order Summary Box
-        JPanel summaryBox = new JPanel(new GridLayout(3, 2, 6, 6));
+        // Order Summary Box - clean divider with soft background
+        JPanel summaryBox = new JPanel(new GridLayout(3, 2, 6, 8));
         summaryBox.setBackground(new Color(248, 250, 252));
         summaryBox.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(226, 232, 240)),
-                new EmptyBorder(12, 14, 12, 14)
+                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(226, 232, 240)),
+                new EmptyBorder(12, 12, 12, 12)
         ));
 
         JLabel lblSubtotal = new JLabel("Subtotal:");
@@ -551,10 +548,8 @@ public class SelfCheckoutPanel extends JPanel {
     private void loadCategories() {
         categoryTabsPanel.removeAll();
 
-        Font btnFont = new Font("Segoe UI", Font.BOLD, 12);
-
         // "All Items" tab
-        JButton btnAll = createCategoryTabButton("★ All Items", "ALL");
+        JButton btnAll = createCategoryTabButton("⭐ All Items", "ALL");
         categoryTabsPanel.add(btnAll);
         categoryTabsPanel.add(Box.createVerticalStrut(6));
 
@@ -572,10 +567,8 @@ public class SelfCheckoutPanel extends JPanel {
         }
 
         for (Category cat : categories) {
-            String rawName = (cat.getName() != null) ? cat.getName().trim() : "General";
-            String capitalized = rawName.substring(0, 1).toUpperCase() + (rawName.length() > 1 ? rawName.substring(1).toLowerCase() : "");
-            String icon = getCategoryIconPrefix(rawName, btnFont);
-            JButton btnCat = createCategoryTabButton(icon + " " + capitalized, rawName);
+            String emoji = getCategoryEmoji(cat.getName());
+            JButton btnCat = createCategoryTabButton(emoji + " " + cat.getName(), cat.getName());
             categoryTabsPanel.add(btnCat);
             categoryTabsPanel.add(Box.createVerticalStrut(6));
         }
@@ -589,65 +582,33 @@ public class SelfCheckoutPanel extends JPanel {
         if (catName == null) return "🏷️";
         String lower = catName.toLowerCase().trim();
         if (lower.contains("dairy") || lower.contains("milk")) return "🥛";
-        if (lower.contains("fruit") || lower.contains("mango") || lower.contains("veg") || lower.contains("fresh")) return "🍎";
+        if (lower.contains("fruit") || lower.contains("mango") || lower.contains("veg")) return "🍎";
         if (lower.contains("electronic") || lower.contains("laptop") || lower.contains("tv")) return "💻";
-        if (lower.contains("accessories") || lower.contains("keyboard") || lower.contains("mouse") || lower.contains("headphone")) return "🎧";
+        if (lower.contains("accessories") || lower.contains("keyboard") || lower.contains("mouse")) return "⌨️";
         if (lower.contains("stationery") || lower.contains("paper")) return "📄";
         if (lower.contains("snack") || lower.contains("food") || lower.contains("bev")) return "🍪";
         return "🏷️";
     }
 
-    private String getCategoryIconPrefix(String name, Font font) {
-        String emoji = getCategoryEmoji(name);
-        try {
-            java.awt.font.FontRenderContext frc = new java.awt.font.FontRenderContext(null, true, true);
-            if (font != null && font.getStringBounds(emoji, frc).getWidth() <= 0.0) {
-                String lower = (name != null) ? name.toLowerCase() : "";
-                if (lower.contains("dairy") || lower.contains("milk")) return "☕";
-                if (lower.contains("fruit") || lower.contains("mango") || lower.contains("veg") || lower.contains("fresh")) return "☘️";
-                if (lower.contains("stationery") || lower.contains("paper")) return "📋";
-                if (lower.contains("all")) return "★";
-                return "🏷️";
-            }
-        } catch (Exception ignored) {}
-        return emoji;
-    }
-
     private JButton createCategoryTabButton(String label, String categoryKey) {
-        JButton btn = new JButton(label) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-                boolean isSelected = selectedCategory.equalsIgnoreCase(categoryKey);
-                Color bg = isSelected ? new Color(37, 99, 235) : (getModel().isRollover() ? new Color(239, 246, 255) : new Color(248, 250, 252));
-                Color border = isSelected ? new Color(29, 78, 216) : (getModel().isRollover() ? new Color(147, 197, 253) : new Color(226, 232, 240));
-
-                g2.setColor(bg);
-                g2.fillRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 8, 8);
-                g2.setColor(border);
-                g2.drawRoundRect(1, 1, getWidth() - 3, getHeight() - 3, 8, 8);
-
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setOpaque(false);
+        JButton btn = new JButton(label);
         btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        btn.setPreferredSize(new Dimension(145, 38));
-        btn.setMinimumSize(new Dimension(130, 38));
-        btn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btn.setMargin(new Insets(0, 0, 0, 0));
-        btn.setBorder(new EmptyBorder(6, 14, 6, 14));
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        btn.setPreferredSize(new Dimension(135, 40));
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         boolean isSelected = selectedCategory.equalsIgnoreCase(categoryKey);
+
+        Color activeBg = new Color(37, 99, 235);
+        Color inactiveBg = new Color(248, 250, 252);
+
+        btn.setBackground(isSelected ? activeBg : inactiveBg);
         btn.setForeground(isSelected ? Color.WHITE : new Color(51, 65, 85));
+        btn.setFocusPainted(false);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(isSelected ? activeBg : new Color(226, 232, 240), 1),
+                new EmptyBorder(8, 10, 8, 10)
+        ));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         btn.addActionListener(e -> {
@@ -753,9 +714,9 @@ public class SelfCheckoutPanel extends JPanel {
         JPanel card = new JPanel(new BorderLayout(0, 0));
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240), 1));
-        card.setPreferredSize(new Dimension(0, 220));
+        card.setPreferredSize(new Dimension(0, 262));
 
-        // 1. TOP: Full Edge-to-Edge Image Banner (Height 115px)
+        // 1. TOP: Full Edge-to-Edge Image Banner (Enlarged Height 138px for bold display)
         JPanel imageBanner = new JPanel(new BorderLayout()) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -778,9 +739,9 @@ public class SelfCheckoutPanel extends JPanel {
                     int imgW = raw.getWidth(null);
                     int imgH = raw.getHeight(null);
                     if (imgW > 0 && imgH > 0) {
-                        // Natural aspect-ratio fit: entire product is shown cleanly without stretching or cropping
-                        int padX = 12;
-                        int padY = 8;
+                        // Natural aspect-ratio fit: enlarged view without stretching or cropping
+                        int padX = 8;
+                        int padY = 6;
                         int availW = w - (padX * 2);
                         int availH = h - (padY * 2);
                         if (availW > 0 && availH > 0) {
@@ -799,14 +760,14 @@ public class SelfCheckoutPanel extends JPanel {
                     }
                 }
 
-                // Crisp divider line separating image banner from details below
-                g2.setColor(new Color(226, 232, 240));
+                // Subtle divider line separating image banner from details below
+                g2.setColor(new Color(241, 245, 249));
                 g2.drawLine(0, h - 1, w, h - 1);
 
                 g2.dispose();
             }
         };
-        imageBanner.setPreferredSize(new Dimension(0, 115));
+        imageBanner.setPreferredSize(new Dimension(0, 138));
         imageBanner.setOpaque(false);
 
         card.add(imageBanner, BorderLayout.NORTH);
@@ -815,7 +776,7 @@ public class SelfCheckoutPanel extends JPanel {
         JPanel detailsPanel = new JPanel();
         detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
         detailsPanel.setOpaque(false);
-        detailsPanel.setBorder(new EmptyBorder(8, 10, 10, 10));
+        detailsPanel.setBorder(new EmptyBorder(8, 12, 10, 12));
 
         // Row 1: Category Tag & Stock Status
         JPanel tagRow = new JPanel(new BorderLayout());
@@ -841,9 +802,9 @@ public class SelfCheckoutPanel extends JPanel {
         String safeName = (p.getName() != null)
                 ? p.getName().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 : "Product";
-        JLabel lblName = new JLabel("<html><div style='line-height:15px; font-weight:600; color:#0F172A; font-family:Segoe UI, sans-serif; font-size:12px;'>" + safeName + "</div></html>");
-        lblName.setPreferredSize(new Dimension(100, 32));
-        lblName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        JLabel lblName = new JLabel("<html><div style='line-height:16px; font-weight:600; color:#0F172A; font-family:Segoe UI, sans-serif; font-size:12px;'>" + safeName + "</div></html>");
+        lblName.setPreferredSize(new Dimension(100, 34));
+        lblName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         lblName.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // Row 3: Barcode / SKU
@@ -899,7 +860,7 @@ public class SelfCheckoutPanel extends JPanel {
             @Override
             public void mouseEntered(MouseEvent e) {
                 if (inStock) {
-                    card.setBorder(BorderFactory.createLineBorder(new Color(59, 130, 246), 1));
+                    card.setBorder(BorderFactory.createLineBorder(new Color(37, 99, 235), 1));
                     card.setBackground(new Color(248, 250, 252));
                 }
             }
