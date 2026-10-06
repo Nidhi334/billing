@@ -74,9 +74,11 @@ public class DashboardFrame extends JFrame {
     public DashboardFrame(User user, boolean offlineDemo) {
         this.currentUser = user;
         this.offlineDemo = offlineDemo;
-        setTitle("SmartBilling Pro - " + (user.isAdmin() ? "Admin Portal" : "Staff Desk") + " [" + user.getFullName() + "]");
+        setTitle("SmartBilling Pro - " + (user.isAdmin() ? "Admin Portal" : "Staff Desk") + " [" + user.getFullName()
+                + "]");
         setSize(1280, 800);
         setMinimumSize(new Dimension(850, 600));
+        setBackground(new Color(248, 250, 252));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -93,6 +95,7 @@ public class DashboardFrame extends JFrame {
         // 1. Top Bar
         topBar = new JPanel(new BorderLayout());
         topBar.setBackground(new Color(15, 23, 42));
+        // topBar.setBackground(Color.LIGHT_GRAY);
         topBar.setPreferredSize(new Dimension(0, 56));
         topBar.setBorder(new EmptyBorder(10, 16, 10, 16));
 
@@ -103,8 +106,7 @@ public class DashboardFrame extends JFrame {
         btnToggleSidebar.setFocusPainted(false);
         btnToggleSidebar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(71, 85, 105), 1),
-                new EmptyBorder(4, 10, 4, 10)
-        ));
+                new EmptyBorder(4, 10, 4, 10)));
         btnToggleSidebar.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnToggleSidebar.setToolTipText("Toggle Sidebar (Show / Hide)");
         btnToggleSidebar.addActionListener(e -> {
@@ -303,8 +305,10 @@ public class DashboardFrame extends JFrame {
     }
 
     public void showAdminChrome(boolean visible) {
-        if (topBar != null) topBar.setVisible(visible);
-        if (sidebar != null) sidebar.setVisible(visible);
+        if (topBar != null)
+            topBar.setVisible(visible);
+        if (sidebar != null)
+            sidebar.setVisible(visible);
         revalidate();
         repaint();
     }
@@ -316,7 +320,6 @@ public class DashboardFrame extends JFrame {
             cardLayout.show(contentPanel, "BILL_HISTORY");
         }
     }
-
 
     public void updateUIVisibilityFromSettings() {
         boolean isTouch = AppSettings.isTouchMode();
@@ -338,15 +341,24 @@ public class DashboardFrame extends JFrame {
         boolean showRep = AppSettings.getBoolean(AppSettings.KEY_NAV_REPORTS, true);
         boolean isAdmin = currentUser.isAdmin();
 
-        if (btnNavHome != null) btnNavHome.setVisible(isAdmin);
-        if (btnNavBilling != null) btnNavBilling.setVisible(showPos || !isAdmin);
-        if (btnNavSelfCheckout != null) btnNavSelfCheckout.setVisible(showPos || !isAdmin);
-        if (btnNavProducts != null) btnNavProducts.setVisible(isAdmin && showPrd);
-        if (btnNavInventory != null) btnNavInventory.setVisible(isAdmin && showInv);
-        if (btnNavCustomers != null) btnNavCustomers.setVisible(showCust);
-        if (btnNavSuppliers != null) btnNavSuppliers.setVisible(isAdmin && showSupp);
-        if (btnNavReports != null) btnNavReports.setVisible(showRep && isAdmin);
-        if (btnNavSettings != null) btnNavSettings.setVisible(isAdmin);
+        if (btnNavHome != null)
+            btnNavHome.setVisible(isAdmin);
+        if (btnNavBilling != null)
+            btnNavBilling.setVisible(showPos || !isAdmin);
+        if (btnNavSelfCheckout != null)
+            btnNavSelfCheckout.setVisible(showPos || !isAdmin);
+        if (btnNavProducts != null)
+            btnNavProducts.setVisible(isAdmin && showPrd);
+        if (btnNavInventory != null)
+            btnNavInventory.setVisible(isAdmin && showInv);
+        if (btnNavCustomers != null)
+            btnNavCustomers.setVisible(showCust);
+        if (btnNavSuppliers != null)
+            btnNavSuppliers.setVisible(isAdmin && showSupp);
+        if (btnNavReports != null)
+            btnNavReports.setVisible(showRep && isAdmin);
+        if (btnNavSettings != null)
+            btnNavSettings.setVisible(isAdmin);
 
         if (billingPanel != null) {
             billingPanel.applySettingsVisibility();
@@ -374,22 +386,27 @@ public class DashboardFrame extends JFrame {
         public ResponsiveScrollablePanel() {
             super();
         }
+
         @Override
         public Dimension getPreferredScrollableViewportSize() {
             return getPreferredSize();
         }
+
         @Override
         public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
             return 16;
         }
+
         @Override
         public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
             return 64;
         }
+
         @Override
         public boolean getScrollableTracksViewportWidth() {
             return true;
         }
+
         @Override
         public boolean getScrollableTracksViewportHeight() {
             return false;
@@ -398,16 +415,17 @@ public class DashboardFrame extends JFrame {
 
     private void initHomeStatsPanel() {
         homeStatsPanel = new JPanel(new BorderLayout(15, 15));
-        homeStatsPanel.setBackground(new Color(248, 250, 252));
+        // homeStatsPanel.setBackground(new Color(248, 250, 252));
+        homeStatsPanel.setBackground(Color.LIGHT_GRAY);
         homeStatsPanel.setBorder(new EmptyBorder(16, 16, 16, 16));
 
         // Welcome banner
         JPanel banner = new JPanel(new BorderLayout(10, 10));
-        banner.setBackground(Color.WHITE);
+        // banner.setBackground(Color.WHITE);
+        banner.setBackground(new Color(99, 99, 252));
         banner.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240)),
-                new EmptyBorder(14, 18, 14, 18)
-        ));
+                new EmptyBorder(14, 18, 14, 18)));
         JLabel welcomeMsg = new JLabel("Welcome back, " + currentUser.getFullName() + "! Here is your shop overview:");
         welcomeMsg.setFont(new Font("Segoe UI", Font.BOLD, 17));
         welcomeMsg.setForeground(new Color(30, 41, 59));
@@ -415,6 +433,8 @@ public class DashboardFrame extends JFrame {
 
         JButton btnRefreshStats = new JButton("🔄 Refresh Metrics");
         btnRefreshStats.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            btnRefreshStats.setBackground(new Color(205,99,99));
+             btnRefreshStats.setForeground(Color.WHITE);
         btnRefreshStats.setFocusPainted(false);
         btnRefreshStats.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnRefreshStats.addActionListener(e -> loadDashboardStats());
@@ -423,7 +443,8 @@ public class DashboardFrame extends JFrame {
 
         // 1. Revenue & Operations Metrics Grid
         statsGrid = new JPanel(new GridLayout(0, 5, 12, 12));
-        statsGrid.setBackground(new Color(248, 250, 252));
+        // statsGrid.setBackground(new Color(99, 250, 252));
+        statsGrid.setBackground(Color.LIGHT_GRAY);
 
         lblTodaySales = new JLabel("₹0.00");
         lblMonthlySales = new JLabel("₹0.00");
@@ -456,6 +477,7 @@ public class DashboardFrame extends JFrame {
         lblChartHeader = new JLabel("📊 Interactive Revenue Visual Analytics & Trends");
         lblChartHeader.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblChartHeader.setForeground(new Color(30, 41, 59));
+        lblChartHeader.setBackground(Color.LIGHT_GRAY);
 
         filtersPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         filtersPanel.setOpaque(false);
@@ -464,7 +486,7 @@ public class DashboardFrame extends JFrame {
         lblTimeline.setFont(new Font("Segoe UI", Font.BOLD, 12));
         filtersPanel.add(lblTimeline);
 
-        cmbTimelineFilter = new JComboBox<>(new String[]{
+        cmbTimelineFilter = new JComboBox<>(new String[] {
                 "📅 Daily Revenue (Last 7 Days)",
                 "📅 Daily Revenue (Last 14 Days)",
                 "📅 Daily Revenue (Last 30 Days)",
@@ -480,7 +502,7 @@ public class DashboardFrame extends JFrame {
         lblBreakdown.setFont(new Font("Segoe UI", Font.BOLD, 12));
         filtersPanel.add(lblBreakdown);
 
-        cmbBreakdownFilter = new JComboBox<>(new String[]{
+        cmbBreakdownFilter = new JComboBox<>(new String[] {
                 "🍰 By Product Category",
                 "💳 By Payment Source (Cash/UPI/Card)"
         });
@@ -527,7 +549,8 @@ public class DashboardFrame extends JFrame {
             @Override
             public void componentResized(java.awt.event.ComponentEvent e) {
                 int w = scrollPane.getViewport().getWidth();
-                if (w <= 0) w = homeStatsPanel.getWidth() - 32;
+                if (w <= 0)
+                    w = homeStatsPanel.getWidth() - 32;
                 updateResponsiveHomeLayout(w);
             }
         });
@@ -538,7 +561,8 @@ public class DashboardFrame extends JFrame {
     }
 
     private void updateResponsiveHomeLayout(int availableWidth) {
-        if (availableWidth < 100) return;
+        if (availableWidth < 100)
+            return;
 
         // 1. Metric Cards Grid: Dynamic column count
         int targetCols;
@@ -641,9 +665,7 @@ public class DashboardFrame extends JFrame {
                 new javax.swing.border.MatteBorder(0, 5, 0, 0, accentColor),
                 BorderFactory.createCompoundBorder(
                         new javax.swing.border.MatteBorder(1, 0, 1, 1, new Color(226, 232, 240)),
-                        new EmptyBorder(14, 18, 14, 18)
-                )
-        ));
+                        new EmptyBorder(14, 18, 14, 18))));
         card.setPreferredSize(new Dimension(190, 96));
         card.setMinimumSize(new Dimension(140, 85));
 
@@ -677,13 +699,14 @@ public class DashboardFrame extends JFrame {
             lblTodaySales.setText(String.format("₹%.2f", todaySales));
             double yearSales = (double) stats.getOrDefault("yearlySalesAmount", 0.0);
             lblMonthlySales.setText(String.format("₹%.2f", monthSales));
-            if (lblYearlySales != null) lblYearlySales.setText(String.format("₹%.2f", yearSales));
+            if (lblYearlySales != null)
+                lblYearlySales.setText(String.format("₹%.2f", yearSales));
             lblTotalRevenue.setText(String.format("₹%.2f", totalRev));
             lblLowStock.setText(String.valueOf(lowStock));
             lblTotalProducts.setText(String.valueOf(totalPrd));
             lblTotalStock.setText(String.valueOf(totalUnits));
             lblTotalCustomers.setText(String.valueOf(totalCust));
-                        lblTotalSuppliers.setText(String.valueOf(totalSupp));
+            lblTotalSuppliers.setText(String.valueOf(totalSupp));
 
             refreshBarChartData();
             refreshPieChartData();
@@ -693,9 +716,9 @@ public class DashboardFrame extends JFrame {
         }
     }
 
-
     private void refreshBarChartData() {
-        if (revenueBarChart == null || cmbTimelineFilter == null) return;
+        if (revenueBarChart == null || cmbTimelineFilter == null)
+            return;
         try {
             int sel = cmbTimelineFilter.getSelectedIndex();
             if (sel == 0) {
@@ -705,9 +728,11 @@ public class DashboardFrame extends JFrame {
             } else if (sel == 2) {
                 revenueBarChart.setData(reportDAO.getDailySalesTrend(30), "📈 Daily Revenue Trend (Last 30 Days)");
             } else if (sel == 3) {
-                revenueBarChart.setData(reportDAO.getMonthlyRevenueTrend(6), "📈 Monthly Revenue Trend (Last 6 Months)");
+                revenueBarChart.setData(reportDAO.getMonthlyRevenueTrend(6),
+                        "📈 Monthly Revenue Trend (Last 6 Months)");
             } else if (sel == 4) {
-                revenueBarChart.setData(reportDAO.getMonthlyRevenueTrend(12), "📈 Monthly Revenue Trend (Last 12 Months)");
+                revenueBarChart.setData(reportDAO.getMonthlyRevenueTrend(12),
+                        "📈 Monthly Revenue Trend (Last 12 Months)");
             } else {
                 revenueBarChart.setData(reportDAO.getYearlyRevenueTrend(5), "📈 Yearly Revenue Trend (Last 5 Years)");
             }
@@ -717,13 +742,15 @@ public class DashboardFrame extends JFrame {
     }
 
     private void refreshPieChartData() {
-        if (revenuePieChart == null || cmbBreakdownFilter == null) return;
+        if (revenuePieChart == null || cmbBreakdownFilter == null)
+            return;
         try {
             int sel = cmbBreakdownFilter.getSelectedIndex();
             if (sel == 0) {
                 revenuePieChart.setData(reportDAO.getCategorySalesBreakdown(), "🍰 Revenue by Category Share");
             } else {
-                revenuePieChart.setData(reportDAO.getRevenueByPaymentSource(), "💳 Revenue by Payment Source (Cash / UPI / Card)");
+                revenuePieChart.setData(reportDAO.getRevenueByPaymentSource(),
+                        "💳 Revenue by Payment Source (Cash / UPI / Card)");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -731,7 +758,8 @@ public class DashboardFrame extends JFrame {
     }
 
     private void refreshTopProductsChartData() {
-        if (topProductsChart == null) return;
+        if (topProductsChart == null)
+            return;
         try {
             topProductsChart.setData(reportDAO.getTopSellingProducts(6), "🏆 Top Selling Products");
         } catch (Exception e) {
@@ -740,7 +768,8 @@ public class DashboardFrame extends JFrame {
     }
 
     private void logout() {
-        int opt = JOptionPane.showConfirmDialog(this, "Are you sure you want to log out?", "Logout", JOptionPane.YES_NO_OPTION);
+        int opt = JOptionPane.showConfirmDialog(this, "Are you sure you want to log out?", "Logout",
+                JOptionPane.YES_NO_OPTION);
         if (opt == JOptionPane.YES_OPTION) {
             dispose();
             SwingUtilities.invokeLater(() -> new LoginFrame().setVisible(true));
