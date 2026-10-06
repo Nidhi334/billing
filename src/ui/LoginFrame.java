@@ -10,7 +10,7 @@ import java.awt.*;
 import java.util.Properties;
 
 public class LoginFrame extends JFrame {
-    private JTextField txtUsername;
+    private JComboBox<String> txtUsername;
     private JPasswordField txtPassword;
     private JButton btnLogin;
     private JButton btnDbConfig;
@@ -79,7 +79,8 @@ public class LoginFrame extends JFrame {
         gbc.gridwidth = 2;
         formCard.add(new JLabel("Username:"), gbc);
 
-        txtUsername = new JTextField("admin");
+        txtUsername = new JComboBox<>(new String[] { "ADMIN", "STAFF" });
+
         txtUsername.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         txtUsername.setPreferredSize(new Dimension(320, 36));
         gbc.gridy = 2;
@@ -207,7 +208,7 @@ public class LoginFrame extends JFrame {
     }
 
     private void performLogin() {
-        String username = txtUsername.getText().trim();
+        String username = String.valueOf(txtUsername.getSelectedItem()).trim();
         String password = new String(txtPassword.getPassword()).trim();
 
         if (username.isEmpty() || password.isEmpty()) {
