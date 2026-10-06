@@ -522,68 +522,102 @@ public class BillHistoryPanel extends JPanel {
     // =========================================================================
     // ACTION BUTTON RENDERER & EDITOR FOR JTABLE
     // =========================================================================
-    private static class ActionButtonRenderer extends JPanel implements TableCellRenderer {
-        private final JButton btn;
-
+    private static class ActionButtonRenderer extends JButton implements TableCellRenderer {
         public ActionButtonRenderer() {
-            setLayout(new GridBagLayout());
-            setOpaque(true);
-
-            btn = new JButton("👁️ View Details");
-            btn.setFont(new Font("Segoe UI", Font.BOLD, 11));
-            btn.setBackground(new Color(37, 99, 235));
-            btn.setForeground(Color.WHITE);
-            btn.setFocusPainted(false);
-            btn.setBorderPainted(false);
-            btn.setBorder(new EmptyBorder(4, 10, 4, 10));
-            btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-            add(btn);
+            super("👁️ View Details");
+            setFont(new Font("Segoe UI", Font.BOLD, 11));
+            setForeground(Color.WHITE);
+            setFocusPainted(false);
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setOpaque(false);
+            setCursor(new Cursor(Cursor.HAND_CURSOR));
         }
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            if (isSelected) {
-                setBackground(table.getSelectionBackground());
-            } else {
-                setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 250, 252));
-            }
             return this;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+            int btnW = Math.min(w - 12, 112);
+            int btnH = 26;
+            int btnX = (w - btnW) / 2;
+            int btnY = (h - btnH) / 2;
+
+            // Pill Button Shape
+            g2.setColor(new Color(37, 99, 235)); // Modern Blue
+            g2.fillRoundRect(btnX, btnY, btnW, btnH, 8, 8);
+
+            // Subtle border
+            g2.setColor(new Color(29, 78, 216));
+            g2.drawRoundRect(btnX, btnY, btnW, btnH, 8, 8);
+
+            // Button Text
+            g2.setColor(Color.WHITE);
+            g2.setFont(getFont());
+            FontMetrics fm = g2.getFontMetrics();
+            String text = "👁️ View Details";
+            int tx = btnX + (btnW - fm.stringWidth(text)) / 2;
+            int ty = btnY + ((btnH - fm.getHeight()) / 2) + fm.getAscent();
+            g2.drawString(text, tx, ty);
+
+            g2.dispose();
         }
     }
 
     private class ActionButtonEditor extends DefaultCellEditor {
-        private final JPanel panel;
         private final JButton btn;
         private int clickedRow;
 
         public ActionButtonEditor() {
             super(new JCheckBox());
-            panel = new JPanel(new GridBagLayout());
-            panel.setOpaque(true);
-
-            btn = new JButton("👁️ View Details");
+            btn = new JButton("👁️ View Details") {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    int w = getWidth();
+                    int h = getHeight();
+                    int btnW = Math.min(w - 12, 112);
+                    int btnH = 26;
+                    int btnX = (w - btnW) / 2;
+                    int btnY = (h - btnH) / 2;
+                    g2.setColor(new Color(29, 78, 216));
+                    g2.fillRoundRect(btnX, btnY, btnW, btnH, 8, 8);
+                    g2.setColor(Color.WHITE);
+                    g2.setFont(getFont());
+                    FontMetrics fm = g2.getFontMetrics();
+                    String text = "👁️ View Details";
+                    int tx = btnX + (btnW - fm.stringWidth(text)) / 2;
+                    int ty = btnY + ((btnH - fm.getHeight()) / 2) + fm.getAscent();
+                    g2.drawString(text, tx, ty);
+                    g2.dispose();
+                }
+            };
             btn.setFont(new Font("Segoe UI", Font.BOLD, 11));
-            btn.setBackground(new Color(29, 78, 216));
             btn.setForeground(Color.WHITE);
             btn.setFocusPainted(false);
+            btn.setContentAreaFilled(false);
             btn.setBorderPainted(false);
-            btn.setBorder(new EmptyBorder(4, 10, 4, 10));
+            btn.setOpaque(false);
             btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
             btn.addActionListener(e -> {
                 fireEditingStopped();
                 viewBillAt(clickedRow);
             });
-
-            panel.add(btn);
         }
 
         @Override
         public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
             this.clickedRow = row;
-            panel.setBackground(table.getSelectionBackground());
-            return panel;
+            return btn;
         }
 
         @Override
