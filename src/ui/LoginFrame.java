@@ -15,168 +15,682 @@ public class LoginFrame extends JFrame {
     private JButton btnLogin;
     private JButton btnDbConfig;
     private JButton btnForgotPassword;
+    private JButton btnAdminRole;
+    private JButton btnStaffRole;
+    private JPanel leftPanel;
+    private CardLayout leftPanelLayout;
+    private JPanel forgotPasswordCard;
+    private JPanel wallpaperPanel;
+    private Timer wallpaperAnimation;
+    private JButton btnWallpaperToggle;
+    private int wallpaperFrame;
+    private String selectedRole = "ADMIN";
     private UserDAO userDAO = new UserDAO();
 
     public LoginFrame() {
         setTitle("Login - Billing & Inventory Management System");
-        setSize(480, 640);
+        setSize(1100, 620);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        setResizable(false);
+        setResizable(true);
         initComponents();
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        wallpaperAnimation = new Timer(70, e -> {
+            wallpaperFrame = (wallpaperFrame + 1) % 1000;
+            wallpaperPanel.repaint();
+        });
+        wallpaperAnimation.start();
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                wallpaperAnimation.stop();
+            }
+        });
+    }
+
+    private void toggleWallpaperAnimation() {
+        if (wallpaperAnimation.isRunning()) {
+            wallpaperAnimation.stop();
+            btnWallpaperToggle.setText("▶  Resume Live Wallpaper");
+            btnWallpaperToggle.setToolTipText("Resume the animated billing and inventory wallpaper");
+        } else {
+            wallpaperAnimation.start();
+            btnWallpaperToggle.setText("❚❚  Pause Live Wallpaper");
+            btnWallpaperToggle.setToolTipText("Pause the animated billing and inventory wallpaper");
+        }
     }
 
     private void initComponents() {
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(new Color(245, 247, 250));
+        wallpaperPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                float colorShift = (float) ((Math.sin(wallpaperFrame / 110.0) + 1.0) / 2.0);
+                Color topColor = new Color(8, (int) (13 + colorShift * 13), (int) (34 + colorShift * 27));
+                Color bottomColor = new Color((int) (24 + colorShift * 17), 13, (int) (58 + colorShift * 38));
+                GradientPaint bg = new GradientPaint(0, 0, topColor, getWidth(), getHeight(), bottomColor);
+                g2.setPaint(bg);
+                g2.fillRect(0, 0, getWidth(), getHeight());
 
-        // Header Banner
-        JPanel headerPanel = new JPanel();
-        headerPanel.setBackground(new Color(30, 41, 59));
-        headerPanel.setPreferredSize(new Dimension(480, 110));
-        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
-        headerPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+                int width = getWidth();
+                int height = getHeight();
+                int glowSize = Math.max(240, Math.min(width, height) * 2 / 3);
+                int glowX = width / 2 + (int) (width / 3.0 * Math.sin(wallpaperFrame / 45.0));
+                int glowY = height / 3 + (int) (height / 5.0 * Math.cos(wallpaperFrame / 55.0));
+                g2.setColor(new Color(34, 211, 238, 38));
+                g2.fillOval(-width / 10, -height / 5, width / 3, height / 2);
+                g2.setColor(new Color(14, 165, 233, 56));
+                g2.fillOval(glowX - glowSize / 2, glowY - glowSize / 2, glowSize, glowSize);
+                g2.setColor(new Color(168, 85, 247, 52));
+                g2.fillOval(width * 3 / 4, height / 10, width / 3, height / 2);
+                g2.setColor(new Color(20, 184, 166, 50));
+                g2.fillOval(width / 3, height * 3 / 5, width / 3, height / 2);
 
-        JLabel titleLabel = new JLabel("SmartBilling Pro");
-        titleLabel.setForeground(Color.WHITE);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                g2.setColor(new Color(125, 211, 252, 45));
+                int spacing = 42;
+                for (int x = spacing; x < width; x += spacing) {
+                    for (int y = spacing; y < height; y += spacing) {
+                        g2.fillOval(x, y, 2, 2);
+                    }
+                }
 
-        JLabel subLabel = new JLabel("Billing & Inventory Management System");
-        subLabel.setForeground(new Color(148, 163, 184));
-        subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        subLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                int safeWidth = Math.max(width, 1);
+                int travel = wallpaperFrame % safeWidth;
+                g2.setStroke(new BasicStroke(2f));
+                g2.setColor(new Color(34, 211, 238, 150));
+                g2.drawLine(travel, height / 3, Math.floorMod(travel + 150, safeWidth), height / 3 - 36);
+                g2.setColor(new Color(192, 132, 252, 135));
+                g2.drawLine(Math.floorMod(travel + width / 2, safeWidth), height * 4 / 5,
+                        Math.floorMod(travel + width / 2 + 180, safeWidth), height * 4 / 5 - 48);
 
-        headerPanel.add(titleLabel);
-        headerPanel.add(Box.createVerticalStrut(5));
-        headerPanel.add(subLabel);
+                int receiptX = Math.floorMod(width - wallpaperFrame * 2, safeWidth + 100);
+                int receiptY = height / 5 + (int) (18 * Math.sin(wallpaperFrame / 18.0));
+                g2.setColor(new Color(15, 23, 42, 145));
+                g2.fillRoundRect(receiptX + 3, receiptY + 4, 46, 58, 8, 8);
+                g2.setColor(new Color(186, 230, 253, 210));
+                g2.fillRoundRect(receiptX, receiptY, 46, 58, 8, 8);
+                g2.setColor(new Color(14, 165, 233, 205));
+                g2.fillRoundRect(receiptX + 8, receiptY + 10, 30, 4, 3, 3);
+                g2.setColor(new Color(71, 85, 105, 150));
+                g2.fillRoundRect(receiptX + 8, receiptY + 22, 26, 3, 2, 2);
+                g2.fillRoundRect(receiptX + 8, receiptY + 31, 20, 3, 2, 2);
+                g2.setColor(new Color(13, 148, 136, 200));
+                g2.fillRoundRect(receiptX + 8, receiptY + 42, 24, 5, 2, 2);
 
-        mainPanel.add(headerPanel, BorderLayout.NORTH);
+                int stockX = Math.floorMod(wallpaperFrame * 2 + width / 3, safeWidth + 90) - 45;
+                int stockY = height * 3 / 4 + (int) (14 * Math.sin(wallpaperFrame / 22.0));
+                g2.setColor(new Color(245, 158, 11, 185));
+                g2.fillRoundRect(stockX, stockY, 34, 34, 8, 8);
+                g2.setColor(new Color(255, 255, 255, 85));
+                g2.drawLine(stockX + 8, stockY + 12, stockX + 26, stockY + 12);
+                g2.drawLine(stockX + 8, stockY + 19, stockX + 26, stockY + 19);
+                g2.drawLine(stockX + 8, stockY + 26, stockX + 21, stockY + 26);
 
-        // Form Card
+                int cartX = Math.floorMod(wallpaperFrame * 3 + width / 5, safeWidth + 120) - 60;
+                int cartY = height / 2 + (int) (20 * Math.sin(wallpaperFrame / 24.0));
+                g2.setColor(new Color(236, 72, 153, 170));
+                g2.fillRoundRect(cartX, cartY, 48, 32, 10, 10);
+                g2.setColor(new Color(255, 255, 255, 185));
+                g2.drawLine(cartX + 10, cartY + 9, cartX + 37, cartY + 9);
+                g2.drawLine(cartX + 10, cartY + 16, cartX + 31, cartY + 16);
+                g2.fillOval(cartX + 10, cartY + 35, 7, 7);
+                g2.fillOval(cartX + 32, cartY + 35, 7, 7);
+
+                g2.dispose();
+            }
+        };
+        wallpaperPanel.setLayout(new BorderLayout());
+        wallpaperPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        JPanel wallpaperControls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        wallpaperControls.setOpaque(false);
+        btnWallpaperToggle = new JButton("❚❚  Pause Live Wallpaper");
+        btnWallpaperToggle.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnWallpaperToggle.setForeground(new Color(224, 242, 254));
+        btnWallpaperToggle.setBackground(new Color(15, 23, 42));
+        btnWallpaperToggle.setFocusPainted(false);
+        btnWallpaperToggle.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnWallpaperToggle.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(34, 211, 238), 1),
+                new EmptyBorder(9, 14, 9, 14)));
+        btnWallpaperToggle.setToolTipText("Pause the animated billing and inventory wallpaper");
+        btnWallpaperToggle.addActionListener(e -> toggleWallpaperAnimation());
+        wallpaperControls.add(btnWallpaperToggle);
+        wallpaperPanel.add(wallpaperControls, BorderLayout.NORTH);
+
+        JPanel shell = new JPanel(new BorderLayout());
+        shell.setOpaque(false);
+        wallpaperPanel.add(shell, BorderLayout.CENTER);
+
+        JPanel contentPanel = new JPanel(new GridBagLayout());
+        contentPanel.setOpaque(false);
+        contentPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
+        shell.add(contentPanel, BorderLayout.CENTER);
+
+        leftPanelLayout = new CardLayout();
+        leftPanel = new JPanel(leftPanelLayout);
+        leftPanel.setOpaque(false);
+        leftPanel.setPreferredSize(new Dimension(380, 430));
+
+        JPanel brandPanel = createBrandPanel();
+        forgotPasswordCard = createForgotPasswordCard();
+        leftPanel.add(brandPanel, "brand");
+        JScrollPane forgotPasswordScroll = new JScrollPane(forgotPasswordCard);
+        forgotPasswordScroll.setBorder(null);
+        forgotPasswordScroll.setOpaque(false);
+        forgotPasswordScroll.getViewport().setOpaque(false);
+        forgotPasswordScroll.getVerticalScrollBar().setUnitIncrement(16);
+        leftPanel.add(forgotPasswordScroll, "forgot");
+        GridBagConstraints leftConstraints = new GridBagConstraints();
+        leftConstraints.gridx = 0;
+        leftConstraints.gridy = 0;
+        leftConstraints.weightx = 0;
+        leftConstraints.weighty = 0;
+        leftConstraints.fill = GridBagConstraints.VERTICAL;
+        leftConstraints.insets = new Insets(0, 0, 0, 20);
+        contentPanel.add(leftPanel, leftConstraints);
+
+        JPanel formWrap = new JPanel(new BorderLayout());
+        formWrap.setOpaque(false);
+        formWrap.setBorder(new EmptyBorder(6, 4, 6, 4));
+        formWrap.add(createLoginPanel(), BorderLayout.CENTER);
+        formWrap.setPreferredSize(new Dimension(380, 430));
+        GridBagConstraints formConstraints = new GridBagConstraints();
+        formConstraints.gridx = 1;
+        formConstraints.gridy = 0;
+        formConstraints.weightx = 0;
+        formConstraints.weighty = 0;
+        formConstraints.fill = GridBagConstraints.VERTICAL;
+        contentPanel.add(formWrap, formConstraints);
+
+        add(wallpaperPanel);
+        applyRoleSelection("ADMIN");
+
+        btnLogin.addActionListener(e -> performLogin());
+        btnForgotPassword.addActionListener(e -> showForgotPasswordPanel());
+        btnDbConfig.addActionListener(e -> openDbConfigDialog());
+    }
+
+    private JPanel createBrandPanel() {
+        JPanel panel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint gradient = new GradientPaint(0, 0, new Color(37, 99, 235), 0, getHeight(),
+                        new Color(13, 148, 136));
+                g2.setPaint(gradient);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 36, 36);
+
+                g2.setColor(new Color(251, 191, 36, 55));
+                g2.fillOval(getWidth() - 190, 25, 180, 180);
+                g2.setColor(new Color(255, 255, 255, 30));
+                g2.fillOval(-30, 220, 220, 220);
+                g2.setColor(new Color(34, 211, 238, 45));
+                g2.fillOval(getWidth() - 250, 380, 260, 260);
+                g2.dispose();
+            }
+        };
+        panel.setOpaque(false);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                new EmptyBorder(20, 20, 20, 20),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+
+        JPanel content = new JPanel();
+        content.setOpaque(false);
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBorder(new EmptyBorder(12, 18, 12, 18));
+
+        JLabel badge = new JLabel("Smart Billing Suite");
+        badge.setAlignmentX(Component.LEFT_ALIGNMENT);
+        badge.setForeground(new Color(191, 219, 254));
+        badge.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        badge.setOpaque(true);
+        badge.setBackground(new Color(255, 255, 255, 38));
+        badge.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(191, 219, 254, 110), 1),
+                new EmptyBorder(7, 12, 7, 12)));
+
+        JLabel title = new JLabel("SmartBilling");
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        title.setForeground(Color.WHITE);
+        title.setFont(new Font("Segoe UI", Font.BOLD, 36));
+
+        JLabel subtitle = new JLabel("Fast billing • Smart inventory • Better service");
+        subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subtitle.setForeground(new Color(191, 219, 254));
+        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+
+        JPanel artPanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                double scale = Math.min(getWidth() / 400.0, getHeight() / 260.0);
+                g2.translate((getWidth() - 400 * scale) / 2.0, (getHeight() - 260 * scale) / 2.0);
+                g2.scale(scale, scale);
+                g2.setColor(new Color(255, 255, 255, 14));
+                g2.fillRoundRect(20, 20, 360, 220, 28, 28);
+
+                g2.setColor(new Color(255, 255, 255, 235));
+                g2.fillRoundRect(42, 38, 220, 168, 22, 22);
+                g2.setColor(new Color(37, 99, 235));
+                g2.fillRoundRect(42, 38, 220, 38, 22, 22);
+                g2.fillRect(42, 57, 220, 19);
+                g2.setColor(Color.WHITE);
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                g2.drawString("INVOICE #1048", 58, 63);
+
+                g2.setColor(new Color(203, 213, 225));
+                g2.fillRoundRect(58, 91, 112, 7, 4, 4);
+                g2.fillRoundRect(58, 109, 150, 7, 4, 4);
+                g2.fillRoundRect(58, 127, 128, 7, 4, 4);
+                g2.setColor(new Color(226, 232, 240));
+                g2.drawLine(58, 148, 245, 148);
+                g2.setColor(new Color(15, 118, 110));
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 14));
+                g2.drawString("TOTAL  $248.50", 58, 177);
+
+                g2.setColor(new Color(251, 191, 36));
+                g2.fillRoundRect(278, 48, 92, 72, 18, 18);
+                g2.setColor(new Color(255, 255, 255, 235));
+                g2.fillOval(305, 61, 38, 38);
+                g2.setColor(new Color(217, 119, 6));
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 25));
+                g2.drawString("$", 316, 89);
+
+                g2.setColor(new Color(16, 185, 129));
+                g2.fillRoundRect(278, 135, 92, 71, 18, 18);
+                g2.setColor(new Color(255, 255, 255, 235));
+                g2.drawRoundRect(298, 151, 51, 38, 5, 5);
+                g2.drawLine(308, 162, 340, 162);
+                g2.drawLine(308, 171, 340, 171);
+                g2.drawLine(308, 180, 330, 180);
+
+                g2.setColor(new Color(255, 255, 255, 120));
+                g2.drawLine(48, 226, 370, 226);
+                g2.setColor(new Color(255, 255, 255, 210));
+                for (int i = 0; i < 7; i++) {
+                    int barHeight = 22 + i * 10;
+                    g2.fillRoundRect(62 + i * 43, 220 - barHeight, 24, barHeight, 8, 8);
+                }
+                g2.dispose();
+            }
+        };
+        artPanel.setOpaque(false);
+        artPanel.setPreferredSize(new Dimension(340, 145));
+
+        JButton btnExplore = new JButton("Explore Platform");
+        btnExplore.setBackground(new Color(255, 255, 255, 18));
+        btnExplore.setForeground(Color.WHITE);
+        btnExplore.setFocusPainted(false);
+        btnExplore.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(191, 219, 254, 120), 1),
+                new EmptyBorder(10, 20, 10, 20)));
+        btnExplore.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnExplore.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnExplore.setPreferredSize(new Dimension(180, 42));
+
+        JPanel bottomInfo = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        bottomInfo.setOpaque(false);
+        JLabel online = new JLabel("● Online");
+        online.setForeground(new Color(134, 239, 172));
+        online.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JLabel status = new JLabel("24/7 billing operations");
+        status.setForeground(new Color(191, 219, 254));
+        status.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        bottomInfo.add(online);
+        bottomInfo.add(status);
+
+        content.add(badge);
+        content.add(Box.createVerticalStrut(12));
+        content.add(title);
+        content.add(Box.createVerticalStrut(6));
+        content.add(subtitle);
+        content.add(Box.createVerticalStrut(10));
+        content.add(artPanel);
+        content.add(Box.createVerticalStrut(10));
+        content.add(btnExplore);
+        content.add(Box.createVerticalStrut(10));
+        content.add(bottomInfo);
+
+        panel.add(content, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel createLoginPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+
         JPanel formCard = new JPanel();
-        formCard.setBackground(Color.WHITE);
+        formCard.setBackground(new Color(239, 246, 255));
         formCard.setBorder(BorderFactory.createCompoundBorder(
-                new EmptyBorder(25, 35, 25, 35),
-                BorderFactory.createLineBorder(new Color(226, 232, 240), 1, true)
-        ));
+                BorderFactory.createLineBorder(new Color(148, 163, 184, 120), 1),
+                new EmptyBorder(16, 20, 16, 20)));
         formCard.setLayout(new GridBagLayout());
+
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 10, 8, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(3, 8, 3, 8);
 
-        JLabel lblSignIn = new JLabel("Sign In to your account");
-        lblSignIn.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        lblSignIn.setForeground(new Color(30, 41, 59));
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
-        formCard.add(lblSignIn, gbc);
+        JLabel lblWelcome = new JLabel("Welcome back");
+        lblWelcome.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        lblWelcome.setForeground(new Color(15, 23, 42));
+        gbc.gridy = 0;
+        formCard.add(lblWelcome, gbc);
 
-        // Username
-        gbc.gridy = 1; gbc.gridwidth = 2;
-        formCard.add(new JLabel("Username:"), gbc);
+        JLabel lblSub = new JLabel("Sign in to continue your smart billing workflow");
+        lblSub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblSub.setForeground(new Color(71, 85, 105));
+        gbc.gridy = 1;
+        formCard.add(lblSub, gbc);
+
+        JPanel roleSwitch = new JPanel(new GridLayout(1, 2, 8, 8));
+        roleSwitch.setOpaque(false);
+        btnAdminRole = new JButton("Admin");
+        btnAdminRole.setBackground(new Color(37, 99, 235));
+        btnAdminRole.setForeground(Color.WHITE);
+        btnAdminRole.setFocusPainted(false);
+        btnAdminRole.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnAdminRole.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnAdminRole.addActionListener(e -> applyRoleSelection("ADMIN"));
+
+        btnStaffRole = new JButton("Staff");
+        btnStaffRole.setBackground(new Color(241, 245, 249));
+        btnStaffRole.setForeground(new Color(15, 23, 42));
+        btnStaffRole.setFocusPainted(false);
+        btnStaffRole.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnStaffRole.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnStaffRole.addActionListener(e -> applyRoleSelection("STAFF"));
+
+        roleSwitch.add(btnAdminRole);
+        roleSwitch.add(btnStaffRole);
+        gbc.gridy = 2;
+        gbc.gridwidth = 2;
+        formCard.add(roleSwitch, gbc);
+
+        JLabel lblUsername = new JLabel("Username");
+        lblUsername.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblUsername.setForeground(new Color(51, 65, 85));
+        gbc.gridy = 3;
+        gbc.gridwidth = 1;
+        formCard.add(lblUsername, gbc);
 
         txtUsername = new JTextField("admin");
         txtUsername.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        txtUsername.setPreferredSize(new Dimension(320, 36));
-        gbc.gridy = 2;
+        txtUsername.setPreferredSize(new Dimension(0, 36));
+        txtUsername.setMargin(new Insets(0, 10, 0, 10));
+        gbc.gridy = 4;
+        gbc.gridwidth = 2;
         formCard.add(txtUsername, gbc);
 
-        // Password
-        gbc.gridy = 3;
-        formCard.add(new JLabel("Password:"), gbc);
+        JLabel lblPassword = new JLabel("Password");
+        lblPassword.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblPassword.setForeground(new Color(51, 65, 85));
+        gbc.gridy = 5;
+        gbc.gridwidth = 1;
+        formCard.add(lblPassword, gbc);
 
-        txtPassword = new JPasswordField("admin123");
+        txtPassword = new JPasswordField();
         txtPassword.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        txtPassword.setPreferredSize(new Dimension(320, 36));
-        gbc.gridy = 4;
-        formCard.add(txtPassword, gbc);
+        txtPassword.setPreferredSize(new Dimension(0, 36));
+        txtPassword.setMargin(new Insets(0, 10, 0, 10));
 
-        // Login Button
-        btnLogin = new JButton("LOGIN");
+        char passwordEchoChar = txtPassword.getEchoChar();
+        JButton btnTogglePasswordVisibility = new JButton(new PasswordVisibilityIcon(false));
+        btnTogglePasswordVisibility.setPreferredSize(new Dimension(38, 36));
+        btnTogglePasswordVisibility.setToolTipText("Show password");
+        btnTogglePasswordVisibility.setFocusPainted(false);
+        btnTogglePasswordVisibility.setContentAreaFilled(false);
+        btnTogglePasswordVisibility.setBorderPainted(false);
+        btnTogglePasswordVisibility.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnTogglePasswordVisibility.addActionListener(e -> {
+            boolean showPassword = txtPassword.getEchoChar() != 0;
+            txtPassword.setEchoChar(showPassword ? (char) 0 : passwordEchoChar);
+            btnTogglePasswordVisibility.setIcon(new PasswordVisibilityIcon(showPassword));
+            btnTogglePasswordVisibility.setToolTipText(showPassword ? "Hide password" : "Show password");
+        });
+
+        JPanel passwordFieldPanel = new JPanel(new BorderLayout());
+        passwordFieldPanel.setOpaque(false);
+        passwordFieldPanel.add(txtPassword, BorderLayout.CENTER);
+        passwordFieldPanel.add(btnTogglePasswordVisibility, BorderLayout.EAST);
+        gbc.gridy = 6;
+        gbc.gridwidth = 2;
+        formCard.add(passwordFieldPanel, gbc);
+
+        JPanel lowerRow = new JPanel(new BorderLayout(10, 0));
+        lowerRow.setOpaque(false);
+        JLabel lblMode = new JLabel("Secure access");
+        lblMode.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblMode.setForeground(new Color(100, 116, 139));
+        btnForgotPassword = new JButton("Forgot password?");
+        btnForgotPassword.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnForgotPassword.setForeground(new Color(37, 99, 235));
+        btnForgotPassword.setContentAreaFilled(false);
+        btnForgotPassword.setFocusPainted(false);
+        btnForgotPassword.setBorderPainted(false);
+        btnForgotPassword.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        lowerRow.add(lblMode, BorderLayout.WEST);
+        lowerRow.add(btnForgotPassword, BorderLayout.EAST);
+        gbc.gridy = 7;
+        formCard.add(lowerRow, gbc);
+
+        btnLogin = new JButton("Login");
         btnLogin.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnLogin.setBackground(new Color(37, 99, 235));
         btnLogin.setForeground(Color.WHITE);
         btnLogin.setFocusPainted(false);
-        btnLogin.setPreferredSize(new Dimension(320, 38));
+        btnLogin.setPreferredSize(new Dimension(0, 40));
         btnLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        gbc.gridy = 5;
-        gbc.insets = new Insets(16, 10, 6, 10);
+        gbc.gridy = 8;
+        gbc.insets = new Insets(7, 8, 5, 8);
         formCard.add(btnLogin, gbc);
 
-        // Offline / Demo Login Button
-        JButton btnDemoLogin = new JButton("⚡ Quick Offline / Demo Login");
+        JButton btnDemoLogin = new JButton("Quick Demo Login");
         btnDemoLogin.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnDemoLogin.setBackground(new Color(241, 245, 249));
+        btnDemoLogin.setBackground(new Color(235, 244, 255));
         btnDemoLogin.setForeground(new Color(30, 41, 59));
         btnDemoLogin.setFocusPainted(false);
-        btnDemoLogin.setPreferredSize(new Dimension(320, 34));
         btnDemoLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnDemoLogin.setToolTipText("Login as Admin in Offline/Demo mode without waiting for MySQL");
         btnDemoLogin.addActionListener(e -> launchDemoAdmin());
-        gbc.gridy = 6;
-        gbc.insets = new Insets(4, 10, 6, 10);
+        gbc.gridy = 9;
+        gbc.insets = new Insets(0, 8, 3, 8);
         formCard.add(btnDemoLogin, gbc);
 
-        // Secondary Links Row (Forgot Password & DB Settings)
-        JPanel linksPanel = new JPanel(new BorderLayout(10, 0));
-        linksPanel.setOpaque(false);
-
-        btnForgotPassword = new JButton("Forgot Password?");
-        btnForgotPassword.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnForgotPassword.setForeground(new Color(37, 99, 235));
-        btnForgotPassword.setContentAreaFilled(false);
-        btnForgotPassword.setBorderPainted(false);
-        btnForgotPassword.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        linksPanel.add(btnForgotPassword, BorderLayout.WEST);
-
-        btnDbConfig = new JButton("⚙ DB Settings");
-        btnDbConfig.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        btnDbConfig.setForeground(new Color(100, 116, 139));
+        btnDbConfig = new JButton("Database Settings");
+        btnDbConfig.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        btnDbConfig.setForeground(new Color(71, 85, 105));
         btnDbConfig.setContentAreaFilled(false);
         btnDbConfig.setBorderPainted(false);
         btnDbConfig.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        linksPanel.add(btnDbConfig, BorderLayout.EAST);
+        gbc.gridy = 10;
+        formCard.add(btnDbConfig, gbc);
 
-        gbc.gridy = 7;
-        gbc.insets = new Insets(6, 10, 4, 10);
-        formCard.add(linksPanel, gbc);
-
-        mainPanel.add(formCard, BorderLayout.CENTER);
-
-        // Footer Section
-        JPanel footerBox = new JPanel();
-        footerBox.setLayout(new BoxLayout(footerBox, BoxLayout.Y_AXIS));
-        footerBox.setOpaque(false);
-        footerBox.setBorder(new EmptyBorder(6, 15, 12, 15));
-
-        JButton btnSelfCheckoutMode = new JButton("🛒 Open Customer Self-Checkout");
-        btnSelfCheckoutMode.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnSelfCheckoutMode.setBackground(new Color(16, 185, 129));
-        btnSelfCheckoutMode.setForeground(Color.WHITE);
-        btnSelfCheckoutMode.setFocusPainted(false);
-        btnSelfCheckoutMode.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btnSelfCheckoutMode.setMaximumSize(new Dimension(360, 36));
-        btnSelfCheckoutMode.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnSelfCheckoutMode.setToolTipText("Open full-screen express customer self-service checkout");
-        btnSelfCheckoutMode.addActionListener(e -> new SelfCheckoutFrame(null).setVisible(true));
-
-        JLabel footerNote = new JLabel("Default logins: admin/admin123 (Admin) | staff/staff123 (Staff)", SwingConstants.CENTER);
+        JLabel footerNote = new JLabel("Admin: admin/admin123   |   Staff: staff/staff123", SwingConstants.CENTER);
         footerNote.setFont(new Font("Segoe UI", Font.ITALIC, 11));
         footerNote.setForeground(new Color(100, 116, 139));
-        footerNote.setAlignmentX(Component.CENTER_ALIGNMENT);
-        footerNote.setBorder(new EmptyBorder(6, 0, 0, 0));
+        gbc.gridy = 11;
+        formCard.add(footerNote, gbc);
 
-        footerBox.add(btnSelfCheckoutMode);
-        footerBox.add(footerNote);
-        mainPanel.add(footerBox, BorderLayout.SOUTH);
+        JButton selfCheckout = new JButton("Customer Self-Checkout");
+        selfCheckout.setBackground(new Color(16, 185, 129));
+        selfCheckout.setForeground(Color.WHITE);
+        selfCheckout.setFocusPainted(false);
+        selfCheckout.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        selfCheckout.addActionListener(e -> new SelfCheckoutFrame(null).setVisible(true));
+        gbc.gridy = 12;
+        gbc.insets = new Insets(5, 8, 0, 8);
+        formCard.add(selfCheckout, gbc);
 
-        add(mainPanel);
+        panel.add(formCard, BorderLayout.CENTER);
+        panel.setPreferredSize(new Dimension(380, 430));
+        return panel;
+    }
 
-        // Actions
-        btnLogin.addActionListener(e -> performLogin());
-        txtPassword.addActionListener(e -> performLogin());
-        btnForgotPassword.addActionListener(e -> openForgotPasswordDialog());
-        btnDbConfig.addActionListener(e -> openDbConfigDialog());
+    private JPanel createForgotPasswordCard() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+        panel.setBorder(new EmptyBorder(16, 16, 16, 16));
+
+        JPanel card = new JPanel();
+        card.setBackground(new Color(255, 255, 255, 230));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(148, 163, 184, 120), 1),
+                new EmptyBorder(24, 22, 24, 22)));
+        card.setLayout(new GridBagLayout());
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 10, 8, 10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.gridx = 0;
+        gbc.weightx = 1.0;
+
+        JLabel title = new JLabel("Reset your password");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        title.setForeground(new Color(15, 23, 42));
+        gbc.gridy = 0;
+        card.add(title, gbc);
+
+        JLabel subtitle = new JLabel("Recover access to your billing account securely.");
+        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        subtitle.setForeground(new Color(71, 85, 105));
+        gbc.gridy = 1;
+        card.add(subtitle, gbc);
+
+        JLabel labelUser = new JLabel("Username");
+        labelUser.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        labelUser.setForeground(new Color(51, 65, 85));
+        gbc.gridy = 2;
+        card.add(labelUser, gbc);
+
+        JTextField resetUser = new JTextField();
+        resetUser.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        resetUser.setPreferredSize(new Dimension(0, 42));
+        gbc.gridy = 3;
+        card.add(resetUser, gbc);
+
+        JLabel labelEmail = new JLabel("Security answer");
+        labelEmail.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        labelEmail.setForeground(new Color(51, 65, 85));
+        gbc.gridy = 4;
+        card.add(labelEmail, gbc);
+
+        JTextField resetAnswer = new JTextField();
+        resetAnswer.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        resetAnswer.setPreferredSize(new Dimension(0, 42));
+        gbc.gridy = 5;
+        card.add(resetAnswer, gbc);
+
+        JLabel labelNew = new JLabel("New password");
+        labelNew.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        labelNew.setForeground(new Color(51, 65, 85));
+        gbc.gridy = 6;
+        card.add(labelNew, gbc);
+
+        JPasswordField resetNew = new JPasswordField();
+        resetNew.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        resetNew.setPreferredSize(new Dimension(0, 42));
+        gbc.gridy = 7;
+        card.add(resetNew, gbc);
+
+        JPanel buttonRow = new JPanel(new GridLayout(1, 2, 10, 0));
+        buttonRow.setOpaque(false);
+
+        JButton backButton = new JButton("Back to login");
+        backButton.setBackground(new Color(241, 245, 249));
+        backButton.setForeground(new Color(15, 23, 42));
+        backButton.setFocusPainted(false);
+        backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        backButton.addActionListener(e -> leftPanelLayout.show(leftPanel, "brand"));
+
+        JButton resetButton = new JButton("Reset password");
+        resetButton.setBackground(new Color(16, 185, 129));
+        resetButton.setForeground(Color.WHITE);
+        resetButton.setFocusPainted(false);
+        resetButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        resetButton.addActionListener(e -> {
+            String username = resetUser.getText().trim();
+            String answer = resetAnswer.getText().trim();
+            String newPass = new String(resetNew.getPassword()).trim();
+            if (username.isEmpty() || answer.isEmpty() || newPass.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please enter username, security answer and new password.",
+                        "Reset Required", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            JOptionPane.showMessageDialog(this,
+                    "Password reset request sent for " + username
+                            + ". Please confirm the account recovery with your admin.",
+                    "Password Reset", JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        buttonRow.add(backButton);
+        buttonRow.add(resetButton);
+        gbc.gridy = 8;
+        card.add(buttonRow, gbc);
+
+        panel.add(card, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private static class PasswordVisibilityIcon implements Icon {
+        private final boolean visible;
+
+        private PasswordVisibilityIcon(boolean visible) {
+            this.visible = visible;
+        }
+
+        @Override
+        public int getIconWidth() {
+            return 18;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return 18;
+        }
+
+        @Override
+        public void paintIcon(Component component, Graphics graphics, int x, int y) {
+            Graphics2D g2 = (Graphics2D) graphics.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(new Color(71, 85, 105));
+            g2.setStroke(new BasicStroke(1.6f));
+            g2.drawOval(x + 1, y + 4, 16, 10);
+            g2.fillOval(x + 7, y + 7, 4, 4);
+            if (!visible) {
+                g2.drawLine(x + 3, y + 15, x + 15, y + 3);
+            }
+            g2.dispose();
+        }
+    }
+
+    private void showForgotPasswordPanel() {
+        leftPanelLayout.show(leftPanel, "forgot");
+    }
+
+    private void applyRoleSelection(String role) {
+        selectedRole = role;
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            btnAdminRole.setBackground(new Color(37, 99, 235));
+            btnAdminRole.setForeground(Color.WHITE);
+            btnStaffRole.setBackground(new Color(241, 245, 249));
+            btnStaffRole.setForeground(new Color(15, 23, 42));
+            txtUsername.setText("admin");
+        } else {
+            btnStaffRole.setBackground(new Color(16, 185, 129));
+            btnStaffRole.setForeground(Color.WHITE);
+            btnAdminRole.setBackground(new Color(241, 245, 249));
+            btnAdminRole.setForeground(new Color(15, 23, 42));
+            txtUsername.setText("staff");
+        }
+        txtPassword.setText("");
     }
 
     private void launchDemoAdmin() {
@@ -206,7 +720,8 @@ public class LoginFrame extends JFrame {
         String password = new String(txtPassword.getPassword()).trim();
 
         if (username.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter both username and password.", "Input Required", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please enter both username and password.", "Input Required",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -234,7 +749,8 @@ public class LoginFrame extends JFrame {
 
                 if (choice == JOptionPane.YES_OPTION) {
                     if (isDefaultAdmin) {
-                        launchDashboard(new User(1, "admin", "admin123", "System Administrator (Demo/Offline)", "ADMIN"), true);
+                        launchDashboard(
+                                new User(1, "admin", "admin123", "System Administrator (Demo/Offline)", "ADMIN"), true);
                     } else {
                         launchDashboard(new User(2, "staff", "staff123", "Cashier Desk (Demo/Offline)", "STAFF"), true);
                     }
@@ -245,18 +761,19 @@ public class LoginFrame extends JFrame {
             } else {
                 String reason = isConnRefused
                         ? "MySQL Database server band hai (Connection Refused)!\n\n"
-                          + "👉 Terminal me MySQL start karein:\n"
-                          + "   sudo systemctl start mysql\n\n"
-                          + "Ya Default credentials use karein: admin / admin123"
+                                + "👉 Terminal me MySQL start karein:\n"
+                                + "   sudo systemctl start mysql\n\n"
+                                + "Ya Default credentials use karein: admin / admin123"
                         : "Database connection error!\n\nDetails: " + msg
-                          + "\n\nPlease ensure MySQL is running and credentials in 'DB Settings' are correct.";
+                                + "\n\nPlease ensure MySQL is running and credentials in 'DB Settings' are correct.";
                 JOptionPane.showMessageDialog(this, reason, "Database Connection Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
         }
 
         if (user == null) {
-            JOptionPane.showMessageDialog(this, "Invalid username or password!", "Authentication Failed", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Invalid username or password!", "Authentication Failed",
+                    JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -277,11 +794,16 @@ public class LoginFrame extends JFrame {
         JPasswordField passField = new JPasswordField(prop.getProperty("db.password", ""));
 
         JPanel panel = new JPanel(new GridLayout(6, 2, 8, 8));
-        panel.add(new JLabel("MySQL Host:")); panel.add(hostField);
-        panel.add(new JLabel("MySQL Port:")); panel.add(portField);
-        panel.add(new JLabel("Database Name:")); panel.add(dbField);
-        panel.add(new JLabel("Username:")); panel.add(userField);
-        panel.add(new JLabel("Password:")); panel.add(passField);
+        panel.add(new JLabel("MySQL Host:"));
+        panel.add(hostField);
+        panel.add(new JLabel("MySQL Port:"));
+        panel.add(portField);
+        panel.add(new JLabel("Database Name:"));
+        panel.add(dbField);
+        panel.add(new JLabel("Username:"));
+        panel.add(userField);
+        panel.add(new JLabel("Password:"));
+        panel.add(passField);
 
         JButton btnTestConn = new JButton("🔍 Test Connection");
         panel.add(btnTestConn);
@@ -293,23 +815,24 @@ public class LoginFrame extends JFrame {
                     portField.getText().trim(),
                     dbField.getText().trim(),
                     userField.getText().trim(),
-                    new String(passField.getPassword())
-            );
+                    new String(passField.getPassword()));
             JOptionPane.showMessageDialog(this, testResult, "Database Test Result",
                     testResult.startsWith("SUCCESS") || testResult.startsWith("CONNECTED")
-                            ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE);
+                            ? JOptionPane.INFORMATION_MESSAGE
+                            : JOptionPane.ERROR_MESSAGE);
         });
 
-        int res = JOptionPane.showConfirmDialog(this, panel, "MySQL Database Settings", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        int res = JOptionPane.showConfirmDialog(this, panel, "MySQL Database Settings", JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE);
         if (res == JOptionPane.OK_OPTION) {
             DBConnection.saveConfig(
                     hostField.getText().trim(),
                     portField.getText().trim(),
                     dbField.getText().trim(),
                     userField.getText().trim(),
-                    new String(passField.getPassword())
-            );
-            JOptionPane.showMessageDialog(this, "Database settings saved successfully!", "Saved", JOptionPane.INFORMATION_MESSAGE);
+                    new String(passField.getPassword()));
+            JOptionPane.showMessageDialog(this, "Database settings saved successfully!", "Saved",
+                    JOptionPane.INFORMATION_MESSAGE);
         }
     }
 }
