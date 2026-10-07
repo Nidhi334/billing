@@ -422,19 +422,20 @@ public class DashboardFrame extends JFrame {
         // Welcome banner
         JPanel banner = new JPanel(new BorderLayout(10, 10));
         // banner.setBackground(Color.WHITE);
-        banner.setBackground(new Color(99, 99, 150));
+        banner.setBackground(Color.LIGHT_GRAY);
         banner.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(226, 232, 240)),
                 new EmptyBorder(14, 18, 14, 18)));
         JLabel welcomeMsg = new JLabel("Welcome back, " + currentUser.getFullName() + "! Here is your shop overview:");
         welcomeMsg.setFont(new Font("Segoe UI", Font.BOLD, 17));
-        welcomeMsg.setForeground(new Color(30, 41, 59));
+        // welcomeMsg.setForeground(new Color(99, 41, 59));
+        welcomeMsg.setForeground(Color.BLACK);
         banner.add(welcomeMsg, BorderLayout.WEST);
 
         JButton btnRefreshStats = new JButton("🔄 Refresh Metrics");
         btnRefreshStats.setFont(new Font("Segoe UI", Font.BOLD, 12));
-            btnRefreshStats.setBackground(new Color(205,99,99));
-             btnRefreshStats.setForeground(Color.WHITE);
+        btnRefreshStats.setBackground(new Color(205, 99, 99));
+        btnRefreshStats.setForeground(Color.WHITE);
         btnRefreshStats.setFocusPainted(false);
         btnRefreshStats.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnRefreshStats.addActionListener(e -> loadDashboardStats());

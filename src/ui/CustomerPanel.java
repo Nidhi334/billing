@@ -35,12 +35,12 @@ public class CustomerPanel extends JPanel {
         // TOP: Header & Search
         JPanel topPanel = new JPanel(new BorderLayout(10, 10));
         // topPanel.setBackground(new Color(248, 250, 252));
-        topPanel.setBackground(Color.blue);
+        topPanel.setBackground(Color.LIGHT_GRAY);
 
         JLabel lblTitle = new JLabel("👨‍💼 Customer Management");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
         // lblTitle.setForeground(new Color(30, 41, 59));
-        lblTitle.setForeground(Color.WHITE);
+        lblTitle.setForeground(Color.BLACK);
         topPanel.add(lblTitle, BorderLayout.WEST);
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));

@@ -44,11 +44,11 @@ public class ProductPanel extends JPanel {
         // JPanel topPanel = new JPanel(new BorderLayout(10, 10));
         JPanel topPanel = new JPanel(new BorderLayout(0, 0));
         // topPanel.setBackground(new Color(248, 250, 252));
-        topPanel.setBackground(Color.BLUE);
+        topPanel.setBackground(Color.LIGHT_GRAY);
         JLabel lblTitle = new JLabel("📦 Product Management & Barcode Hub");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
         // lblTitle.setForeground(new Color(30, 41, 59));
-        lblTitle.setForeground(Color.WHITE);
+        lblTitle.setForeground(Color.BLACK);
         topPanel.add(lblTitle, BorderLayout.WEST);
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));

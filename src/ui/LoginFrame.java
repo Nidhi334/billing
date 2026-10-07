@@ -24,7 +24,6 @@ public class LoginFrame extends JFrame {
     private Timer wallpaperAnimation;
     private JButton btnWallpaperToggle;
     private int wallpaperFrame;
-    private String selectedRole = "ADMIN";
     private UserDAO userDAO = new UserDAO();
 
     public LoginFrame() {
@@ -270,92 +269,112 @@ public class LoginFrame extends JFrame {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                double scale = Math.min(getWidth() / 400.0, getHeight() / 260.0);
-                g2.translate((getWidth() - 400 * scale) / 2.0, (getHeight() - 260 * scale) / 2.0);
+                double scale = Math.min(getWidth() / 400.0, getHeight() / 250.0);
+                g2.translate((getWidth() - 400 * scale) / 2.0, (getHeight() - 250 * scale) / 2.0);
                 g2.scale(scale, scale);
-                g2.setColor(new Color(255, 255, 255, 14));
-                g2.fillRoundRect(20, 20, 360, 220, 28, 28);
+                g2.setColor(new Color(4, 12, 32, 95));
+                g2.fillRoundRect(24, 24, 352, 206, 24, 24);
 
-                g2.setColor(new Color(255, 255, 255, 235));
-                g2.fillRoundRect(42, 38, 220, 168, 22, 22);
-                g2.setColor(new Color(37, 99, 235));
-                g2.fillRoundRect(42, 38, 220, 38, 22, 22);
-                g2.fillRect(42, 57, 220, 19);
-                g2.setColor(Color.WHITE);
-                g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
-                g2.drawString("INVOICE #1048", 58, 63);
-
-                g2.setColor(new Color(203, 213, 225));
-                g2.fillRoundRect(58, 91, 112, 7, 4, 4);
-                g2.fillRoundRect(58, 109, 150, 7, 4, 4);
-                g2.fillRoundRect(58, 127, 128, 7, 4, 4);
+                g2.setColor(new Color(241, 245, 249));
+                g2.fillRoundRect(30, 18, 340, 204, 18, 18);
                 g2.setColor(new Color(226, 232, 240));
-                g2.drawLine(58, 148, 245, 148);
-                g2.setColor(new Color(15, 118, 110));
-                g2.setFont(new Font("Segoe UI", Font.BOLD, 14));
-                g2.drawString("TOTAL  $248.50", 58, 177);
+                g2.fillRoundRect(30, 18, 62, 204, 18, 18);
+                g2.fillRect(74, 18, 18, 204);
 
-                g2.setColor(new Color(251, 191, 36));
-                g2.fillRoundRect(278, 48, 92, 72, 18, 18);
-                g2.setColor(new Color(255, 255, 255, 235));
-                g2.fillOval(305, 61, 38, 38);
-                g2.setColor(new Color(217, 119, 6));
-                g2.setFont(new Font("Segoe UI", Font.BOLD, 25));
-                g2.drawString("$", 316, 89);
-
-                g2.setColor(new Color(16, 185, 129));
-                g2.fillRoundRect(278, 135, 92, 71, 18, 18);
-                g2.setColor(new Color(255, 255, 255, 235));
-                g2.drawRoundRect(298, 151, 51, 38, 5, 5);
-                g2.drawLine(308, 162, 340, 162);
-                g2.drawLine(308, 171, 340, 171);
-                g2.drawLine(308, 180, 330, 180);
-
-                g2.setColor(new Color(255, 255, 255, 120));
-                g2.drawLine(48, 226, 370, 226);
-                g2.setColor(new Color(255, 255, 255, 210));
-                for (int i = 0; i < 7; i++) {
-                    int barHeight = 22 + i * 10;
-                    g2.fillRoundRect(62 + i * 43, 220 - barHeight, 24, barHeight, 8, 8);
+                g2.setColor(new Color(37, 99, 235));
+                g2.fillRoundRect(42, 33, 28, 28, 9, 9);
+                g2.setColor(Color.WHITE);
+                g2.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                g2.drawLine(49, 48, 55, 42);
+                g2.drawLine(55, 42, 63, 51);
+                g2.setColor(new Color(148, 163, 184));
+                for (int i = 0; i < 4; i++) {
+                    int y = 82 + i * 29;
+                    g2.fillRoundRect(46, y, 20, 5, 3, 3);
+                    g2.fillRoundRect(51, y + 9, 14, 4, 2, 2);
                 }
+
+                g2.setColor(new Color(15, 23, 42));
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                g2.drawString("Sales overview", 108, 43);
+                g2.setColor(new Color(100, 116, 139));
+                g2.setFont(new Font("Segoe UI", Font.PLAIN, 8));
+                g2.drawString("Your store at a glance", 108, 56);
+
+                g2.setColor(Color.WHITE);
+                g2.fillRoundRect(106, 68, 118, 53, 10, 10);
+                g2.fillRoundRect(232, 68, 121, 53, 10, 10);
+                g2.setColor(new Color(100, 116, 139));
+                g2.setFont(new Font("Segoe UI", Font.PLAIN, 8));
+                g2.drawString("TODAY'S SALES", 116, 84);
+                g2.drawString("ORDERS", 242, 84);
+                g2.setColor(new Color(15, 23, 42));
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 16));
+                g2.drawString("₹24,850", 116, 105);
+                g2.drawString("128", 242, 105);
+                g2.setColor(new Color(16, 185, 129));
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 8));
+                g2.drawString("↑ 12.8%", 184, 105);
+                g2.drawString("↑ 8.2%", 310, 105);
+
+                g2.setColor(Color.WHITE);
+                g2.fillRoundRect(106, 129, 247, 77, 10, 10);
+                g2.setColor(new Color(71, 85, 105));
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 9));
+                g2.drawString("Weekly revenue", 117, 145);
+                g2.setColor(new Color(226, 232, 240));
+                g2.drawLine(117, 187, 341, 187);
+                g2.setColor(new Color(191, 219, 254));
+                int[] barHeights = { 19, 29, 24, 39, 31, 48, 42 };
+                for (int i = 0; i < barHeights.length; i++) {
+                    int x = 128 + i * 29;
+                    int barHeight = barHeights[i];
+                    g2.fillRoundRect(x, 182 - barHeight, 14, barHeight, 6, 6);
+                }
+                g2.setColor(new Color(37, 99, 235));
+                int highlightHeight = 54 + (int) (4 * Math.sin(wallpaperFrame / 12.0));
+                g2.fillRoundRect(302, 182 - highlightHeight, 14, highlightHeight, 6, 6);
+
+                g2.setColor(new Color(255, 255, 255, 238));
+                g2.fillRoundRect(300, 4, 82, 48, 12, 12);
+                g2.setColor(new Color(16, 185, 129));
+                g2.fillRoundRect(309, 13, 20, 20, 6, 6);
+                g2.setColor(Color.WHITE);
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 10));
+                g2.drawString("₹", 315, 27);
+                g2.setColor(new Color(15, 23, 42));
+                g2.setFont(new Font("Segoe UI", Font.BOLD, 8));
+                g2.drawString("Payment", 334, 22);
+                g2.setColor(new Color(100, 116, 139));
+                g2.setFont(new Font("Segoe UI", Font.PLAIN, 7));
+                g2.drawString("Successful", 334, 33);
                 g2.dispose();
             }
         };
         artPanel.setOpaque(false);
-        artPanel.setPreferredSize(new Dimension(340, 145));
-
-        JButton btnExplore = new JButton("Explore Platform");
-        btnExplore.setBackground(new Color(255, 255, 255, 18));
-        btnExplore.setForeground(Color.WHITE);
-        btnExplore.setFocusPainted(false);
-        btnExplore.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(191, 219, 254, 120), 1),
-                new EmptyBorder(10, 20, 10, 20)));
-        btnExplore.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnExplore.setAlignmentX(Component.LEFT_ALIGNMENT);
-        btnExplore.setPreferredSize(new Dimension(180, 42));
+        artPanel.setPreferredSize(new Dimension(340, 190));
 
         JPanel bottomInfo = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         bottomInfo.setOpaque(false);
-        JLabel online = new JLabel("● Online");
-        online.setForeground(new Color(134, 239, 172));
-        online.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        JLabel status = new JLabel("24/7 billing operations");
-        status.setForeground(new Color(191, 219, 254));
-        status.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        bottomInfo.add(online);
-        bottomInfo.add(status);
+        String[] features = { "FAST CHECKOUT", "LIVE INVENTORY", "SALES INSIGHTS" };
+        for (String feature : features) {
+            JLabel featureLabel = new JLabel(feature);
+            featureLabel.setForeground(new Color(224, 242, 254));
+            featureLabel.setFont(new Font("Segoe UI", Font.BOLD, 9));
+            featureLabel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(191, 219, 254, 90), 1),
+                    new EmptyBorder(5, 8, 5, 8)));
+            bottomInfo.add(featureLabel);
+        }
 
         content.add(badge);
         content.add(Box.createVerticalStrut(12));
         content.add(title);
         content.add(Box.createVerticalStrut(6));
         content.add(subtitle);
-        content.add(Box.createVerticalStrut(10));
+        content.add(Box.createVerticalStrut(6));
         content.add(artPanel);
-        content.add(Box.createVerticalStrut(10));
-        content.add(btnExplore);
-        content.add(Box.createVerticalStrut(10));
+        content.add(Box.createVerticalStrut(6));
         content.add(bottomInfo);
 
         panel.add(content, BorderLayout.CENTER);
@@ -493,30 +512,19 @@ public class LoginFrame extends JFrame {
         gbc.insets = new Insets(7, 8, 5, 8);
         formCard.add(btnLogin, gbc);
 
-        JButton btnDemoLogin = new JButton("Quick Demo Login");
-        btnDemoLogin.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnDemoLogin.setBackground(new Color(235, 244, 255));
-        btnDemoLogin.setForeground(new Color(30, 41, 59));
-        btnDemoLogin.setFocusPainted(false);
-        btnDemoLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnDemoLogin.addActionListener(e -> launchDemoAdmin());
-        gbc.gridy = 9;
-        gbc.insets = new Insets(0, 8, 3, 8);
-        formCard.add(btnDemoLogin, gbc);
-
         btnDbConfig = new JButton("Database Settings");
         btnDbConfig.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         btnDbConfig.setForeground(new Color(71, 85, 105));
         btnDbConfig.setContentAreaFilled(false);
         btnDbConfig.setBorderPainted(false);
         btnDbConfig.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        gbc.gridy = 10;
+        gbc.gridy = 9;
         formCard.add(btnDbConfig, gbc);
 
         JLabel footerNote = new JLabel("Admin: admin/admin123   |   Staff: staff/staff123", SwingConstants.CENTER);
         footerNote.setFont(new Font("Segoe UI", Font.ITALIC, 11));
         footerNote.setForeground(new Color(100, 116, 139));
-        gbc.gridy = 11;
+        gbc.gridy = 10;
         formCard.add(footerNote, gbc);
 
         JButton selfCheckout = new JButton("Customer Self-Checkout");
@@ -525,7 +533,7 @@ public class LoginFrame extends JFrame {
         selfCheckout.setFocusPainted(false);
         selfCheckout.setCursor(new Cursor(Cursor.HAND_CURSOR));
         selfCheckout.addActionListener(e -> new SelfCheckoutFrame(null).setVisible(true));
-        gbc.gridy = 12;
+        gbc.gridy = 11;
         gbc.insets = new Insets(5, 8, 0, 8);
         formCard.add(selfCheckout, gbc);
 
@@ -676,7 +684,6 @@ public class LoginFrame extends JFrame {
     }
 
     private void applyRoleSelection(String role) {
-        selectedRole = role;
         if ("ADMIN".equalsIgnoreCase(role)) {
             btnAdminRole.setBackground(new Color(37, 99, 235));
             btnAdminRole.setForeground(Color.WHITE);
@@ -691,11 +698,6 @@ public class LoginFrame extends JFrame {
             txtUsername.setText("staff");
         }
         txtPassword.setText("");
-    }
-
-    private void launchDemoAdmin() {
-        User demoAdmin = new User(1, "admin", "admin123", "System Administrator (Demo/Offline)", "ADMIN");
-        launchDashboard(demoAdmin, true);
     }
 
     private void launchDashboard(User user) {
@@ -778,11 +780,6 @@ public class LoginFrame extends JFrame {
         }
 
         launchDashboard(user);
-    }
-
-    private void openForgotPasswordDialog() {
-        ForgotPasswordDialog dialog = new ForgotPasswordDialog(this);
-        dialog.setVisible(true);
     }
 
     private void openDbConfigDialog() {

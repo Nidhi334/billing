@@ -36,13 +36,13 @@ public class SupplierPanel extends JPanel {
         // 1. TOP BAR: Title & Search
         // ==========================================
         JPanel topPanel = new JPanel(new BorderLayout(0, 0));
-        topPanel.setBackground(Color.BLUE);
+        topPanel.setBackground(Color.LIGHT_GRAY);
         // setBackground(new Color(248, 250, 252));
         setBackground(Color.LIGHT_GRAY);
 
         JLabel lblTitle = new JLabel("🏢 Supplier & Vendor Management");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTitle.setForeground(Color.WHITE);
+        lblTitle.setForeground(Color.BLACK);
 
         topPanel.add(lblTitle, BorderLayout.WEST);
 
