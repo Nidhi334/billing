@@ -21,6 +21,7 @@ public class SelfCheckoutFrame extends JFrame {
         setMinimumSize(new Dimension(1024, 680));
         setLocationRelativeTo(null);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
+        util.AppIconUtil.applyToWindow(this);
 
         addWindowListener(new WindowAdapter() {
             @Override

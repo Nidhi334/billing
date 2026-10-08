@@ -54,7 +54,7 @@ public class SettingsPanel extends JPanel {
     public SettingsPanel(Runnable onSettingsChangedCallback) {
         this.onSettingsChangedCallback = onSettingsChangedCallback;
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(248, 250, 252));
+        setBackground(AppTheme.BG_CANVAS);
         setBorder(new EmptyBorder(15, 18, 15, 18));
         initComponents();
         loadCurrentSettings();
@@ -63,23 +63,23 @@ public class SettingsPanel extends JPanel {
     private void initComponents() {
         // TOP BANNER
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(new Color(248, 250, 252));
+        topPanel.setBackground(AppTheme.BG_CANVAS);
 
         JLabel lblTitle = new JLabel("⚙️ System, Hardware & UI Settings");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTitle.setForeground(new Color(30, 41, 59));
+        lblTitle.setForeground(AppTheme.TEXT_PRIMARY);
         topPanel.add(lblTitle, BorderLayout.WEST);
 
         JLabel lblSub = new JLabel("Configure Touch vs Non-Touch interface, POS buttons (Numpad, Bed/Hold), Devices, and Database Credentials.");
         lblSub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblSub.setForeground(new Color(100, 116, 139));
+        lblSub.setForeground(AppTheme.TEXT_SECONDARY);
         topPanel.add(lblSub, BorderLayout.SOUTH);
         add(topPanel, BorderLayout.NORTH);
 
         // MAIN SCROLLABLE CONTENT
         JPanel scrollContent = new JPanel();
         scrollContent.setLayout(new BoxLayout(scrollContent, BoxLayout.Y_AXIS));
-        scrollContent.setBackground(new Color(248, 250, 252));
+        scrollContent.setBackground(AppTheme.BG_CANVAS);
 
         // 1. TOUCH VS NON-TOUCH SCREEN MODE
         JPanel modeCard = createSectionCard("🖥️ Screen Mode: Touch-Enabled vs Non-Touch Standard Desktop");
@@ -272,7 +272,7 @@ public class SettingsPanel extends JPanel {
 
         // BOTTOM ACTION BUTTONS
         JPanel bottomBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 10));
-        bottomBar.setBackground(new Color(248, 250, 252));
+        bottomBar.setBackground(AppTheme.BG_CANVAS);
 
         JButton btnResetDefaults = new JButton("Reset All to Default");
         btnResetDefaults.setFont(new Font("Segoe UI", Font.PLAIN, 12));
@@ -281,7 +281,7 @@ public class SettingsPanel extends JPanel {
 
         JButton btnSave = new JButton("💾 Save & Apply All Settings");
         btnSave.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btnSave.setBackground(new Color(16, 185, 129));
+        btnSave.setBackground(AppTheme.FOREST_GREEN);
         btnSave.setForeground(Color.WHITE);
         btnSave.setPreferredSize(new Dimension(230, 40));
         btnSave.setCursor(new Cursor(Cursor.HAND_CURSOR));

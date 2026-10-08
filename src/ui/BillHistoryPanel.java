@@ -49,7 +49,7 @@ public class BillHistoryPanel extends JPanel {
     public BillHistoryPanel(User user) {
         this.currentUser = user;
         setLayout(new BorderLayout(12, 12));
-        setBackground(new Color(248, 250, 252));
+        setBackground(AppTheme.BG_CANVAS);
         setBorder(new EmptyBorder(16, 18, 16, 18));
 
         initUI();
@@ -63,13 +63,14 @@ public class BillHistoryPanel extends JPanel {
 
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
+
         JLabel lblTitle = new JLabel("📜 Total Billing & Orders History");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTitle.setForeground(new Color(15, 23, 42));
+        lblTitle.setForeground(AppTheme.TEXT_PRIMARY);
 
         JLabel lblSub = new JLabel("Complete ledger of all customer bills, sales history, search, and reprint receipts");
         lblSub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblSub.setForeground(new Color(100, 116, 139));
+        lblSub.setForeground(AppTheme.TEXT_SECONDARY);
         headerPanel.add(lblTitle, BorderLayout.NORTH);
         headerPanel.add(lblSub, BorderLayout.SOUTH);
 
@@ -102,9 +103,9 @@ public class BillHistoryPanel extends JPanel {
         kpiGrid.setOpaque(false);
 
         kpiGrid.add(createKpiCard("TOTAL ORDERS / BILLS", "0 Bills", new Color(37, 99, 235), new Color(239, 246, 255), (lbl) -> lblTotalBillsVal = lbl));
-        kpiGrid.add(createKpiCard("TOTAL REVENUE", "₹0.00", new Color(22, 163, 74), new Color(240, 253, 244), (lbl) -> lblTotalRevenueVal = lbl));
-        kpiGrid.add(createKpiCard("CASH COLLECTED", "₹0.00", new Color(217, 119, 6), new Color(254, 243, 199), (lbl) -> lblTotalCashVal = lbl));
-        kpiGrid.add(createKpiCard("UPI / ONLINE / CARD", "₹0.00", new Color(147, 51, 234), new Color(250, 245, 255), (lbl) -> lblTotalOnlineVal = lbl));
+        kpiGrid.add(createKpiCard("TOTAL REVENUE", "₹0", new Color(22, 163, 74), new Color(240, 253, 244), (lbl) -> lblTotalRevenueVal = lbl));
+        kpiGrid.add(createKpiCard("CASH COLLECTED", "₹0", new Color(217, 119, 6), new Color(254, 243, 199), (lbl) -> lblTotalCashVal = lbl));
+        kpiGrid.add(createKpiCard("UPI / ONLINE / CARD", "₹0", new Color(147, 51, 234), new Color(250, 245, 255), (lbl) -> lblTotalOnlineVal = lbl));
 
         JPanel northPanel = new JPanel(new BorderLayout(0, 12));
         northPanel.setOpaque(false);
@@ -404,18 +405,18 @@ public class BillHistoryPanel extends JPanel {
                         cust,
                         phone,
                         s.getPaymentMode() != null ? s.getPaymentMode() : "CASH",
-                        String.format("₹%.2f", total),
+                        AppTheme.formatCurrency(total),
                         "👁️ View Details"
                 });
             }
 
             // Update KPI cards
             lblTotalBillsVal.setText(currentSalesList.size() + " Bills");
-            lblTotalRevenueVal.setText(String.format("₹%.2f", totalRev));
-            lblTotalCashVal.setText(String.format("₹%.2f", totalCash));
-            lblTotalOnlineVal.setText(String.format("₹%.2f", totalOnline));
+            lblTotalRevenueVal.setText(AppTheme.formatCurrency(totalRev));
+            lblTotalCashVal.setText(AppTheme.formatCurrency(totalCash));
+            lblTotalOnlineVal.setText(AppTheme.formatCurrency(totalOnline));
 
-            lblTableStatus.setText("Showing " + currentSalesList.size() + " bill(s) | Total Amount: " + String.format("₹%.2f", totalRev));
+            lblTableStatus.setText("Showing " + currentSalesList.size() + " bill(s) | Total Amount: " + AppTheme.formatCurrency(totalRev));
 
         } catch (Exception ex) {
             System.err.println("Notice: Could not load bill history from database: " + ex.getMessage());
@@ -482,16 +483,16 @@ public class BillHistoryPanel extends JPanel {
                     d[2],
                     d[3],
                     d[4],
-                    String.format("₹%.2f", amt),
+                    AppTheme.formatCurrency(amt),
                     "👁️ View Details"
             });
         }
 
         lblTotalBillsVal.setText(currentSalesList.size() + " Bills");
-        lblTotalRevenueVal.setText(String.format("₹%.2f", totalRev));
-        lblTotalCashVal.setText(String.format("₹%.2f", totalCash));
-        lblTotalOnlineVal.setText(String.format("₹%.2f", totalOnline));
-        lblTableStatus.setText("Showing " + currentSalesList.size() + " bill(s) | Total Amount: " + String.format("₹%.2f", totalRev));
+        lblTotalRevenueVal.setText(AppTheme.formatCurrency(totalRev));
+        lblTotalCashVal.setText(AppTheme.formatCurrency(totalCash));
+        lblTotalOnlineVal.setText(AppTheme.formatCurrency(totalOnline));
+        lblTableStatus.setText("Showing " + currentSalesList.size() + " bill(s) | Total Amount: " + AppTheme.formatCurrency(totalRev));
     }
 
     private void viewSelectedBill() {

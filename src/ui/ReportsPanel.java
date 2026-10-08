@@ -20,7 +20,7 @@ public class ReportsPanel extends JPanel {
 
     public ReportsPanel() {
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(248, 250, 252));
+        setBackground(AppTheme.BG_CANVAS);
         setBorder(new EmptyBorder(15, 15, 15, 15));
         initComponents();
         loadReports();
@@ -29,11 +29,11 @@ public class ReportsPanel extends JPanel {
     private void initComponents() {
         // TOP Header
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(new Color(248, 250, 252));
+        topPanel.setBackground(AppTheme.BG_CANVAS);
 
         JLabel lblTitle = new JLabel("📈 Sales & Profit Analysis Reports");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTitle.setForeground(new Color(30, 41, 59));
+        lblTitle.setForeground(AppTheme.TEXT_PRIMARY);
         topPanel.add(lblTitle, BorderLayout.WEST);
 
         btnRefreshAll = new JButton("🔄 Refresh Data");
@@ -47,7 +47,7 @@ public class ReportsPanel extends JPanel {
 
         // TAB 1: Sales Invoices Report
         JPanel salesPanel = new JPanel(new BorderLayout(10, 10));
-        salesPanel.setBackground(new Color(248, 250, 252));
+        salesPanel.setBackground(AppTheme.BG_CANVAS);
 
         // Filter Bar
         JPanel filterBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 10));
@@ -98,7 +98,7 @@ public class ReportsPanel extends JPanel {
 
         // TAB 3: Visual Revenue Analytics
         JPanel analyticsPanel = new JPanel(new GridLayout(1, 2, 15, 15));
-        analyticsPanel.setBackground(new Color(248, 250, 252));
+        analyticsPanel.setBackground(AppTheme.BG_CANVAS);
         analyticsPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
         reportBarChart = new DailySalesBarChartPanel();

@@ -29,7 +29,7 @@ public class InventoryPanel extends JPanel {
 
     public InventoryPanel() {
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(248, 250, 252));
+        setBackground(AppTheme.BG_CANVAS);
         setBorder(new EmptyBorder(15, 15, 15, 15));
         initComponents();
         loadDropdownData();
@@ -39,11 +39,11 @@ public class InventoryPanel extends JPanel {
     private void initComponents() {
 
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(new Color(248, 250, 252));
+        topPanel.setBackground(AppTheme.BG_CANVAS);
 
         JLabel title = new JLabel("📊 Inventory & Stock Management");
         title.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        title.setForeground(new Color(30, 41, 59));
+        title.setForeground(AppTheme.TEXT_PRIMARY);
         topPanel.add(title, BorderLayout.WEST);
 
         btnRefresh = new JButton("Refresh Inventory");
@@ -52,7 +52,7 @@ public class InventoryPanel extends JPanel {
 
         // Center split: Stock-In Form on top, Tabs (Low Stock Alerts & Transaction History) below
         JPanel centerPanel = new JPanel(new BorderLayout(12, 12));
-        centerPanel.setBackground(new Color(248, 250, 252));
+        centerPanel.setBackground(AppTheme.BG_CANVAS);
 
         // Card: Stock-In (Purchase Quick Entry)
         JPanel stockInCard = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 12));
@@ -78,7 +78,7 @@ public class InventoryPanel extends JPanel {
         stockInCard.add(txtCostPrice);
 
         btnAddStock = new JButton("+ Add to Stock");
-        btnAddStock.setBackground(new Color(16, 185, 129));
+        btnAddStock.setBackground(AppTheme.FOREST_GREEN);
         btnAddStock.setForeground(Color.WHITE);
         btnAddStock.setFont(new Font("Segoe UI", Font.BOLD, 12));
         stockInCard.add(btnAddStock);

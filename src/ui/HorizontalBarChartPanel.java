@@ -9,17 +9,16 @@ import java.util.Map;
 
 public class HorizontalBarChartPanel extends JPanel {
     private Map<String, Double> chartData;
-    private String chartTitle = "🏆 Top Selling Products";
+    private String chartTitle = "Top Selling Products";
+    private final SidebarIcon titleIcon = new SidebarIcon("trophy", 16, AppTheme.FOREST_GREEN);
     private int hoveredIndex = -1;
 
     public HorizontalBarChartPanel() {
         setBackground(Color.WHITE);
+        setOpaque(false);
         setPreferredSize(new Dimension(450, 260));
         setMinimumSize(new Dimension(150, 180));
-        setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(226, 232, 240)),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)
-        ));
+        setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
 
         addMouseMotionListener(new MouseAdapter() {
             @Override
@@ -40,7 +39,7 @@ public class HorizontalBarChartPanel extends JPanel {
 
     public void setData(Map<String, Double> data, String title) {
         this.chartData = data;
-        this.chartTitle = title;
+        this.chartTitle = (title != null) ? title.replaceFirst("^[\\p{So}\\p{Cn}\\s]+", "") : "Top Selling Products";
         this.hoveredIndex = -1;
         repaint();
     }
@@ -72,22 +71,31 @@ public class HorizontalBarChartPanel extends JPanel {
 
     @Override
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         int w = getWidth();
         int h = getHeight();
+        int r = 36; // Extra rounded modern widget silhouette
 
-        // Chart Title
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        g2.setColor(new Color(30, 41, 59));
-        g2.drawString(chartTitle, 16, 22);
+        // Subtle ambient drop shadow
+        g2.setColor(new Color(0, 50, 30, 6));
+        g2.fillRoundRect(1, 2, w - 2, h - 2, r, r);
+
+        // Pure crisp white card surface, NO BORDER!
+        g2.setColor(Color.WHITE);
+        g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
+
+        // Chart Icon & Title
+        titleIcon.paintIcon(this, g2, 22, 14);
+        g2.setFont(AppTheme.font(Font.BOLD, 13));
+        g2.setColor(AppTheme.TEXT_PRIMARY);
+        g2.drawString(chartTitle, 44, 26);
 
         if (chartData == null || chartData.isEmpty()) {
-            g2.setFont(new Font("Segoe UI", Font.ITALIC, 12));
-            g2.setColor(new Color(148, 163, 184));
+            g2.setFont(AppTheme.font(Font.ITALIC, 12));
+            g2.setColor(AppTheme.TEXT_MUTED);
             g2.drawString("No product sales data recorded yet", 40, h / 2);
             g2.dispose();
             return;
@@ -101,11 +109,11 @@ public class HorizontalBarChartPanel extends JPanel {
         }
 
         // Subtitle Total
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        g2.setColor(new Color(100, 116, 139));
-        String sub = String.format("Total Units: %.0f", totalUnits);
+        g2.setFont(AppTheme.font(Font.PLAIN, 11));
+        g2.setColor(AppTheme.TEXT_MUTED);
+        String sub = String.format("Total Units: %,d", (long) totalUnits);
         int subW = g2.getFontMetrics().stringWidth(sub);
-        g2.drawString(sub, w - subW - 16, 22);
+        g2.drawString(sub, w - subW - 22, 26);
 
         int leftPad = getLeftPadding(w);
         int rightPad = getRightPadding(w);
@@ -132,25 +140,25 @@ public class HorizontalBarChartPanel extends JPanel {
 
             // Label (Product Name)
             g2.setFont(new Font("Segoe UI", isHovered ? Font.BOLD : Font.PLAIN, 11));
-            g2.setColor(isHovered ? new Color(30, 41, 59) : new Color(71, 85, 105));
+            g2.setColor(isHovered ? AppTheme.TEXT_PRIMARY : AppTheme.TEXT_SECONDARY);
             String name = fitLabel(g2.getFontMetrics(), entry.getKey(), leftPad - 16);
             int nameW = g2.getFontMetrics().stringWidth(name);
             g2.drawString(name, leftPad - nameW - 10, y + barH - 4);
 
             // Bar background track
-            g2.setColor(new Color(241, 245, 249));
+            g2.setColor(AppTheme.BG_CANVAS);
             g2.fill(new RoundRectangle2D.Float(x, y, chartW, barH, 6, 6));
 
             // Bar Gradient
-            Color startColor = isHovered ? new Color(16, 185, 129) : new Color(13, 148, 136);
-            Color endColor = isHovered ? new Color(5, 150, 105) : new Color(15, 118, 110);
+            Color startColor = isHovered ? AppTheme.FOREST_MID : AppTheme.FOREST_MID;
+            Color endColor = isHovered ? AppTheme.ELECTRIC_LIME : AppTheme.FOREST_GREEN;
             GradientPaint gp = new GradientPaint(x, y, startColor, x + barWidth, y, endColor);
             g2.setPaint(gp);
             g2.fill(new RoundRectangle2D.Float(x, y, Math.max(6, barWidth), barH, 6, 6));
 
             // Value text on right (guaranteed not clipped)
             g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
-            g2.setColor(isHovered ? new Color(15, 23, 42) : new Color(100, 116, 139));
+            g2.setColor(isHovered ? AppTheme.TEXT_PRIMARY : AppTheme.TEXT_MUTED);
             String vStr = String.format("%.0f units", val);
             int vStrW = g2.getFontMetrics().stringWidth(vStr);
             int vx = x + barWidth + 8;

@@ -89,7 +89,7 @@ public class BillingPanel extends JPanel {
     public BillingPanel(User user) {
         this.currentUser = user;
         setLayout(new BorderLayout(10, 10));
-        setBackground(new Color(241, 245, 249));
+        setBackground(AppTheme.BG_CANVAS);
         setBorder(new EmptyBorder(10, 12, 10, 12));
 
         initComponents();
@@ -126,10 +126,12 @@ public class BillingPanel extends JPanel {
         if (lblTouchBadge != null) {
             if (isTouch) {
                 lblTouchBadge.setText(" 📱 TOUCH SCREEN MODE ");
-                lblTouchBadge.setBackground(new Color(16, 185, 129));
+                lblTouchBadge.setBackground(AppTheme.ELECTRIC_LIME);
+                lblTouchBadge.setForeground(AppTheme.FOREST_DEEP);
             } else {
                 lblTouchBadge.setText(" 💻 NON-TOUCH KEYBOARD MODE (F1-F6) ");
-                lblTouchBadge.setBackground(new Color(37, 99, 235));
+                lblTouchBadge.setBackground(AppTheme.FOREST_GREEN);
+                lblTouchBadge.setForeground(Color.WHITE);
             }
         }
 
@@ -165,7 +167,7 @@ public class BillingPanel extends JPanel {
 
         // Header Strip
         JPanel headerStrip = new JPanel(new BorderLayout(10, 5));
-        headerStrip.setBackground(new Color(15, 23, 42));
+        headerStrip.setBackground(AppTheme.FOREST_DEEP);
         headerStrip.setBorder(new EmptyBorder(8, 12, 8, 12));
 
         JPanel headerLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
@@ -174,8 +176,8 @@ public class BillingPanel extends JPanel {
         lblTouchBadge = new JLabel(" 📱 TOUCH MODE ");
         lblTouchBadge.setFont(new Font("Segoe UI", Font.BOLD, 10));
         lblTouchBadge.setOpaque(true);
-        lblTouchBadge.setBackground(new Color(16, 185, 129));
-        lblTouchBadge.setForeground(Color.WHITE);
+        lblTouchBadge.setBackground(AppTheme.ELECTRIC_LIME);
+        lblTouchBadge.setForeground(AppTheme.FOREST_DEEP);
         lblTouchBadge.setBorder(new EmptyBorder(2, 6, 2, 6));
         lblTerminal.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblTerminal.setForeground(Color.WHITE);
@@ -451,7 +453,7 @@ public class BillingPanel extends JPanel {
 
         btnQuickCheckout = new JButton("💳 Pay & Print (Ctrl+Enter)");
         btnQuickCheckout.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        btnQuickCheckout.setBackground(new Color(16, 185, 129));
+        btnQuickCheckout.setBackground(AppTheme.FOREST_GREEN);
         btnQuickCheckout.setForeground(Color.WHITE);
         btnQuickCheckout.setFocusPainted(false);
         cartActionsPanel.add(btnQuickCheckout);
@@ -468,17 +470,17 @@ public class BillingPanel extends JPanel {
 
         // 1. Total Bill Display Card
         JPanel totalDisplayCard = new JPanel(new BorderLayout(5, 5));
-        totalDisplayCard.setBackground(new Color(15, 23, 42));
+        totalDisplayCard.setBackground(AppTheme.FOREST_DEEP);
         totalDisplayCard.setBorder(new EmptyBorder(12, 16, 12, 16));
 
         JLabel lblPayableTitle = new JLabel("TOTAL PAYABLE");
         lblPayableTitle.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        lblPayableTitle.setForeground(new Color(148, 163, 184));
+        lblPayableTitle.setForeground(AppTheme.BORDER_SAGE);
         totalDisplayCard.add(lblPayableTitle, BorderLayout.NORTH);
 
         lblGrandTotal = new JLabel("₹0.00");
         lblGrandTotal.setFont(new Font("Segoe UI", Font.BOLD, 30));
-        lblGrandTotal.setForeground(new Color(56, 189, 248));
+        lblGrandTotal.setForeground(AppTheme.ELECTRIC_LIME);
         totalDisplayCard.add(lblGrandTotal, BorderLayout.CENTER);
 
         JPanel subBreakdown = new JPanel(new GridLayout(3, 2, 4, 2));
@@ -600,7 +602,7 @@ public class BillingPanel extends JPanel {
         JPanel bottomCheckout = new JPanel(new GridLayout(1, 1));
         bottomCheckout.setOpaque(false);
         JButton btnPayPrint = new JButton("💳 PAY & PRINT BILL (Ctrl+Enter)");
-        btnPayPrint.setBackground(new Color(16, 185, 129));
+        btnPayPrint.setBackground(AppTheme.FOREST_GREEN);
         btnPayPrint.setForeground(Color.WHITE);
         btnPayPrint.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnPayPrint.setPreferredSize(new Dimension(0, 48));

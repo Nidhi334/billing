@@ -8,28 +8,18 @@ import java.util.Map;
 
 public class CategoryPieChartPanel extends JPanel {
     private Map<String, Double> chartData;
-    private String chartTitle = "🍰 Revenue Breakdown";
+    private String chartTitle = "Revenue Breakdown";
+    private SidebarIcon titleIcon = new SidebarIcon("pie_chart", 16, AppTheme.FOREST_GREEN);
     private int hoveredSlice = -1;
 
-    private static final Color[] SLICE_COLORS = {
-            new Color(59, 130, 246),
-            new Color(16, 185, 129),
-            new Color(245, 158, 11),
-            new Color(239, 68, 68),
-            new Color(139, 92, 246),
-            new Color(236, 72, 153),
-            new Color(14, 165, 233),
-            new Color(100, 116, 139)
-    };
+    private static final Color[] SLICE_COLORS = AppTheme.CHART_PALETTE;
 
     public CategoryPieChartPanel() {
         setBackground(Color.WHITE);
+        setOpaque(false);
         setPreferredSize(new Dimension(420, 260));
         setMinimumSize(new Dimension(150, 180));
-        setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(226, 232, 240)),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)
-        ));
+        setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
 
         addMouseMotionListener(new MouseAdapter() {
             @Override
@@ -51,13 +41,19 @@ public class CategoryPieChartPanel extends JPanel {
 
     public void setData(Map<String, Double> data, String title) {
         this.chartData = data;
-        this.chartTitle = title;
+        String clean = (title != null) ? title.replaceFirst("^[\\p{So}\\p{Cn}\\s]+", "") : "Revenue Breakdown";
+        this.chartTitle = clean;
+        if (clean.toLowerCase().contains("payment")) {
+            this.titleIcon = new SidebarIcon("wallet", 16, AppTheme.FOREST_GREEN);
+        } else {
+            this.titleIcon = new SidebarIcon("pie_chart", 16, AppTheme.FOREST_GREEN);
+        }
         this.hoveredSlice = -1;
         repaint();
     }
 
     public void setData(Map<String, Double> data) {
-        setData(data, "🍰 Category-Wise Revenue Share");
+        setData(data, "Category-Wise Revenue Share");
     }
 
     private void handleMouseMove(int mx, int my) {
@@ -112,22 +108,31 @@ public class CategoryPieChartPanel extends JPanel {
 
     @Override
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         int w = getWidth();
         int h = getHeight();
+        int r = 36; // Extra rounded modern widget silhouette
 
-        // Chart Title
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        g2.setColor(new Color(30, 41, 59));
-        g2.drawString(chartTitle, 16, 22);
+        // Subtle ambient drop shadow
+        g2.setColor(new Color(0, 50, 30, 6));
+        g2.fillRoundRect(1, 2, w - 2, h - 2, r, r);
+
+        // Pure crisp white card surface, NO BORDER!
+        g2.setColor(Color.WHITE);
+        g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
+
+        // Chart Icon & Title
+        titleIcon.paintIcon(this, g2, 22, 14);
+        g2.setFont(AppTheme.font(Font.BOLD, 13));
+        g2.setColor(AppTheme.TEXT_PRIMARY);
+        g2.drawString(chartTitle, 44, 26);
 
         if (chartData == null || chartData.isEmpty()) {
-            g2.setFont(new Font("Segoe UI", Font.ITALIC, 12));
-            g2.setColor(new Color(148, 163, 184));
+            g2.setFont(AppTheme.font(Font.ITALIC, 12));
+            g2.setColor(AppTheme.TEXT_MUTED);
             g2.drawString("No revenue recorded for breakdown", 30, h / 2);
             g2.dispose();
             return;
@@ -169,7 +174,7 @@ public class CategoryPieChartPanel extends JPanel {
             boolean isHover = (colorIdx == hoveredSlice);
 
             if (isHover) {
-                hoveredText = String.format("%s: ₹%.2f (%.1f%%)", entry.getKey(), val, fraction * 100);
+                hoveredText = String.format("%s: %s (%.1f%%)", entry.getKey(), AppTheme.formatCurrency(val), fraction * 100);
                 g2.setColor(color.darker());
                 g2.fillArc(pieX - 2, pieY - 2, pieDiameter + 4, pieDiameter + 4, (int) Math.round(curAngle), arcAngle);
             } else {
@@ -211,7 +216,7 @@ public class CategoryPieChartPanel extends JPanel {
 
         g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
         g2.setColor(new Color(16, 185, 129));
-        String cVal = String.format("₹%.0f", total);
+        String cVal = AppTheme.formatCurrency(total);
         int cVW = g2.getFontMetrics().stringWidth(cVal);
         g2.drawString(cVal, holeX + (holeDiameter - cVW) / 2, holeY + holeDiameter / 2 + 12);
 

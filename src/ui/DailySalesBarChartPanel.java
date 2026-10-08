@@ -9,17 +9,16 @@ import java.util.Map;
 
 public class DailySalesBarChartPanel extends JPanel {
     private Map<String, Double> chartData;
-    private String chartTitle = "📈 Revenue Trend";
+    private String chartTitle = "Daily Revenue Trend";
+    private final SidebarIcon titleIcon = new SidebarIcon("trending_up", 16, AppTheme.FOREST_GREEN);
     private int hoveredIndex = -1;
 
     public DailySalesBarChartPanel() {
         setBackground(Color.WHITE);
+        setOpaque(false);
         setPreferredSize(new Dimension(450, 260));
         setMinimumSize(new Dimension(150, 180));
-        setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(226, 232, 240)),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)
-        ));
+        setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
 
         addMouseMotionListener(new MouseAdapter() {
             @Override
@@ -40,13 +39,13 @@ public class DailySalesBarChartPanel extends JPanel {
 
     public void setData(Map<String, Double> data, String title) {
         this.chartData = data;
-        this.chartTitle = title;
+        this.chartTitle = (title != null) ? title.replaceFirst("^[\\p{So}\\p{Cn}\\s]+", "") : "Daily Revenue Trend";
         this.hoveredIndex = -1;
         repaint();
     }
 
     public void setData(Map<String, Double> data) {
-        setData(data, "📈 Daily Revenue Trend (Last 7 Days)");
+        setData(data, "Daily Revenue Trend (Last 7 Days)");
     }
 
     private void handleMouseMove(int mx, int my) {
@@ -84,22 +83,31 @@ public class DailySalesBarChartPanel extends JPanel {
 
     @Override
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         int w = getWidth();
         int h = getHeight();
+        int r = 36; // Extra rounded modern widget silhouette
 
-        // Chart Title
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        g2.setColor(new Color(30, 41, 59));
-        g2.drawString(chartTitle, 16, 22);
+        // Subtle ambient drop shadow
+        g2.setColor(new Color(0, 50, 30, 6));
+        g2.fillRoundRect(1, 2, w - 2, h - 2, r, r);
+
+        // Pure crisp white card surface, NO BORDER!
+        g2.setColor(Color.WHITE);
+        g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
+
+        // Chart Icon & Title
+        titleIcon.paintIcon(this, g2, 22, 14);
+        g2.setFont(AppTheme.font(Font.BOLD, 13));
+        g2.setColor(AppTheme.TEXT_PRIMARY);
+        g2.drawString(chartTitle, 44, 26);
 
         if (chartData == null || chartData.isEmpty()) {
-            g2.setFont(new Font("Segoe UI", Font.ITALIC, 12));
-            g2.setColor(new Color(148, 163, 184));
+            g2.setFont(AppTheme.font(Font.ITALIC, 12));
+            g2.setColor(AppTheme.TEXT_MUTED);
             g2.drawString("No revenue data available for this range", 40, h / 2);
             g2.dispose();
             return;
@@ -113,15 +121,15 @@ public class DailySalesBarChartPanel extends JPanel {
         }
 
         // Subtitle Total
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        g2.setColor(new Color(100, 116, 139));
-        String sub = String.format("Total: ₹%.2f", totalRev);
+        g2.setFont(AppTheme.font(Font.PLAIN, 11));
+        g2.setColor(AppTheme.TEXT_MUTED);
+        String sub = "Total: " + AppTheme.formatCurrency(totalRev);
         int subW = g2.getFontMetrics().stringWidth(sub);
-        g2.drawString(sub, w - subW - 16, 22);
+        g2.drawString(sub, w - subW - 22, 26);
 
-        int leftPad = 55;
+        int leftPad = 58;
         int rightPad = 25;
-        int topPad = 45;
+        int topPad = 48;
         int bottomPad = 45;
         int chartW = w - leftPad - rightPad;
         int chartH = h - topPad - bottomPad;
@@ -131,12 +139,12 @@ public class DailySalesBarChartPanel extends JPanel {
         int gridSteps = 4;
         for (int i = 0; i <= gridSteps; i++) {
             int y = topPad + (chartH * i / gridSteps);
-            g2.setColor(new Color(226, 232, 240));
+            g2.setColor(AppTheme.BORDER_SAGE);
             g2.drawLine(leftPad, y, leftPad + chartW, y);
 
             double lblVal = maxVal * (gridSteps - i) / gridSteps;
-            g2.setColor(new Color(100, 116, 139));
-            String lbl = String.format("₹%.0f", lblVal);
+            g2.setColor(AppTheme.TEXT_MUTED);
+            String lbl = AppTheme.formatCurrency(Math.round(lblVal));
             g2.drawString(lbl, 8, y + 4);
         }
 
@@ -157,9 +165,9 @@ public class DailySalesBarChartPanel extends JPanel {
 
             boolean isHovered = (idx == hoveredIndex);
 
-            // Bar Gradient
-            Color startColor = isHovered ? new Color(99, 102, 241) : new Color(59, 130, 246);
-            Color endColor = isHovered ? new Color(79, 70, 229) : new Color(37, 99, 235);
+            // Bar Gradient: Forest Green to Mid Forest, or highlight volt-gradient on hover
+            Color startColor = isHovered ? AppTheme.FOREST_MID : AppTheme.FOREST_MID;
+            Color endColor   = isHovered ? AppTheme.ELECTRIC_LIME : AppTheme.FOREST_GREEN;
             GradientPaint gp = new GradientPaint(x, y, startColor, x, y + barHeight, endColor);
             g2.setPaint(gp);
             g2.fill(new RoundRectangle2D.Float(x, y, barW, Math.max(4, barHeight), 6, 6));
@@ -167,15 +175,15 @@ public class DailySalesBarChartPanel extends JPanel {
             // Top Value Label
             if (val > 0) {
                 g2.setFont(new Font("Segoe UI", Font.BOLD, isHovered ? 11 : 10));
-                g2.setColor(isHovered ? new Color(30, 41, 59) : new Color(71, 85, 105));
-                String vStr = String.format("₹%.0f", val);
+                g2.setColor(isHovered ? AppTheme.TEXT_PRIMARY : AppTheme.TEXT_SECONDARY);
+                String vStr = AppTheme.formatCurrency(val);
                 int strW = g2.getFontMetrics().stringWidth(vStr);
                 g2.drawString(vStr, x + (barW - strW) / 2, Math.max(topPad - 5, y - 5));
             }
 
             // X-axis label
             g2.setFont(new Font("Segoe UI", isHovered ? Font.BOLD : Font.PLAIN, 10));
-            g2.setColor(isHovered ? new Color(30, 41, 59) : new Color(100, 116, 139));
+            g2.setColor(isHovered ? AppTheme.FOREST_GREEN : AppTheme.TEXT_MUTED);
             String dateLabel = entry.getKey();
             int dateW = g2.getFontMetrics().stringWidth(dateLabel);
             g2.drawString(dateLabel, x + (barW - dateW) / 2, topPad + chartH + 18);
@@ -183,7 +191,7 @@ public class DailySalesBarChartPanel extends JPanel {
             if (isHovered) {
                 tooltipX = x + barW / 2;
                 tooltipY = y - 10;
-                tooltipText = String.format("%s: ₹%.2f", entry.getKey(), val);
+                tooltipText = String.format("%s: %s", entry.getKey(), AppTheme.formatCurrency(val));
             }
 
             idx++;

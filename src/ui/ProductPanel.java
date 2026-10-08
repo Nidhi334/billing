@@ -38,7 +38,7 @@ public class ProductPanel extends JPanel {
 
     public ProductPanel() {
         setLayout(new BorderLayout(15, 15));
-        setBackground(new Color(248, 250, 252));
+        setBackground(AppTheme.BG_CANVAS);
         setBorder(new EmptyBorder(15, 15, 15, 15));
         initComponents();
         loadCategories();
@@ -48,15 +48,15 @@ public class ProductPanel extends JPanel {
     private void initComponents() {
         // TOP: Title & Search bar
         JPanel topPanel = new JPanel(new BorderLayout(10, 10));
-        topPanel.setBackground(new Color(248, 250, 252));
+        topPanel.setBackground(AppTheme.BG_CANVAS);
 
         JLabel lblTitle = new JLabel("📦 Product Management & Barcode Hub");
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTitle.setForeground(new Color(30, 41, 59));
+        lblTitle.setForeground(AppTheme.TEXT_PRIMARY);
         topPanel.add(lblTitle, BorderLayout.WEST);
 
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        searchPanel.setBackground(new Color(248, 250, 252));
+        searchPanel.setBackground(AppTheme.BG_CANVAS);
         searchPanel.add(new JLabel("Search (Code/Barcode/Name):"));
         txtSearch = new JTextField(18);
         searchPanel.add(txtSearch);
@@ -213,7 +213,7 @@ public class ProductPanel extends JPanel {
         JPanel btnPanel = new JPanel(new GridLayout(2, 2, 6, 6));
         btnPanel.setBackground(Color.WHITE);
         btnAdd = new JButton("Add Product");
-        btnAdd.setBackground(new Color(16, 185, 129));
+        btnAdd.setBackground(AppTheme.FOREST_GREEN);
         btnAdd.setForeground(Color.WHITE);
         btnAdd.setFont(new Font("Segoe UI", Font.BOLD, 12));
 
