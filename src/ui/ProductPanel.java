@@ -483,6 +483,7 @@ public class ProductPanel extends JPanel {
         imageSection.add(imageBtnStack, BorderLayout.CENTER);
 
         formBody.add(imageSection);
+        formBody.add(Box.createVerticalStrut(10));
 
         // Scroll pane without horizontal scrollbar and with slim vertical scrollbar
         JScrollPane formScroll = new JScrollPane(formBody);
@@ -524,6 +525,7 @@ public class ProductPanel extends JPanel {
         // ---------------------------------------------------------------------
         JPanel formActionsContainer = new JPanel(new BorderLayout(0, 6));
         formActionsContainer.setOpaque(false);
+        formActionsContainer.setBorder(new EmptyBorder(6, 0, 0, 0));
 
         // New Mode Button (Add)
         btnAdd = createPillButton("➕ Add Product to Catalog", AppTheme.FOREST_GREEN, AppTheme.FOREST_GREEN, Color.WHITE);

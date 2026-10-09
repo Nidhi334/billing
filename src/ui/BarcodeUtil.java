@@ -55,9 +55,9 @@ public class BarcodeUtil {
             String pattern = CODE128_PATTERNS[sym];
             boolean isBar = true;
             for (int k = 0; k < pattern.length(); k++) {
-                int runLen = pattern.charAt(k) - 0;
+                int runLen = pattern.charAt(k) - '0';
                 for (int r = 0; r < runLen; r++) {
-                    modules.append(isBar ? 1 : 0);
+                    modules.append(isBar ? '1' : '0');
                 }
                 isBar = !isBar;
             }
@@ -83,7 +83,7 @@ public class BarcodeUtil {
 
         g2.setColor(Color.BLACK);
         for (int i = 0; i < totalModules; i++) {
-            if (modules.charAt(i) == 1) {
+            if (modules.charAt(i) == '1') {
                 int x1 = (int) Math.round(quietZone + (i * moduleWidth));
                 int x2 = (int) Math.round(quietZone + ((i + 1) * moduleWidth));
                 int w = Math.max(1, x2 - x1);
