@@ -15,11 +15,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
-import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -128,13 +125,13 @@ public class BillingPanel extends JPanel {
 
         if (lblTouchBadge != null) {
             if (isTouch) {
-                lblTouchBadge.setText(" 📱 TOUCH MODE ");
+                lblTouchBadge.setText(" 📱 TOUCH SCREEN MODE ");
                 lblTouchBadge.setBackground(AppTheme.ELECTRIC_LIME);
                 lblTouchBadge.setForeground(AppTheme.FOREST_DEEP);
             } else {
-                lblTouchBadge.setText(" 💻 KEYBOARD MODE ");
-                lblTouchBadge.setBackground(new Color(230, 245, 236));
-                lblTouchBadge.setForeground(AppTheme.FOREST_DEEP);
+                lblTouchBadge.setText(" 💻 NON-TOUCH KEYBOARD MODE (F1-F6) ");
+                lblTouchBadge.setBackground(AppTheme.FOREST_GREEN);
+                lblTouchBadge.setForeground(Color.WHITE);
             }
         }
 
@@ -164,88 +161,71 @@ public class BillingPanel extends JPanel {
     }
 
     private void initComponents() {
-        // TOP 1: Header Strip & Invoice/Customer Meta Panel
-        JPanel topContainer = new JPanel(new BorderLayout(0, 8));
+        // TOP 1: Mall POS Header Bar (Store info, shortcuts banner, held bill bar)
+        JPanel topContainer = new JPanel(new BorderLayout(8, 8));
         topContainer.setOpaque(false);
 
-        // Header Strip - Elevated White Card
-        JPanel headerStrip = new JPanel(new BorderLayout(14, 0)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-                int r = 18;
-                g2.setColor(new Color(0, 50, 30, 5));
-                g2.fillRoundRect(1, 2, w - 2, h - 2, r, r);
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        headerStrip.setOpaque(false);
-        headerStrip.setBorder(new EmptyBorder(8, 14, 8, 14));
+        // Header Strip
+        JPanel headerStrip = new JPanel(new BorderLayout(10, 5));
+        headerStrip.setBackground(AppTheme.FOREST_DEEP);
+        headerStrip.setBorder(new EmptyBorder(8, 12, 8, 12));
 
         JPanel headerLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         headerLeft.setOpaque(false);
-
-        JLabel lblTerminal = new JLabel("⚡ POS Terminal 01");
-        lblTerminal.setFont(AppTheme.font(Font.BOLD, 14));
-        lblTerminal.setForeground(AppTheme.TEXT_PRIMARY);
-
-        lblTouchBadge = new JLabel(" TOUCH MODE ") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getBackground());
-                int h = getHeight();
-                g2.fillRoundRect(0, 0, getWidth(), h, h, h);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        lblTouchBadge.setFont(AppTheme.font(Font.BOLD, 9));
-        lblTouchBadge.setOpaque(false);
+        JLabel lblTerminal = new JLabel("⚡ POS TERMINAL - DESK #1");
+        lblTouchBadge = new JLabel(" 📱 TOUCH MODE ");
+        lblTouchBadge.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        lblTouchBadge.setOpaque(true);
         lblTouchBadge.setBackground(AppTheme.ELECTRIC_LIME);
         lblTouchBadge.setForeground(AppTheme.FOREST_DEEP);
-        lblTouchBadge.setBorder(new EmptyBorder(2, 8, 2, 8));
-
+        lblTouchBadge.setBorder(new EmptyBorder(2, 6, 2, 6));
+        lblTerminal.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblTerminal.setForeground(Color.WHITE);
         headerLeft.add(lblTerminal);
         headerLeft.add(lblTouchBadge);
 
-        JLabel lblShortcuts = new JLabel("[ F1 Scan • F2 Hold • F3 Cust • F4 Cash • F6 UPI • Ctrl+↵ Pay ]");
-        lblShortcuts.setFont(AppTheme.font(Font.PLAIN, 11));
-        lblShortcuts.setForeground(AppTheme.TEXT_MUTED);
+        JLabel lblShortcuts = new JLabel("[F1: Barcode | F7: Scan Dialog | F2: Hold | F3: Cust | F4: Cash | F6: UPI | Ctrl+D: Disc | Ctrl+Enter: Pay]");
+        lblShortcuts.setFont(new Font("Monospaced", Font.PLAIN, 11));
+        lblShortcuts.setForeground(new Color(148, 163, 184));
         headerLeft.add(lblShortcuts);
-
         headerStrip.add(headerLeft, BorderLayout.WEST);
 
         // Held Bills Toolbar
-        heldBillsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        heldBillsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         heldBillsPanel.setOpaque(false);
-
-        JLabel lblHeld = new JLabel("Held Bills:");
-        lblHeld.setForeground(AppTheme.TEXT_SECONDARY);
-        lblHeld.setFont(AppTheme.font(Font.BOLD, 11));
+        JLabel lblHeld = new JLabel("Held Bills (Bed/Table):");
+        lblHeld.setForeground(new Color(203, 213, 225));
+        lblHeld.setFont(new Font("Segoe UI", Font.BOLD, 11));
         heldBillsPanel.add(lblHeld);
+        // set style
+        // set style
 
         cmbHeldBills = new JComboBox<>(new String[]{"-- Active Bill --"});
-        cmbHeldBills.setFont(AppTheme.font(Font.PLAIN, 11));
-        cmbHeldBills.setPreferredSize(new Dimension(130, 28));
-        cmbHeldBills.setBackground(Color.WHITE);
+        cmbHeldBills.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        cmbHeldBills.setPreferredSize(new Dimension(170, 26));
         heldBillsPanel.add(cmbHeldBills);
 
-        JButton btnResumeBill = createPillButton("Recall", new Color(239, 246, 255), new Color(191, 219, 254), new Color(29, 78, 216));
+        JButton btnResumeBill = new JButton("Recall");
+        btnResumeBill.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnResumeBill.setBackground(new Color(37, 99, 235));
+        btnResumeBill.setForeground(Color.WHITE);
+        btnResumeBill.setMargin(new Insets(2, 6, 2, 6));
         heldBillsPanel.add(btnResumeBill);
 
-        JButton btnHoldBill = createPillButton("Hold (F2)", new Color(254, 243, 199), new Color(253, 230, 138), new Color(180, 83, 9));
+        JButton btnHoldBill = new JButton("Hold (F2)");
+        btnHoldBill.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnHoldBill.setBackground(new Color(217, 119, 6));
+        btnHoldBill.setForeground(Color.WHITE);
+        btnHoldBill.setMargin(new Insets(2, 6, 2, 6));
         heldBillsPanel.add(btnHoldBill);
 
-        JButton btnHistory = createPillButton("📜 Bill History", new Color(240, 250, 244), AppTheme.BORDER_SAGE, AppTheme.FOREST_GREEN);
+        JButton btnHistory = new JButton("📜 Bill History");
+        btnHistory.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnHistory.setBackground(new Color(241, 245, 249));
+        btnHistory.setForeground(new Color(30, 41, 59));
+        btnHistory.setMargin(new Insets(2, 8, 2, 8));
+        btnHistory.setFocusable(false);
+        btnHistory.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnHistory.setToolTipText("View Total Orders & Sales History");
         btnHistory.addActionListener(e -> {
             Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
@@ -255,7 +235,13 @@ public class BillingPanel extends JPanel {
         });
         heldBillsPanel.add(btnHistory);
 
-        JButton btnSelfCheckout = createPillButton("🛒 Self Checkout", AppTheme.FOREST_GREEN, AppTheme.FOREST_GREEN, Color.WHITE);
+        JButton btnSelfCheckout = new JButton("🛒 Self Checkout");
+        btnSelfCheckout.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnSelfCheckout.setBackground(new Color(16, 185, 129));
+        btnSelfCheckout.setForeground(Color.WHITE);
+        btnSelfCheckout.setMargin(new Insets(2, 8, 2, 8));
+        btnSelfCheckout.setFocusable(false);
+        btnSelfCheckout.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSelfCheckout.setToolTipText("Launch Customer Self-Checkout Express");
         btnSelfCheckout.addActionListener(e -> {
             new SelfCheckoutFrame(currentUser).setVisible(true);
@@ -265,109 +251,68 @@ public class BillingPanel extends JPanel {
         headerStrip.add(heldBillsPanel, BorderLayout.EAST);
         topContainer.add(headerStrip, BorderLayout.NORTH);
 
-        // Sub-header Meta Panel (Invoice No, Customer, Mobile Search, Payment Mode)
-        JPanel metaPanel = new JPanel(new GridLayout(1, 4, 12, 0)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-                int r = 18;
-                g2.setColor(new Color(0, 50, 30, 5));
-                g2.fillRoundRect(1, 2, w - 2, h - 2, r, r);
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        metaPanel.setOpaque(false);
-        metaPanel.setBorder(new EmptyBorder(8, 14, 8, 14));
+        // Sub-header controls (Invoice #, Customer, Payment Mode, Cashier)
+        JPanel metaPanel = new JPanel(new GridLayout(1, 4, 10, 0));
+        metaPanel.setBackground(Color.WHITE);
+        metaPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(226, 232, 240)),
+                new EmptyBorder(8, 10, 8, 10)
+        ));
 
         // 1. Invoice No
-        JPanel pInv = new JPanel(new BorderLayout(0, 4));
-        pInv.setOpaque(false);
-        JLabel lblInvTitle = new JLabel("INVOICE NUMBER");
-        lblInvTitle.setFont(AppTheme.font(Font.BOLD, 10));
-        lblInvTitle.setForeground(AppTheme.TEXT_MUTED);
-        pInv.add(lblInvTitle, BorderLayout.NORTH);
-
-        txtInvoiceNo = new JTextField() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(240, 250, 244));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        txtInvoiceNo.setOpaque(false);
+        JPanel pInv = new JPanel(new BorderLayout(4, 2));
+        pInv.setBackground(Color.WHITE);
+        pInv.add(new JLabel("Invoice No:"), BorderLayout.NORTH);
+        txtInvoiceNo = new JTextField();
         txtInvoiceNo.setEditable(false);
-        txtInvoiceNo.setFont(AppTheme.font(Font.BOLD, 12));
-        txtInvoiceNo.setForeground(AppTheme.FOREST_MID);
-        txtInvoiceNo.setBorder(new EmptyBorder(6, 10, 6, 10));
-        txtInvoiceNo.setPreferredSize(new Dimension(0, 32));
+        txtInvoiceNo.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        txtInvoiceNo.setForeground(new Color(37, 99, 235));
         pInv.add(txtInvoiceNo, BorderLayout.CENTER);
         metaPanel.add(pInv);
 
         // 2. Customer
-        JPanel pCust = new JPanel(new BorderLayout(0, 4));
-        pCust.setOpaque(false);
+        JPanel pCust = new JPanel(new BorderLayout(4, 2));
+        pCust.setBackground(Color.WHITE);
         JPanel pCustHeader = new JPanel(new BorderLayout(4, 0));
         pCustHeader.setOpaque(false);
-        JLabel lblCust = new JLabel("CUSTOMER (F3)");
-        lblCust.setFont(AppTheme.font(Font.BOLD, 10));
-        lblCust.setForeground(AppTheme.TEXT_MUTED);
+        JLabel lblCust = new JLabel("Customer (F3):");
+        lblCust.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         pCustHeader.add(lblCust, BorderLayout.WEST);
 
-        JButton btnQuickAdd = createPillButton("+ New", new Color(240, 250, 244), AppTheme.BORDER_SAGE, AppTheme.FOREST_GREEN);
-        btnQuickAdd.setFont(AppTheme.font(Font.BOLD, 10));
-        btnQuickAdd.setBorder(new EmptyBorder(1, 8, 1, 8));
-        btnQuickAdd.setPreferredSize(new Dimension(54, 20));
+        JButton btnQuickAdd = new JButton("+ New");
+        btnQuickAdd.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        btnQuickAdd.setForeground(new Color(37, 99, 235));
+        btnQuickAdd.setBackground(new Color(239, 246, 255));
+        btnQuickAdd.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(191, 219, 254), 1),
+                new EmptyBorder(1, 6, 1, 6)
+        ));
+        btnQuickAdd.setFocusable(false);
+        btnQuickAdd.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnQuickAdd.setToolTipText("Quick Add New Customer");
         btnQuickAdd.addActionListener(e -> openQuickAddCustomerDialog(txtCustPhone.getText().trim()));
         pCustHeader.add(btnQuickAdd, BorderLayout.EAST);
         pCust.add(pCustHeader, BorderLayout.NORTH);
 
         cmbCustomer = new JComboBox<>();
-        cmbCustomer.setFont(AppTheme.font(Font.PLAIN, 12));
-        cmbCustomer.setBackground(Color.WHITE);
-        cmbCustomer.setPreferredSize(new Dimension(0, 32));
         pCust.add(cmbCustomer, BorderLayout.CENTER);
         metaPanel.add(pCust);
 
-        // 3. Customer Mobile Search
-        JPanel pPhone = new JPanel(new BorderLayout(0, 4));
-        pPhone.setOpaque(false);
-        JLabel lblPhoneTitle = new JLabel("CUSTOMER MOBILE (ENTER)");
-        lblPhoneTitle.setFont(AppTheme.font(Font.BOLD, 10));
-        lblPhoneTitle.setForeground(AppTheme.TEXT_MUTED);
-        pPhone.add(lblPhoneTitle, BorderLayout.NORTH);
-
-        txtCustPhone = new ModernSearchField("Mobile or name search...", 12);
+        // 3. Customer Mobile Quick Search
+        JPanel pPhone = new JPanel(new BorderLayout(4, 2));
+        pPhone.setBackground(Color.WHITE);
+        pPhone.add(new JLabel("Mobile / Search (Enter):"), BorderLayout.NORTH);
+        txtCustPhone = new JTextField();
+        txtCustPhone.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         txtCustPhone.setToolTipText("Enter customer mobile to search or register (Press Enter)");
-        txtCustPhone.setPreferredSize(new Dimension(0, 32));
         pPhone.add(txtCustPhone, BorderLayout.CENTER);
         metaPanel.add(pPhone);
 
         // 4. Payment Mode
-        JPanel pMode = new JPanel(new BorderLayout(0, 4));
-        pMode.setOpaque(false);
-        JLabel lblModeTitle = new JLabel("PAYMENT MODE (F4/F6)");
-        lblModeTitle.setFont(AppTheme.font(Font.BOLD, 10));
-        lblModeTitle.setForeground(AppTheme.TEXT_MUTED);
-        pMode.add(lblModeTitle, BorderLayout.NORTH);
-
+        JPanel pMode = new JPanel(new BorderLayout(4, 2));
+        pMode.setBackground(Color.WHITE);
+        pMode.add(new JLabel("Payment Mode:"), BorderLayout.NORTH);
         cmbPaymentMode = new JComboBox<>(new String[]{"CASH", "UPI", "CARD", "CREDIT"});
-        cmbPaymentMode.setFont(AppTheme.font(Font.BOLD, 12));
-        cmbPaymentMode.setBackground(Color.WHITE);
-        cmbPaymentMode.setPreferredSize(new Dimension(0, 32));
         pMode.add(cmbPaymentMode, BorderLayout.CENTER);
         metaPanel.add(pMode);
 
@@ -375,77 +320,25 @@ public class BillingPanel extends JPanel {
         add(topContainer, BorderLayout.NORTH);
 
         // CENTER: Left Barcode & Cart Table (POS Desk)
-        JPanel leftCenter = new JPanel(new BorderLayout(0, 8));
+        JPanel leftCenter = new JPanel(new BorderLayout(8, 8));
         leftCenter.setOpaque(false);
 
-        // Barcode / Fast Scanner Card
-        scanBar = new JPanel(new BorderLayout(10, 0)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-                int r = 18;
-                g2.setColor(new Color(0, 50, 30, 5));
-                g2.fillRoundRect(1, 2, w - 2, h - 2, r, r);
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        scanBar.setOpaque(false);
-        scanBar.setBorder(new EmptyBorder(8, 14, 8, 14));
+        // Fast Barcode Scanner input box
+        scanBar = new JPanel(new BorderLayout(8, 0));
+        scanBar.setBackground(Color.WHITE);
+        scanBar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(37, 99, 235), 2, true),
+                new EmptyBorder(8, 12, 8, 12)
+        ));
 
-        JLabel lblScanIcon = new JLabel("🏷️ BARCODE / SKU (F1): ");
-        lblScanIcon.setFont(AppTheme.font(Font.BOLD, 12));
-        lblScanIcon.setForeground(AppTheme.TEXT_PRIMARY);
+        JLabel lblScanIcon = new JLabel("🏷️ BARCODE / SCAN (F1): ");
+        lblScanIcon.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblScanIcon.setForeground(new Color(30, 41, 59));
         scanBar.add(lblScanIcon, BorderLayout.WEST);
 
-        txtBarcode = new JTextField() {
-            private boolean focused = false;
-            {
-                addFocusListener(new FocusAdapter() {
-                    @Override public void focusGained(FocusEvent e) { focused = true; repaint(); }
-                    @Override public void focusLost(FocusEvent e) { focused = false; repaint(); }
-                });
-            }
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-                int arc = 14;
-                g2.setColor(new Color(248, 252, 249));
-                g2.fillRoundRect(0, 0, w, h, arc, arc);
-
-                if (focused) {
-                    g2.setColor(AppTheme.FOREST_GREEN);
-                    g2.setStroke(new BasicStroke(1.5f));
-                    g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
-                } else {
-                    g2.setColor(AppTheme.BORDER_SAGE);
-                    g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
-                }
-                super.paintComponent(g);
-                if (getText().isEmpty() && !focused) {
-                    g2.setColor(AppTheme.TEXT_MUTED);
-                    g2.setFont(getFont());
-                    FontMetrics fm = g2.getFontMetrics();
-                    int ty = (h + fm.getAscent() - fm.getDescent()) / 2;
-                    g2.drawString("Scan barcode or type code/name and press Enter...", 12, ty);
-                }
-                g2.dispose();
-            }
-        };
-        txtBarcode.setOpaque(false);
-        txtBarcode.setFont(AppTheme.font(Font.BOLD, 14));
-        txtBarcode.setBorder(new EmptyBorder(6, 12, 6, 12));
-        txtBarcode.setPreferredSize(new Dimension(0, 36));
-
+        txtBarcode = new JTextField();
+        txtBarcode.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        txtBarcode.setToolTipText("Scan barcode or type code/name and press Enter");
         barcodeScanTimer = new Timer(250, e -> {
             String typed = txtBarcode.getText() == null ? "" : txtBarcode.getText().trim();
             if (!typed.isEmpty() && looksLikeBarcodeScan(typed)) {
@@ -460,52 +353,28 @@ public class BillingPanel extends JPanel {
         });
         scanBar.add(txtBarcode, BorderLayout.CENTER);
 
-        JPanel scanEastActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel scanEastActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         scanEastActions.setOpaque(false);
 
-        btnOpenScanner = createPillButton("📷 Scan Barcode (F7)", new Color(240, 250, 244), AppTheme.BORDER_SAGE, AppTheme.FOREST_GREEN);
-        btnOpenScanner.setPreferredSize(new Dimension(150, 36));
+        btnOpenScanner = new JButton("📷 Scan Barcode (F7)");
+        btnOpenScanner.setBackground(new Color(37, 99, 235));
+        btnOpenScanner.setForeground(Color.WHITE);
+        btnOpenScanner.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnOpenScanner.setFocusPainted(false);
         scanEastActions.add(btnOpenScanner);
 
-        btnScanAdd = createPillButton("➕ Add Item ↵", AppTheme.FOREST_GREEN, AppTheme.FOREST_GREEN, Color.WHITE);
-        btnScanAdd.setPreferredSize(new Dimension(116, 36));
+        btnScanAdd = new JButton("➕ Add Item ↵");
+        btnScanAdd.setBackground(new Color(16, 185, 129));
+        btnScanAdd.setForeground(Color.WHITE);
+        btnScanAdd.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnScanAdd.setFocusPainted(false);
         scanEastActions.add(btnScanAdd);
 
         scanBar.add(scanEastActions, BorderLayout.EAST);
+
         leftCenter.add(scanBar, BorderLayout.NORTH);
 
-        // Cart Table with Empty State & elevated card
-        JPanel tableCard = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-                int r = 20;
-                g2.setColor(new Color(0, 50, 30, 6));
-                g2.fillRoundRect(1, 2, w - 2, h - 2, r, r);
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-
-            @Override
-            protected void paintChildren(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-                int r = 20;
-                Shape clip = new RoundRectangle2D.Float(0, 0, w, h, r, r);
-                g2.clip(clip);
-                super.paintChildren(g2);
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.dispose();
-            }
-        };
-        tableCard.setOpaque(false);
-
+        // Cart Table
         String[] cartCols = {"#", "Code / Barcode", "Product Name", "Rate (₹)", "Qty", "Total (₹)", "Action"};
         cartModel = new DefaultTableModel(cartCols, 0) {
             @Override
@@ -513,348 +382,109 @@ public class BillingPanel extends JPanel {
                 return c == 4; // allow direct inline quantity editing
             }
         };
-
-        cartTable = new JTable(cartModel) {
-            @Override
-            public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
-                Component c = super.prepareRenderer(renderer, row, column);
-                if (!isRowSelected(row)) {
-                    if (row % 2 == 1) {
-                        c.setBackground(new Color(251, 254, 252));
-                    } else {
-                        c.setBackground(Color.WHITE);
-                    }
-                } else {
-                    c.setBackground(new Color(230, 248, 238));
-                }
-                return c;
-            }
-        };
-        cartTable.setOpaque(false);
-        cartTable.setRowHeight(40);
-        cartTable.setFont(AppTheme.font(Font.PLAIN, 12));
-        cartTable.setShowVerticalLines(false);
-        cartTable.setGridColor(new Color(241, 246, 243));
+        cartTable = new JTable(cartModel);
+        cartTable.setRowHeight(32);
+        cartTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        cartTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
         cartTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        cartTable.setSelectionBackground(new Color(230, 248, 238));
-        cartTable.setSelectionForeground(AppTheme.TEXT_PRIMARY);
-
-        // Header
-        JTableHeader header = cartTable.getTableHeader();
-        header.setPreferredSize(new Dimension(0, 40));
-        header.setReorderingAllowed(false);
-        header.setDefaultRenderer(new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
-                JLabel l = (JLabel) super.getTableCellRendererComponent(t, val, sel, focus, r, c);
-                l.setFont(AppTheme.font(Font.BOLD, 12));
-                l.setForeground(AppTheme.TEXT_PRIMARY);
-                l.setBackground(new Color(240, 250, 244));
-                l.setOpaque(true);
-                l.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(0, 0, 1, 0, AppTheme.BORDER_SAGE),
-                        new EmptyBorder(0, 10, 0, 10)
-                ));
-                if (c == 0 || c == 4 || c == 6) {
-                    l.setHorizontalAlignment(SwingConstants.CENTER);
-                } else if (c == 3 || c == 5) {
-                    l.setHorizontalAlignment(SwingConstants.RIGHT);
-                } else {
-                    l.setHorizontalAlignment(SwingConstants.LEFT);
-                }
-                return l;
-            }
-        });
 
         // Column widths
         cartTable.getColumnModel().getColumn(0).setPreferredWidth(35);
-        cartTable.getColumnModel().getColumn(1).setPreferredWidth(120);
+        cartTable.getColumnModel().getColumn(1).setPreferredWidth(110);
         cartTable.getColumnModel().getColumn(2).setPreferredWidth(260);
-        cartTable.getColumnModel().getColumn(3).setPreferredWidth(85);
-        cartTable.getColumnModel().getColumn(4).setPreferredWidth(65);
+        cartTable.getColumnModel().getColumn(3).setPreferredWidth(80);
+        cartTable.getColumnModel().getColumn(4).setPreferredWidth(60);
         cartTable.getColumnModel().getColumn(5).setPreferredWidth(100);
-        cartTable.getColumnModel().getColumn(6).setPreferredWidth(85);
+        cartTable.getColumnModel().getColumn(6).setPreferredWidth(70);
 
-        // Alignments & Styles
+        // Center align Qty and Price
         DefaultTableCellRenderer centerRender = new DefaultTableCellRenderer();
         centerRender.setHorizontalAlignment(SwingConstants.CENTER);
-        centerRender.setFont(AppTheme.font(Font.BOLD, 11));
-        centerRender.setForeground(AppTheme.TEXT_MUTED);
         cartTable.getColumnModel().getColumn(0).setCellRenderer(centerRender);
-
-        DefaultTableCellRenderer codeRender = new DefaultTableCellRenderer();
-        codeRender.setFont(AppTheme.font(Font.BOLD, 12));
-        codeRender.setForeground(AppTheme.FOREST_MID);
-        codeRender.setBorder(new EmptyBorder(0, 10, 0, 6));
-        cartTable.getColumnModel().getColumn(1).setCellRenderer(codeRender);
-
-        DefaultTableCellRenderer nameRender = new DefaultTableCellRenderer();
-        nameRender.setFont(AppTheme.font(Font.PLAIN, 12));
-        nameRender.setForeground(AppTheme.TEXT_PRIMARY);
-        nameRender.setBorder(new EmptyBorder(0, 10, 0, 6));
-        cartTable.getColumnModel().getColumn(2).setCellRenderer(nameRender);
+        cartTable.getColumnModel().getColumn(4).setCellRenderer(centerRender);
 
         DefaultTableCellRenderer rightRender = new DefaultTableCellRenderer();
         rightRender.setHorizontalAlignment(SwingConstants.RIGHT);
-        rightRender.setFont(AppTheme.font(Font.PLAIN, 12));
-        rightRender.setForeground(AppTheme.TEXT_SECONDARY);
-        rightRender.setBorder(new EmptyBorder(0, 6, 0, 10));
         cartTable.getColumnModel().getColumn(3).setCellRenderer(rightRender);
+        cartTable.getColumnModel().getColumn(5).setCellRenderer(rightRender);
 
-        DefaultTableCellRenderer qtyRender = new DefaultTableCellRenderer();
-        qtyRender.setHorizontalAlignment(SwingConstants.CENTER);
-        qtyRender.setFont(AppTheme.font(Font.BOLD, 12));
-        qtyRender.setForeground(AppTheme.TEXT_PRIMARY);
-        cartTable.getColumnModel().getColumn(4).setCellRenderer(qtyRender);
+        JScrollPane tableScroll = new JScrollPane(cartTable);
+        tableScroll.setBorder(BorderFactory.createLineBorder(new Color(226, 232, 240)));
+        leftCenter.add(tableScroll, BorderLayout.CENTER);
 
-        DefaultTableCellRenderer totalRender = new DefaultTableCellRenderer();
-        totalRender.setHorizontalAlignment(SwingConstants.RIGHT);
-        totalRender.setFont(AppTheme.font(Font.BOLD, 13));
-        totalRender.setForeground(AppTheme.TEXT_PRIMARY);
-        totalRender.setBorder(new EmptyBorder(0, 6, 0, 12));
-        cartTable.getColumnModel().getColumn(5).setCellRenderer(totalRender);
+        // Cart status footer (Total items, units, delete button)
+        JPanel cartFooter = new JPanel(new BorderLayout(10, 0));
+        cartFooter.setBackground(Color.WHITE);
+        cartFooter.setBorder(new EmptyBorder(6, 12, 6, 12));
 
-        // Action Column: Sleek pill remove button
-        cartTable.getColumnModel().getColumn(6).setCellRenderer(new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
-                JLabel l = (JLabel) super.getTableCellRendererComponent(t, val, sel, focus, r, c);
-                l.setHorizontalAlignment(SwingConstants.CENTER);
-                l.setFont(AppTheme.font(Font.BOLD, 11));
-                l.setForeground(new Color(220, 38, 38));
-                l.setText("🗑️ Remove");
-                return l;
-            }
-        });
-
-        // Double click or click on action column removes
-        cartTable.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                int r = cartTable.rowAtPoint(e.getPoint());
-                int c = cartTable.columnAtPoint(e.getPoint());
-                if (r >= 0 && r < cartItems.size()) {
-                    if (c == 6) {
-                        removeItemFromCart(r);
-                    }
-                }
-            }
-        });
-
-        JViewport customViewport = new JViewport() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                if (cartItems == null || cartItems.isEmpty()) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-                    int w = getWidth();
-                    int h = getHeight();
-                    int cy = Math.max(140, h / 3);
-
-                    SidebarIcon cartIcon = new SidebarIcon("cart", 52, new Color(195, 222, 210));
-                    cartIcon.paintIcon(this, g2, (w - 52) / 2, cy - 65);
-
-                    g2.setColor(AppTheme.TEXT_PRIMARY);
-                    g2.setFont(AppTheme.font(Font.BOLD, 15));
-                    FontMetrics fm1 = g2.getFontMetrics();
-                    String t1 = "Your Billing Cart is Empty";
-                    g2.drawString(t1, (w - fm1.stringWidth(t1)) / 2, cy + 16);
-
-                    g2.setColor(AppTheme.TEXT_MUTED);
-                    g2.setFont(AppTheme.font(Font.PLAIN, 12));
-                    FontMetrics fm2 = g2.getFontMetrics();
-                    String t2 = "Scan a product barcode, type code, or press F1 to begin checkout";
-                    g2.drawString(t2, (w - fm2.stringWidth(t2)) / 2, cy + 38);
-
-                    g2.dispose();
-                }
-            }
-        };
-        customViewport.setOpaque(false);
-        customViewport.setView(cartTable);
-
-        JScrollPane tableScroll = new JScrollPane();
-        tableScroll.setViewport(customViewport);
-        tableScroll.setColumnHeaderView(cartTable.getTableHeader());
-        tableScroll.setBorder(BorderFactory.createEmptyBorder());
-        tableScroll.setOpaque(false);
-        tableScroll.getVerticalScrollBar().setUnitIncrement(16);
-        tableScroll.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
-        tableScroll.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
-            @Override
-            protected void configureScrollBarColors() {
-                this.thumbColor = new Color(205, 230, 215);
-                this.trackColor = new Color(248, 252, 249);
-            }
-            @Override
-            protected JButton createDecreaseButton(int orientation) {
-                return createZeroButton();
-            }
-            @Override
-            protected JButton createIncreaseButton(int orientation) {
-                return createZeroButton();
-            }
-            private JButton createZeroButton() {
-                JButton b = new JButton();
-                b.setPreferredSize(new Dimension(0, 0));
-                b.setMinimumSize(new Dimension(0, 0));
-                b.setMaximumSize(new Dimension(0, 0));
-                return b;
-            }
-            @Override
-            protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
-                if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) return;
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(isThumbRollover() ? AppTheme.FOREST_MID : thumbColor);
-                g2.fillRoundRect(thumbBounds.x + 1, thumbBounds.y + 2, thumbBounds.width - 2, thumbBounds.height - 4, 6, 6);
-                g2.dispose();
-            }
-            @Override
-            protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setColor(trackColor);
-                g2.fillRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height);
-                g2.dispose();
-            }
-        });
-
-        tableCard.add(tableScroll, BorderLayout.CENTER);
-
-        // Cart status footer
-        JPanel cartFooter = new JPanel(new BorderLayout(10, 0)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setColor(new Color(248, 252, 249));
-                g2.fillRect(0, 0, getWidth(), getHeight());
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawLine(0, 0, getWidth(), 0);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        cartFooter.setOpaque(false);
-        cartFooter.setBorder(new EmptyBorder(8, 14, 8, 14));
-
-        JPanel statsLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        JPanel statsLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
         statsLeft.setOpaque(false);
-
-        lblItemsCount = new JLabel("Items: 0") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(240, 250, 244));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        lblItemsCount.setFont(AppTheme.font(Font.BOLD, 11));
-        lblItemsCount.setForeground(AppTheme.FOREST_MID);
-        lblItemsCount.setBorder(new EmptyBorder(3, 8, 3, 8));
+        lblItemsCount = new JLabel("Items: 0");
+        lblItemsCount.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblItemsCount.setForeground(new Color(71, 85, 105));
         statsLeft.add(lblItemsCount);
 
-        lblTotalQty = new JLabel("Total Qty: 0") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(240, 250, 244));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        lblTotalQty.setFont(AppTheme.font(Font.BOLD, 11));
-        lblTotalQty.setForeground(AppTheme.FOREST_MID);
-        lblTotalQty.setBorder(new EmptyBorder(3, 8, 3, 8));
+        lblTotalQty = new JLabel("Total Qty: 0");
+        lblTotalQty.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblTotalQty.setForeground(new Color(71, 85, 105));
         statsLeft.add(lblTotalQty);
         cartFooter.add(statsLeft, BorderLayout.WEST);
 
-        cartActionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        cartActionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         cartActionsPanel.setOpaque(false);
 
-        JButton btnIncQty = createPillButton("➕ Qty +1", new Color(240, 250, 244), AppTheme.BORDER_SAGE, AppTheme.TEXT_PRIMARY);
+        JButton btnIncQty = new JButton("➕ Qty +1");
+        btnIncQty.setFont(new Font("Segoe UI", Font.BOLD, 11));
         cartActionsPanel.add(btnIncQty);
 
-        JButton btnDecQty = createPillButton("➖ Qty -1", new Color(240, 250, 244), AppTheme.BORDER_SAGE, AppTheme.TEXT_PRIMARY);
+        JButton btnDecQty = new JButton("➖ Qty -1");
+        btnDecQty.setFont(new Font("Segoe UI", Font.BOLD, 11));
         cartActionsPanel.add(btnDecQty);
 
-        JButton btnRemove = createPillButton("🗑️ Remove", new Color(254, 242, 242), new Color(254, 202, 202), new Color(220, 38, 38));
+        JButton btnRemove = new JButton("🗑 Remove");
+        btnRemove.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnRemove.setBackground(new Color(239, 68, 68));
+        btnRemove.setForeground(Color.WHITE);
         cartActionsPanel.add(btnRemove);
 
-        JButton btnClear = createPillButton("Clear All", new Color(248, 250, 252), new Color(226, 232, 240), AppTheme.TEXT_MUTED);
+        JButton btnClear = new JButton("Clear All");
+        btnClear.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         cartActionsPanel.add(btnClear);
 
-        btnQuickCheckout = createPillButton("💳 Pay & Print (Ctrl+Enter)", AppTheme.FOREST_GREEN, AppTheme.FOREST_GREEN, Color.WHITE);
+        btnQuickCheckout = new JButton("💳 Pay & Print (Ctrl+Enter)");
+        btnQuickCheckout.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnQuickCheckout.setBackground(AppTheme.FOREST_GREEN);
+        btnQuickCheckout.setForeground(Color.WHITE);
         btnQuickCheckout.setFocusPainted(false);
         cartActionsPanel.add(btnQuickCheckout);
 
         cartFooter.add(cartActionsPanel, BorderLayout.EAST);
-        tableCard.add(cartFooter, BorderLayout.SOUTH);
+        leftCenter.add(cartFooter, BorderLayout.SOUTH);
 
-        leftCenter.add(tableCard, BorderLayout.CENTER);
         add(leftCenter, BorderLayout.CENTER);
 
-        // RIGHT: POS Checkout Console Hub
-        JPanel rightHub = new JPanel(new BorderLayout(0, 10));
+        // RIGHT: Mall POS Checkout Hub (Totals, Discount, Numpad, Quick Cash, UPI, Checkout)
+        JPanel rightHub = new JPanel(new BorderLayout(10, 10));
         rightHub.setPreferredSize(new Dimension(360, 0));
         rightHub.setOpaque(false);
 
-        // 1. Total Bill Hero Card - Deep Forest Gradient
-        JPanel totalDisplayCard = new JPanel(new BorderLayout(0, 8)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-                int r = 24;
+        // 1. Total Bill Display Card
+        JPanel totalDisplayCard = new JPanel(new BorderLayout(5, 5));
+        totalDisplayCard.setBackground(AppTheme.FOREST_DEEP);
+        totalDisplayCard.setBorder(new EmptyBorder(12, 16, 12, 16));
 
-                g2.setColor(new Color(0, 50, 30, 12));
-                g2.fillRoundRect(1, 2, w - 2, h - 2, r, r);
-
-                GradientPaint gp = new GradientPaint(0, 0, AppTheme.FOREST_DEEP, w, h, AppTheme.FOREST_GREEN);
-                g2.setPaint(gp);
-                g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
-
-                Shape clip = new RoundRectangle2D.Float(0, 0, w, h, r, r);
-                g2.setClip(clip);
-                SidebarIcon bgIcon = new SidebarIcon("wallet", 58, Color.WHITE);
-                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.12f));
-                bgIcon.paintIcon(this, g2, w - 68, 14);
-
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        totalDisplayCard.setOpaque(false);
-        totalDisplayCard.setBorder(new EmptyBorder(14, 18, 14, 18));
-
-        JLabel lblPayableTitle = new JLabel("TOTAL AMOUNT DUE");
-        lblPayableTitle.setFont(AppTheme.font(Font.BOLD, 10));
-        lblPayableTitle.setForeground(new Color(193, 247, 0, 210));
+        JLabel lblPayableTitle = new JLabel("TOTAL PAYABLE");
+        lblPayableTitle.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblPayableTitle.setForeground(AppTheme.BORDER_SAGE);
         totalDisplayCard.add(lblPayableTitle, BorderLayout.NORTH);
 
         lblGrandTotal = new JLabel("₹0.00");
-        lblGrandTotal.setFont(AppTheme.font(Font.BOLD, 32));
+        lblGrandTotal.setFont(new Font("Segoe UI", Font.BOLD, 30));
         lblGrandTotal.setForeground(AppTheme.ELECTRIC_LIME);
         totalDisplayCard.add(lblGrandTotal, BorderLayout.CENTER);
 
-        JPanel subBreakdown = new JPanel(new GridLayout(3, 2, 4, 3));
+        JPanel subBreakdown = new JPanel(new GridLayout(3, 2, 4, 2));
         subBreakdown.setOpaque(false);
-        subBreakdown.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(255, 255, 255, 30)),
-                new EmptyBorder(8, 0, 0, 0)
-        ));
 
         subBreakdown.add(createWhiteLabel("Subtotal:"));
         lblSubtotal = createWhiteLabel("₹0.00", SwingConstants.RIGHT);
@@ -862,7 +492,7 @@ public class BillingPanel extends JPanel {
 
         subBreakdown.add(createWhiteLabel("Discount:"));
         lblDiscount = createWhiteLabel("₹0.00", SwingConstants.RIGHT);
-        lblDiscount.setForeground(new Color(254, 202, 202));
+        lblDiscount.setForeground(new Color(248, 113, 113));
         subBreakdown.add(lblDiscount);
 
         subBreakdown.add(createWhiteLabel("GST (18%):"));
@@ -872,132 +502,112 @@ public class BillingPanel extends JPanel {
         totalDisplayCard.add(subBreakdown, BorderLayout.SOUTH);
         rightHub.add(totalDisplayCard, BorderLayout.NORTH);
 
-        // 2. Middle Panel: Payment Tools, Cash Tendered, Change Due, Numpad
+        // 2. Middle: Quick Cash / Tendered & Discount Controls
         JPanel midPanel = new JPanel();
         midPanel.setLayout(new BoxLayout(midPanel, BoxLayout.Y_AXIS));
         midPanel.setOpaque(false);
 
-        // Discount & UPI Card
-        discountBar = createElevatedCard(18, 10, 12, 10, 12);
-        discountBar.setLayout(new BorderLayout(8, 6));
+        // Discount Toolbar
+        discountBar = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
+        discountBar.setBackground(Color.WHITE);
+        discountBar.setBorder(BorderFactory.createTitledBorder("🏷️ Bill Discount (Ctrl+D)"));
 
-        JLabel lblDiscHeader = new JLabel("PAYMENT TOOLS & DISCOUNT");
-        lblDiscHeader.setFont(AppTheme.font(Font.BOLD, 10));
-        lblDiscHeader.setForeground(AppTheme.TEXT_MUTED);
-        discountBar.add(lblDiscHeader, BorderLayout.NORTH);
+        btnAddDiscount = new JButton("Apply Discount");
+        btnAddDiscount.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnAddDiscount.setBackground(new Color(241, 245, 249));
+        discountBar.add(btnAddDiscount);
 
-        JPanel discBtnRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        discBtnRow.setOpaque(false);
+        btnRemoveDiscount = new JButton("Remove");
+        btnRemoveDiscount.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        discountBar.add(btnRemoveDiscount);
 
-        btnOpenUpi = createPillButton("📱 UPI QR (F6)", new Color(124, 58, 237), new Color(109, 40, 217), Color.WHITE);
-        btnAddDiscount = createPillButton("🏷️ Discount (Ctrl+D)", new Color(240, 250, 244), AppTheme.BORDER_SAGE, AppTheme.FOREST_GREEN);
-        btnRemoveDiscount = createPillButton("Remove", new Color(248, 250, 252), new Color(226, 232, 240), AppTheme.TEXT_MUTED);
-
-        discBtnRow.add(btnOpenUpi);
-        discBtnRow.add(btnAddDiscount);
-        discBtnRow.add(btnRemoveDiscount);
-        discountBar.add(discBtnRow, BorderLayout.CENTER);
+        btnOpenUpi = new JButton("📱 UPI QR (F6)");
+        btnOpenUpi.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnOpenUpi.setBackground(new Color(139, 92, 246));
+        btnOpenUpi.setForeground(Color.WHITE);
+        discountBar.add(btnOpenUpi);
 
         midPanel.add(discountBar);
-        midPanel.add(Box.createVerticalStrut(8));
+        midPanel.add(Box.createVerticalStrut(6));
 
-        // Quick Cash Presets Card
-        quickCashPanel = createElevatedCard(18, 10, 12, 10, 12);
-        quickCashPanel.setLayout(new BorderLayout(0, 6));
-
-        JLabel lblCashPresetsHeader = new JLabel("💵 QUICK CASH TENDERED");
-        lblCashPresetsHeader.setFont(AppTheme.font(Font.BOLD, 10));
-        lblCashPresetsHeader.setForeground(AppTheme.TEXT_MUTED);
-        quickCashPanel.add(lblCashPresetsHeader, BorderLayout.NORTH);
-
-        JPanel cashChipsGrid = new JPanel(new GridLayout(2, 3, 6, 6));
-        cashChipsGrid.setOpaque(false);
+        // Quick Cash Chips (₹100, ₹200, ₹500, ₹2000, Exact)
+        quickCashPanel = new JPanel(new GridLayout(2, 3, 5, 5));
+        quickCashPanel.setBackground(Color.WHITE);
+        quickCashPanel.setBorder(BorderFactory.createTitledBorder("💵 Quick Cash Tendered"));
 
         int[] cashPresets = {100, 200, 500, 1000, 2000};
         for (int p : cashPresets) {
-            JButton btnChip = createPillButton("₹" + p, new Color(248, 252, 249), AppTheme.BORDER_SAGE, AppTheme.TEXT_PRIMARY);
+            JButton btnChip = new JButton("₹" + p);
+            btnChip.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            btnChip.setBackground(new Color(248, 250, 252));
             btnChip.addActionListener(e -> setTenderedCash(p));
-            cashChipsGrid.add(btnChip);
+            quickCashPanel.add(btnChip);
         }
-        JButton btnExact = createPillButton("EXACT", new Color(236, 253, 243), new Color(167, 243, 208), new Color(2, 122, 72));
+        JButton btnExact = new JButton("EXACT");
+        btnExact.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btnExact.setBackground(new Color(220, 252, 231));
+        btnExact.setForeground(new Color(22, 101, 52));
         btnExact.addActionListener(e -> setTenderedCash(grandTotal));
-        cashChipsGrid.add(btnExact);
+        quickCashPanel.add(btnExact);
 
-        quickCashPanel.add(cashChipsGrid, BorderLayout.CENTER);
         midPanel.add(quickCashPanel);
-        midPanel.add(Box.createVerticalStrut(8));
+        midPanel.add(Box.createVerticalStrut(6));
 
-        // Cash Paid & Change Return Card
-        JPanel tenderCard = createElevatedCard(18, 10, 14, 10, 14);
-        tenderCard.setLayout(new GridLayout(2, 2, 10, 6));
+        // Cash Paid & Change Due Banner
+        JPanel tenderCard = new JPanel(new GridLayout(2, 2, 8, 4));
+        tenderCard.setBackground(Color.WHITE);
+        tenderCard.setBorder(new EmptyBorder(8, 10, 8, 10));
 
         JLabel lblCashTitle = new JLabel("Cash Paid (₹):");
-        lblCashTitle.setFont(AppTheme.font(Font.BOLD, 12));
-        lblCashTitle.setForeground(AppTheme.TEXT_PRIMARY);
+        lblCashTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
         tenderCard.add(lblCashTitle);
 
-        txtCashPaid = new JTextField("0.00") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(248, 252, 249));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        txtCashPaid.setOpaque(false);
-        txtCashPaid.setFont(AppTheme.font(Font.BOLD, 15));
+        txtCashPaid = new JTextField("0.00");
+        txtCashPaid.setFont(new Font("Segoe UI", Font.BOLD, 14));
         txtCashPaid.setHorizontalAlignment(JTextField.RIGHT);
-        txtCashPaid.setBorder(new EmptyBorder(4, 8, 4, 8));
         tenderCard.add(txtCashPaid);
 
         JLabel lblChangeTitle = new JLabel("Change Return:");
-        lblChangeTitle.setFont(AppTheme.font(Font.BOLD, 12));
+        lblChangeTitle.setFont(new Font("Segoe UI", Font.BOLD, 12));
         lblChangeTitle.setForeground(new Color(220, 38, 38));
         tenderCard.add(lblChangeTitle);
 
         lblChangeDue = new JLabel("₹0.00", SwingConstants.RIGHT);
-        lblChangeDue.setFont(AppTheme.font(Font.BOLD, 17));
-        lblChangeDue.setForeground(new Color(0, 135, 90));
+        lblChangeDue.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        lblChangeDue.setForeground(new Color(22, 163, 74));
         tenderCard.add(lblChangeDue);
 
         midPanel.add(tenderCard);
-        midPanel.add(Box.createVerticalStrut(8));
+        midPanel.add(Box.createVerticalStrut(6));
 
-        // Touch Numpad
-        numpadPanel = createElevatedCard(18, 10, 12, 10, 12);
-        numpadPanel.setLayout(new BorderLayout(0, 6));
-
-        JLabel lblNumpadTitle = new JLabel("🔢 ON-SCREEN NUMPAD");
-        lblNumpadTitle.setFont(AppTheme.font(Font.BOLD, 10));
-        lblNumpadTitle.setForeground(AppTheme.TEXT_MUTED);
-        numpadPanel.add(lblNumpadTitle, BorderLayout.NORTH);
-
-        JPanel numpadGrid = new JPanel(new GridLayout(4, 3, 5, 5));
-        numpadGrid.setOpaque(false);
+        // Touch Numpad (7-8-9, 4-5-6, 1-2-3, 0-.-C)
+        numpadPanel = new JPanel(new GridLayout(4, 3, 4, 4));
+        numpadPanel.setBackground(Color.WHITE);
+        numpadPanel.setBorder(BorderFactory.createTitledBorder("🔢 POS Numpad / NUPED Buttons"));
 
         String[] keys = {"7", "8", "9", "4", "5", "6", "1", "2", "3", "C", "0", "."};
         for (String k : keys) {
-            JButton btnKey = createPillButton(k, new Color(248, 252, 249), AppTheme.BORDER_SAGE, AppTheme.TEXT_PRIMARY);
-            btnKey.setFont(AppTheme.font(Font.BOLD, 13));
+            JButton btnKey = new JButton(k);
+            btnKey.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            btnKey.setBackground(new Color(248, 250, 252));
+            btnKey.setFocusPainted(false);
             btnKey.addActionListener(e -> handleNumpadKey(k));
-            numpadGrid.add(btnKey);
+            numpadPanel.add(btnKey);
         }
-        numpadPanel.add(numpadGrid, BorderLayout.CENTER);
         midPanel.add(numpadPanel);
 
         rightHub.add(midPanel, BorderLayout.CENTER);
 
-        // 3. Bottom Big Checkout CTA
+        // 3. Bottom Big Checkout Button
         JPanel bottomCheckout = new JPanel(new GridLayout(1, 1));
         bottomCheckout.setOpaque(false);
-        JButton btnPayPrint = createPillButton("💳 PAY & PRINT BILL (Ctrl+Enter)", AppTheme.FOREST_GREEN, AppTheme.FOREST_GREEN, Color.WHITE);
-        btnPayPrint.setFont(AppTheme.font(Font.BOLD, 14));
-        btnPayPrint.setPreferredSize(new Dimension(0, 50));
+        JButton btnPayPrint = new JButton("💳 PAY & PRINT BILL (Ctrl+Enter)");
+        btnPayPrint.setBackground(AppTheme.FOREST_GREEN);
+        btnPayPrint.setForeground(Color.WHITE);
+        btnPayPrint.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnPayPrint.setPreferredSize(new Dimension(0, 48));
+        btnPayPrint.setFocusPainted(false);
+        btnPayPrint.setCursor(new Cursor(Cursor.HAND_CURSOR));
         bottomCheckout.add(btnPayPrint);
 
         rightHub.add(bottomCheckout, BorderLayout.SOUTH);
@@ -1109,143 +719,6 @@ public class BillingPanel extends JPanel {
         lbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lbl.setForeground(new Color(226, 232, 240));
         return lbl;
-    }
-
-    private JButton createPillButton(String text, Color bg, Color border, Color fg) {
-        JButton btn = new JButton(text) {
-            private boolean hovered = false;
-            {
-                addMouseListener(new MouseAdapter() {
-                    @Override public void mouseEntered(MouseEvent e) { hovered = true; repaint(); }
-                    @Override public void mouseExited(MouseEvent e) { hovered = false; repaint(); }
-                });
-            }
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-                int r = h;
-
-                if (hovered) {
-                    if (bg.equals(AppTheme.FOREST_GREEN)) {
-                        g2.setColor(AppTheme.FOREST_MID);
-                    } else {
-                        g2.setColor(new Color(Math.max(0, bg.getRed() - 10), Math.max(0, bg.getGreen() - 10), Math.max(0, bg.getBlue() - 10)));
-                    }
-                } else {
-                    g2.setColor(bg);
-                }
-                g2.fillRoundRect(0, 0, w, h, r, r);
-
-                if (border != null) {
-                    g2.setColor(border);
-                    g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
-                }
-
-                g2.setColor(fg);
-                g2.setFont(getFont());
-                FontMetrics fm = g2.getFontMetrics();
-                int tx = (w - fm.stringWidth(getText())) / 2;
-                int ty = ((h - fm.getHeight()) / 2) + fm.getAscent();
-                g2.drawString(getText(), tx, ty);
-                g2.dispose();
-            }
-        };
-        btn.setFont(AppTheme.font(Font.BOLD, 11));
-        btn.setForeground(fg);
-        btn.setFocusPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setBorderPainted(false);
-        btn.setOpaque(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setBorder(new EmptyBorder(6, 12, 6, 12));
-        return btn;
-    }
-
-    private JPanel createElevatedCard(int arc, int topPad, int leftPad, int bottomPad, int rightPad) {
-        JPanel card = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-
-                g2.setColor(new Color(0, 50, 30, 5));
-                g2.fillRoundRect(1, 2, w - 2, h - 2, arc, arc);
-
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, w - 1, h - 1, arc, arc);
-
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
-
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        card.setOpaque(false);
-        card.setBorder(new EmptyBorder(topPad, leftPad, bottomPad, rightPad));
-        return card;
-    }
-
-    private static class ModernSearchField extends JTextField {
-        private final String placeholder;
-        private boolean focused = false;
-
-        public ModernSearchField(String placeholder, int columns) {
-            super(columns);
-            this.placeholder = placeholder;
-            setFont(AppTheme.font(Font.PLAIN, 12));
-            setOpaque(false);
-            setBorder(new EmptyBorder(6, 28, 6, 8));
-            setForeground(AppTheme.TEXT_PRIMARY);
-
-            addFocusListener(new FocusAdapter() {
-                @Override public void focusGained(FocusEvent e) { focused = true; repaint(); }
-                @Override public void focusLost(FocusEvent e) { focused = false; repaint(); }
-            });
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-            int w = getWidth(), h = getHeight();
-            int arc = 14;
-
-            g2.setColor(new Color(248, 252, 249));
-            g2.fillRoundRect(0, 0, w, h, arc, arc);
-
-            if (focused) {
-                g2.setColor(AppTheme.FOREST_GREEN);
-                g2.setStroke(new BasicStroke(1.5f));
-                g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
-            } else {
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
-            }
-
-            g2.setColor(focused ? AppTheme.FOREST_GREEN : AppTheme.TEXT_MUTED);
-            g2.setStroke(new BasicStroke(1.3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            int cx = 12, cy = h / 2 - 1, r = 4;
-            g2.drawOval(cx - r, cy - r, r * 2, r * 2);
-            g2.drawLine(cx + 3, cy + 3, cx + 7, cy + 7);
-
-            super.paintComponent(g);
-
-            if (getText().isEmpty() && !focused) {
-                g2.setColor(AppTheme.TEXT_MUTED);
-                g2.setFont(getFont());
-                FontMetrics fm = g2.getFontMetrics();
-                int ty = (h + fm.getAscent() - fm.getDescent()) / 2;
-                g2.drawString(placeholder, 28, ty);
-            }
-
-            g2.dispose();
-        }
     }
 
     private void setupGlobalKeyShortcuts() {
@@ -1732,9 +1205,6 @@ public class BillingPanel extends JPanel {
         }
 
         updateCashCalculations();
-        if (cartTable != null && cartTable.getParent() != null) {
-            cartTable.getParent().repaint();
-        }
     }
 
     private void setTenderedCash(double amt) {
