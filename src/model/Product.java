@@ -76,5 +76,13 @@ public class Product {
     public boolean isOutOfStock() {
         return quantity <= 0;
     }
+
+    @Override
+    public String toString() {
+        if (name != null && !name.trim().isEmpty()) {
+            return name + (code != null ? " (" + code + ")" : "");
+        }
+        return code != null ? code : "Product #" + id;
+    }
 }
 
