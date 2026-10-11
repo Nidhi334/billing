@@ -805,7 +805,7 @@ public class InventoryPanel extends JPanel {
     }
 
     private void initLedgerTable() {
-        String[] cols = {"#", "Product Code", "Product Name", "Category", "Current Stock", "Cost Valuation", "Sell Price", "Status", "Action"};
+        String[] cols = {"#", "Code", "Product Name", "Category", "Stock", "Cost Valuation", "Sell Price", "Status", "Action"};
         ledgerModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -813,14 +813,14 @@ public class InventoryPanel extends JPanel {
         setupTableStyle(ledgerTable);
 
         ledgerTable.getColumnModel().getColumn(0).setPreferredWidth(35);  // #
-        ledgerTable.getColumnModel().getColumn(1).setPreferredWidth(95);  // Code
-        ledgerTable.getColumnModel().getColumn(2).setPreferredWidth(170); // Name
+        ledgerTable.getColumnModel().getColumn(1).setPreferredWidth(75);  // Code
+        ledgerTable.getColumnModel().getColumn(2).setPreferredWidth(175); // Name
         ledgerTable.getColumnModel().getColumn(3).setPreferredWidth(100); // Category
-        ledgerTable.getColumnModel().getColumn(4).setPreferredWidth(90);  // Stock
-        ledgerTable.getColumnModel().getColumn(5).setPreferredWidth(100); // Valuation
-        ledgerTable.getColumnModel().getColumn(6).setPreferredWidth(95);  // Sell
-        ledgerTable.getColumnModel().getColumn(7).setPreferredWidth(105); // Status
-        ledgerTable.getColumnModel().getColumn(8).setPreferredWidth(80);  // Action
+        ledgerTable.getColumnModel().getColumn(4).setPreferredWidth(80);  // Stock
+        ledgerTable.getColumnModel().getColumn(5).setPreferredWidth(105); // Cost Valuation
+        ledgerTable.getColumnModel().getColumn(6).setPreferredWidth(90);  // Sell Price
+        ledgerTable.getColumnModel().getColumn(7).setPreferredWidth(100); // Status
+        ledgerTable.getColumnModel().getColumn(8).setPreferredWidth(75);  // Action
 
         DefaultTableCellRenderer centerRender = new DefaultTableCellRenderer();
         centerRender.setHorizontalAlignment(SwingConstants.CENTER);
