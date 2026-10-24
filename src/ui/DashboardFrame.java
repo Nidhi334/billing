@@ -54,9 +54,6 @@ public class DashboardFrame extends JFrame {
     private JPanel navBox;
     private boolean isSidebarCollapsed = false;
 
-    // Header badge for Touch vs Desktop
-    private JLabel lblModeBadge;
-
     // Stat card labels
     private JLabel lblTotalProducts, lblTotalStock, lblTotalCustomers, lblTotalSuppliers;
     private JLabel lblLowStock, lblTodaySales, lblMonthlySales, lblYearlySales, lblTotalRevenue;
@@ -169,21 +166,20 @@ public class DashboardFrame extends JFrame {
         navItems.clear();
         btnNavHome = new SidebarNavItem("Dashboard", "dashboard");
         btnNavBilling = new SidebarNavItem("New Sale / Billing", "billing");
-        btnNavSelfCheckout = new SidebarNavItem("Self Checkout", "self_checkout");
+        // btnNavSelfCheckout = new SidebarNavItem("Self Checkout", "self_checkout");
         btnNavBillHistory = new SidebarNavItem("Bill History / Orders", "bill_history");
         btnNavCustomers = new SidebarNavItem("Customers", "customers");
-        btnNavProducts = new SidebarNavItem("Products", "products");
-        btnNavInventory = new SidebarNavItem("Inventory / Stock", "inventory");
+        // Merged Products & Stock nav item
+        btnNavInventory = new SidebarNavItem("Products & Stock", "products");
         btnNavSuppliers = new SidebarNavItem("Suppliers", "suppliers");
         btnNavReports = new SidebarNavItem("Reports & P/L", "reports");
         btnNavSettings = new SidebarNavItem("Settings", "settings");
 
         navItems.add(btnNavHome);
         navItems.add(btnNavBilling);
-        navItems.add(btnNavSelfCheckout);
+        // navItems.add(btnNavSelfCheckout);
         navItems.add(btnNavBillHistory);
         navItems.add(btnNavCustomers);
-        navItems.add(btnNavProducts);
         navItems.add(btnNavInventory);
         navItems.add(btnNavSuppliers);
         navItems.add(btnNavReports);
@@ -208,8 +204,6 @@ public class DashboardFrame extends JFrame {
         sidebarFooter = new JPanel(new BorderLayout());
         sidebarFooter.setOpaque(false);
         sidebarFooter.setBorder(new EmptyBorder(6, 10, 14, 10));
-
-        lblModeBadge = createModeBadge();
 
         sidebar.add(sidebarFooter, BorderLayout.SOUTH);
 
@@ -269,6 +263,7 @@ public class DashboardFrame extends JFrame {
             cardLayout.show(contentPanel, "BILLING");
             billingPanel.focusBarcodeField();
         });
+        /*
         btnNavSelfCheckout.addActionListener(e -> {
             setActiveNavButton(btnNavSelfCheckout);
             showAdminChrome(false);
@@ -276,19 +271,22 @@ public class DashboardFrame extends JFrame {
             selfCheckoutPanel.focusScanInput();
             cardLayout.show(contentPanel, "SELF_CHECKOUT");
         });
+        */
         btnNavBillHistory.addActionListener(e -> {
             setActiveNavButton(btnNavBillHistory);
             showAdminChrome(true);
             billHistoryPanel.loadBillHistory();
             cardLayout.show(contentPanel, "BILL_HISTORY");
         });
-        btnNavProducts.addActionListener(e -> {
-            setActiveNavButton(btnNavProducts);
-            showAdminChrome(true);
-            productPanel.loadProductTable();
-            productPanel.loadCategories();
-            cardLayout.show(contentPanel, "PRODUCTS");
-        });
+        if (btnNavProducts != null) {
+            btnNavProducts.addActionListener(e -> {
+                setActiveNavButton(btnNavInventory);
+                showAdminChrome(true);
+                inventoryPanel.loadDropdownData();
+                inventoryPanel.refreshData();
+                cardLayout.show(contentPanel, "INVENTORY");
+            });
+        }
         btnNavInventory.addActionListener(e -> {
             setActiveNavButton(btnNavInventory);
             showAdminChrome(true);
@@ -492,13 +490,7 @@ public class DashboardFrame extends JFrame {
             roleLbl.setFont(AppTheme.font(Font.PLAIN, 10));
             roleLbl.setForeground(AppTheme.TEXT_MUTED);
 
-            JLabel dot = new JLabel("•");
-            dot.setFont(new Font("SansSerif", Font.PLAIN, 9));
-            dot.setForeground(new Color(180, 205, 192));
-
             subRow.add(roleLbl);
-            subRow.add(dot);
-            subRow.add(lblModeBadge);
 
             details.add(nameLbl);
             details.add(Box.createVerticalStrut(2));
@@ -539,30 +531,7 @@ public class DashboardFrame extends JFrame {
         sidebarFooter.repaint();
     }
 
-    private JLabel createModeBadge() {
-        JLabel badge = new JLabel("TOUCH") {
-            {
-                setFont(AppTheme.font(Font.BOLD, 9));
-                setOpaque(false);
-                setBorder(new EmptyBorder(2, 6, 2, 6));
-                setHorizontalAlignment(SwingConstants.CENTER);
-            }
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                g2.setColor(getBackground());
-                int h = getHeight();
-                g2.fillRoundRect(0, 0, getWidth(), h, h, h);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        badge.setBackground(AppTheme.ELECTRIC_LIME);
-        badge.setForeground(AppTheme.FOREST_DEEP);
-        return badge;
-    }
+
 
     private JComponent createUserAvatar(int size) {
         String name = currentUser.getFullName();
@@ -683,41 +652,16 @@ public class DashboardFrame extends JFrame {
     }
 
     public void updateUIVisibilityFromSettings() {
-        boolean isTouch = AppSettings.isTouchMode();
-        if (lblModeBadge != null) {
-            if (isTouch) {
-                lblModeBadge.setText("TOUCH");
-                lblModeBadge.setBackground(AppTheme.ELECTRIC_LIME);
-                lblModeBadge.setForeground(AppTheme.FOREST_DEEP);
-            } else {
-                lblModeBadge.setText("DESKTOP");
-                lblModeBadge.setBackground(new Color(230, 244, 236));
-                lblModeBadge.setForeground(AppTheme.FOREST_GREEN);
-            }
-            lblModeBadge.repaint();
-        }
-
-        boolean showPos = AppSettings.getBoolean(AppSettings.KEY_SHOW_POS_NAV, true);
-        boolean showPrd = AppSettings.getBoolean(AppSettings.KEY_NAV_PRODUCTS, true);
-        boolean showInv = AppSettings.getBoolean(AppSettings.KEY_NAV_INVENTORY, true);
-        boolean showCust = AppSettings.getBoolean(AppSettings.KEY_NAV_CUSTOMERS, true);
-        boolean showSupp = AppSettings.getBoolean(AppSettings.KEY_NAV_SUPPLIERS, true);
-        boolean showRep = AppSettings.getBoolean(AppSettings.KEY_NAV_REPORTS, true);
         boolean isAdmin = currentUser.isAdmin();
 
         if (btnNavHome != null) btnNavHome.setVisible(isAdmin);
-        if (btnNavBilling != null) btnNavBilling.setVisible(showPos || !isAdmin);
-        if (btnNavSelfCheckout != null) btnNavSelfCheckout.setVisible(showPos || !isAdmin);
-        if (btnNavProducts != null) btnNavProducts.setVisible(isAdmin && showPrd);
-        if (btnNavInventory != null) btnNavInventory.setVisible(isAdmin && showInv);
-        if (btnNavCustomers != null) btnNavCustomers.setVisible(showCust);
-        if (btnNavSuppliers != null) btnNavSuppliers.setVisible(isAdmin && showSupp);
-        if (btnNavReports != null) btnNavReports.setVisible(showRep && isAdmin);
+        if (btnNavBilling != null) btnNavBilling.setVisible(true);
+        if (btnNavBillHistory != null) btnNavBillHistory.setVisible(true);
+        if (btnNavCustomers != null) btnNavCustomers.setVisible(true);
+        if (btnNavInventory != null) btnNavInventory.setVisible(isAdmin);
+        if (btnNavSuppliers != null) btnNavSuppliers.setVisible(isAdmin);
+        if (btnNavReports != null) btnNavReports.setVisible(isAdmin);
         if (btnNavSettings != null) btnNavSettings.setVisible(isAdmin);
-
-        if (billingPanel != null) {
-            billingPanel.applySettingsVisibility();
-        }
 
         revalidate();
         repaint();

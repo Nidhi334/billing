@@ -11,14 +11,19 @@ public class UserDAO {
     private static boolean userColumnsChecked = false;
 
     private synchronized void ensureSecurityColumns(Connection conn) {
-        if (userColumnsChecked) return;
+        if (userColumnsChecked)
+            return;
         try (Statement st = conn.createStatement()) {
-            st.execute("ALTER TABLE users ADD COLUMN security_question VARCHAR(255) DEFAULT 'What is your favorite color?' AFTER role");
-        } catch (Exception ignored) {}
+            st.execute(
+                    "ALTER TABLE users ADD COLUMN security_question VARCHAR(255) DEFAULT 'What is your favorite color?' AFTER role");
+        } catch (Exception ignored) {
+        }
 
         try (Statement st = conn.createStatement()) {
-            st.execute("ALTER TABLE users ADD COLUMN security_answer VARCHAR(255) DEFAULT 'blue' AFTER security_question");
-        } catch (Exception ignored) {}
+            st.execute(
+                    "ALTER TABLE users ADD COLUMN security_answer VARCHAR(255) DEFAULT 'blue' AFTER security_question");
+        } catch (Exception ignored) {
+        }
 
         userColumnsChecked = true;
     }
@@ -47,9 +52,11 @@ public class UserDAO {
         try (Connection conn = DBConnection.getConnection()) {
             ensureSecurityColumns(conn);
             try (PreparedStatement insert = conn.prepareStatement(
-                    "INSERT IGNORE INTO users (username, password, full_name, role, security_question, security_answer) VALUES " +
-                    "('admin', 'admin123', 'System Administrator', 'ADMIN', 'What is your pet name?', 'tiger'), " +
-                    "('staff', 'staff123', 'Cashier Desk', 'STAFF', 'What is your pet name?', 'buddy')")) {
+                    "INSERT IGNORE INTO users (username, password, full_name, role, security_question, security_answer) VALUES "
+                            +
+                            "('admin', 'admin123', 'System Administrator', 'ADMIN', 'What is your pet name?', 'tiger'), "
+                            +
+                            "('staff', 'staff123', 'Cashier Desk', 'STAFF', 'What is your pet name?', 'buddy')")) {
                 insert.executeUpdate();
             }
         } catch (Exception ex) {
@@ -105,7 +112,7 @@ public class UserDAO {
         try (Connection conn = DBConnection.getConnection()) {
             ensureSecurityColumns(conn);
             try (PreparedStatement ps = conn.prepareStatement(sql);
-                 ResultSet rs = ps.executeQuery()) {
+                    ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     list.add(mapUser(rs));
                 }
@@ -123,7 +130,8 @@ public class UserDAO {
                 ps.setString(2, user.getPassword());
                 ps.setString(3, user.getFullName());
                 ps.setString(4, user.getRole());
-                ps.setString(5, user.getSecurityQuestion() != null ? user.getSecurityQuestion() : "What is your favorite color?");
+                ps.setString(5, user.getSecurityQuestion() != null ? user.getSecurityQuestion()
+                        : "What is your favorite color?");
                 ps.setString(6, user.getSecurityAnswer() != null ? user.getSecurityAnswer() : "blue");
                 return ps.executeUpdate() > 0;
             }
@@ -141,7 +149,8 @@ public class UserDAO {
         try {
             user.setSecurityQuestion(rs.getString("security_question"));
             user.setSecurityAnswer(rs.getString("security_answer"));
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return user;
     }
 }

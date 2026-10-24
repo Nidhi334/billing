@@ -1,5 +1,6 @@
 package ui;
 
+import config.AppSettings;
 import config.DBConnection;
 import dao.UserDAO;
 import model.User;
@@ -53,7 +54,7 @@ public class LoginPanel extends JPanel {
     private JButton btnLogin, btnDbConfig, btnForgotPassword;
     private JButton btnRoleDropdown;
     private RoleDropdownCard roleDropdownCard;
-    private boolean isAdmin = true;
+    private boolean isAdmin = true; // will be synced after remembered-user loads
     private JCheckBox chkRemember;
     private JButton btnTogglePassword;
     private boolean showPassword = false;
@@ -117,6 +118,16 @@ public class LoginPanel extends JPanel {
         txtUsername.addActionListener       (e -> txtPassword.requestFocusInWindow());
         btnForgotPassword.addActionListener (e -> forgotPwd());
         btnDbConfig.addActionListener       (e -> dbConfig());
+
+        SwingUtilities.invokeLater(() -> {
+            boolean remember = AppSettings.getBoolean(AppSettings.KEY_REMEMBER_TERMINAL, true);
+            String saved = AppSettings.getString(AppSettings.KEY_REMEMBERED_USERNAME, "");
+            if (remember && !saved.trim().isEmpty()) {
+                txtPassword.requestFocusInWindow();
+            } else {
+                txtUsername.requestFocusInWindow();
+            }
+        });
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -130,7 +141,8 @@ public class LoginPanel extends JPanel {
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 32, 16));
         topBar.setOpaque(false);
 
-        btnRoleDropdown = new JButton("Administrator", new ChevronIcon());
+        // Initial label will be synced with remembered user in buildRightFormPanel
+        btnRoleDropdown = new JButton(isAdmin ? "Administrator" : "Cashier Desk", new ChevronIcon());
         btnRoleDropdown.setHorizontalTextPosition(SwingConstants.LEFT);
         btnRoleDropdown.setIconTextGap(8);
         btnRoleDropdown.setFont(appFont(Font.BOLD, 13));
@@ -195,9 +207,21 @@ public class LoginPanel extends JPanel {
         form.add(Box.createVerticalStrut(26));
 
         // ── Username ──────────────────────────────────────────────────────────
+        boolean rememberMe = AppSettings.getBoolean(AppSettings.KEY_REMEMBER_TERMINAL, true);
+        String savedUser = AppSettings.getString(AppSettings.KEY_REMEMBERED_USERNAME, "admin");
+
+        // Sync role dropdown and isAdmin flag to match the remembered user
+        if (rememberMe && savedUser != null && !savedUser.trim().isEmpty()) {
+            boolean savedIsAdmin = "admin".equalsIgnoreCase(savedUser.trim());
+            this.isAdmin = savedIsAdmin;
+            if (btnRoleDropdown != null) {
+                btnRoleDropdown.setText(savedIsAdmin ? "Administrator" : "Cashier Desk");
+            }
+        }
+
         form.add(fLabel("Username or Staff ID"));
         form.add(Box.createVerticalStrut(5));
-        txtUsername = new JTextField("admin");
+        txtUsername = new JTextField(rememberMe ? savedUser : "");
         txtUsername.setFont(appFont(Font.PLAIN, 14));
         form.add(fWrap(txtUsername, null));
         form.add(Box.createVerticalStrut(16));
@@ -228,11 +252,19 @@ public class LoginPanel extends JPanel {
         optRow.setOpaque(false);
         optRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
         optRow.setAlignmentX(0f);
-        chkRemember = new JCheckBox("Remember this terminal", true);
+        chkRemember = new JCheckBox("Remember this terminal", rememberMe);
         chkRemember.setFont(appFont(Font.PLAIN, 13));
         chkRemember.setForeground(TEXT_SOFT);
         chkRemember.setOpaque(false);
         chkRemember.setFocusPainted(false);
+        chkRemember.addActionListener(e -> {
+            boolean isSel = chkRemember.isSelected();
+            AppSettings.setBoolean(AppSettings.KEY_REMEMBER_TERMINAL, isSel);
+            if (!isSel) {
+                AppSettings.setString(AppSettings.KEY_REMEMBERED_USERNAME, "");
+            }
+            AppSettings.saveSettings();
+        });
         btnForgotPassword = new JButton("Forgot Password?");
         btnForgotPassword.setFont(appFont(Font.PLAIN, 13));
         btnForgotPassword.setForeground(MID_GREEN);
@@ -254,18 +286,17 @@ public class LoginPanel extends JPanel {
         form.add(orDivider());
         form.add(Box.createVerticalStrut(14));
 
-        // ── Secondary ghost pill buttons ──────────────────────────────────────
-        JPanel secRow = new JPanel(new GridLayout(1, 2, 10, 0));
-        secRow.setOpaque(false);
-        secRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
-        secRow.setAlignmentX(0f);
-        JButton btnDemo  = ghostPill("Quick Demo",    new VecIcon("bolt", 14, TEXT_MED));
-        JButton btnKiosk = ghostPill("Self-Checkout", new VecIcon("cart", 14, TEXT_MED));
-        btnDemo.addActionListener (e -> launchDemo());
-        btnKiosk.addActionListener(e -> { stopVideo(); new SelfCheckoutFrame(null).setVisible(true); });
-        secRow.add(btnDemo);
-        secRow.add(btnKiosk);
-        form.add(secRow);
+        // ── Secondary ghost pill button (Customer Self-Checkout) ──────────────
+        JButton btnKiosk = ghostPill("Customer Self-Checkout", new VecIcon("cart", 14, TEXT_MED));
+        btnKiosk.setPreferredSize(new Dimension(380, 44));
+        btnKiosk.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
+        btnKiosk.setAlignmentX(0f);
+        btnKiosk.addActionListener(e -> {
+            stopVideo();
+            if (parentFrame != null) parentFrame.setVisible(false);
+            new SelfCheckoutFrame(null).setVisible(true);
+        });
+        form.add(btnKiosk);
         form.add(Box.createVerticalStrut(28));
 
         // ── Footer ────────────────────────────────────────────────────────────
@@ -907,10 +938,12 @@ public class LoginPanel extends JPanel {
             if (defA || defS) {
                 if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(this,
                         "MySQL is not running.\nLaunch in OFFLINE / DEMO MODE?",
-                        "MySQL Offline", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE))
+                        "MySQL Offline", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE)) {
+                    persistRememberTerminal(user);
                     launchDashboard(defA
                         ? new User(1, "admin", "admin123", "System Administrator (Demo)", "ADMIN")
                         : new User(2, "staff", "staff123", "Cashier Desk (Demo)", "STAFF"));
+                }
             } else {
                 JOptionPane.showMessageDialog(this,
                     conn ? "MySQL is offline.\n\nsudo systemctl start mysql\n\nOr use: admin / admin123"
@@ -919,8 +952,28 @@ public class LoginPanel extends JPanel {
             }
             return;
         }
-        if (u == null) { JOptionPane.showMessageDialog(this, "Invalid credentials.", "Login Failed", JOptionPane.ERROR_MESSAGE); return; }
+        if (u == null) {
+            String hint = isAdmin
+                ? "Default Admin: admin / admin123"
+                : "Default Staff: staff / staff123";
+            JOptionPane.showMessageDialog(this,
+                "Invalid credentials.\n\n" + hint,
+                "Login Failed", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        persistRememberTerminal(user);
         launchDashboard(u);
+    }
+
+    private void persistRememberTerminal(String username) {
+        boolean remember = chkRemember != null && chkRemember.isSelected();
+        AppSettings.setBoolean(AppSettings.KEY_REMEMBER_TERMINAL, remember);
+        if (remember) {
+            AppSettings.setString(AppSettings.KEY_REMEMBERED_USERNAME, username);
+        } else {
+            AppSettings.setString(AppSettings.KEY_REMEMBERED_USERNAME, "");
+        }
+        AppSettings.saveSettings();
     }
 
     private void forgotPwd() {

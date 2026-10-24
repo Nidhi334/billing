@@ -40,6 +40,18 @@ public class SelfCheckoutFrame extends JFrame {
                 "Exit Self-Checkout", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         if (res == JOptionPane.YES_OPTION) {
             dispose();
+            boolean found = false;
+            for (Frame f : Frame.getFrames()) {
+                if (f instanceof LoginFrame && f.isDisplayable()) {
+                    f.setVisible(true);
+                    f.toFront();
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                SwingUtilities.invokeLater(() -> new LoginFrame().setVisible(true));
+            }
         }
     }
 

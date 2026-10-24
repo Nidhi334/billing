@@ -65,7 +65,7 @@ public class ProductImageUtil {
             if (sanitizedName.endsWith("_")) sanitizedName = sanitizedName.substring(0, sanitizedName.length() - 1);
             if (!sanitizedName.isEmpty()) candidates.add(sanitizedName);
 
-            for (String kw : new String[]{"milk", "laptop", "mouse", "keyboard", "paper", "mango", "tv", "mobile", "mob", "amul", "dell"}) {
+            for (String kw : new String[]{"laptop", "mouse", "keyboard", "monitor", "headphone", "headphones", "paper", "pen", "sandisk", "flash_drive", "usb", "hub", "adapter", "notebook"}) {
                 if (pName.contains(kw)) candidates.add(kw);
             }
 
@@ -145,11 +145,23 @@ public class ProductImageUtil {
         File inDir = new File(IMAGES_DIR, f.getName());
         if (inDir.exists()) return inDir;
 
+        // Try alternate extensions (e.g. .jpg when .png was configured, or vice-versa)
+        String baseName = f.getName();
+        int dot = baseName.lastIndexOf('.');
+        if (dot > 0) {
+            String rawBase = baseName.substring(0, dot);
+            for (String altExt : new String[]{".jpg", ".jpeg", ".png", ".webp"}) {
+                File altFile = new File(IMAGES_DIR, rawBase + altExt);
+                if (altFile.exists()) return altFile;
+            }
+        }
+
         return null;
     }
 
     /**
-     * Copies an uploaded image file into data/product_images and returns the relative path.
+     * Compresses and converts an uploaded product image into a 4:3 aspect ratio JPEG,
+     * saving it into data/product_images/ and returning the relative path.
      */
     public static String saveProductImage(File sourceFile, String productCode) {
         if (sourceFile == null || !sourceFile.exists()) return null;
@@ -158,20 +170,19 @@ public class ProductImageUtil {
             File dir = new File(IMAGES_DIR);
             if (!dir.exists()) dir.mkdirs();
 
-            String ext = "png";
-            String name = sourceFile.getName();
-            int dot = name.lastIndexOf('.');
-            if (dot > 0 && dot < name.length() - 1) {
-                ext = name.substring(dot + 1).toLowerCase();
-            }
-
             String safeCode = (productCode != null && !productCode.trim().isEmpty())
                     ? productCode.replaceAll("[^a-zA-Z0-9_-]", "_")
                     : "prod";
-            String newFileName = "prod_" + safeCode + "_" + System.currentTimeMillis() + "." + ext;
+            String newFileName = "prod_" + safeCode + "_" + System.currentTimeMillis() + ".jpg";
             File destFile = new File(dir, newFileName);
 
-            Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            try {
+                ImageCompressor.compressTo4x3Jpg(sourceFile, destFile, ImageCompressor.TARGET_WIDTH, ImageCompressor.JPEG_QUALITY);
+            } catch (Exception ex) {
+                // Fallback copy if compression fails
+                Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+
             clearCache();
             return destFile.getPath();
         } catch (Exception ex) {
@@ -189,44 +200,40 @@ public class ProductImageUtil {
     }
 
     /**
-     * Scale a BufferedImage into an ImageIcon with rounded corners and high-quality rendering.
+     * Scale a BufferedImage into an ImageIcon with cover mode (object-fit: cover),
+     * rounded corners and high-quality rendering.
      */
     private static ImageIcon createScaledIcon(BufferedImage src, int targetW, int targetH) {
         BufferedImage out = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = out.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
         // Rounded clip
-        g2.setClip(new RoundRectangle2D.Float(0, 0, targetW, targetH, 12, 12));
+        g2.setClip(new RoundRectangle2D.Float(0, 0, targetW, targetH, 8, 8));
 
         // Soft background fill
         g2.setColor(new Color(248, 250, 252));
         g2.fillRect(0, 0, targetW, targetH);
 
-        // Aspect-ratio fit
-        double srcRatio = (double) src.getWidth() / src.getHeight();
-        double targetRatio = (double) targetW / targetH;
-        int drawW = targetW;
-        int drawH = targetH;
-        int drawX = 0;
-        int drawY = 0;
-
-        if (srcRatio > targetRatio) {
-            drawH = (int) (targetW / srcRatio);
-            drawY = (targetH - drawH) / 2;
-        } else {
-            drawW = (int) (targetH * srcRatio);
-            drawX = (targetW - drawW) / 2;
+        // Aspect-ratio COVER (fills entire target area, crops excess, perfectly centered)
+        int imgW = src.getWidth();
+        int imgH = src.getHeight();
+        if (imgW > 0 && imgH > 0) {
+            double scale = Math.max((double) targetW / imgW, (double) targetH / imgH);
+            int drawW = Math.max(1, (int) Math.round(imgW * scale));
+            int drawH = Math.max(1, (int) Math.round(imgH * scale));
+            int drawX = (targetW - drawW) / 2;
+            int drawY = (targetH - drawH) / 2;
+            g2.drawImage(src, drawX, drawY, drawW, drawH, null);
         }
-
-        g2.drawImage(src, drawX, drawY, drawW, drawH, null);
 
         // Soft border
         g2.setClip(null);
         g2.setColor(new Color(226, 232, 240));
         g2.setStroke(new BasicStroke(1f));
-        g2.draw(new RoundRectangle2D.Float(0.5f, 0.5f, targetW - 1f, targetH - 1f, 12, 12));
+        g2.draw(new RoundRectangle2D.Float(0.5f, 0.5f, targetW - 1f, targetH - 1f, 8, 8));
         g2.dispose();
 
         return new ImageIcon(out);
@@ -296,13 +303,13 @@ public class ProductImageUtil {
         }
 
         // Draw rounded gradient background
-        g2.setClip(new RoundRectangle2D.Float(0, 0, width, height, 12, 12));
+        g2.setClip(new RoundRectangle2D.Float(0, 0, width, height, 8, 8));
         GradientPaint gp = new GradientPaint(0, 0, topColor, 0, height, bottomColor);
         g2.setPaint(gp);
         g2.fillRect(0, 0, width, height);
 
         // Center emoji / icon
-        int fontSize = Math.max(22, Math.min(width, height) / 2);
+        int fontSize = Math.max(20, Math.min(width, height) / 2);
         g2.setFont(new Font("Segoe UI Emoji", Font.PLAIN, fontSize));
         FontMetrics fm = g2.getFontMetrics();
         int iconX = (width - fm.stringWidth(iconEmoji)) / 2;
@@ -329,7 +336,7 @@ public class ProductImageUtil {
         g2.setClip(null);
         g2.setColor(new Color(accentColor.getRed(), accentColor.getGreen(), accentColor.getBlue(), 60));
         g2.setStroke(new BasicStroke(1f));
-        g2.draw(new RoundRectangle2D.Float(0.5f, 0.5f, width - 1f, height - 1f, 12, 12));
+        g2.draw(new RoundRectangle2D.Float(0.5f, 0.5f, width - 1f, height - 1f, 8, 8));
         g2.dispose();
 
         return new ImageIcon(img);

@@ -17,6 +17,9 @@ echo "    Compiling Billing & Inventory Management System...    "
 echo "=========================================================="
 
 mkdir -p bin
+if [ -f "tools/camera_scanner.m" ] && ( [ ! -f "bin/camera_scanner" ] || [ "tools/camera_scanner.m" -nt "bin/camera_scanner" ] ); then
+    clang -O2 -framework Foundation -framework AVFoundation -framework Vision -framework AppKit -framework CoreMedia -framework CoreVideo -framework CoreImage tools/camera_scanner.m -o bin/camera_scanner 2>/dev/null || true
+fi
 javac -cp "lib/*:src" -d bin src/config/*.java src/model/*.java src/dao/*.java src/util/*.java src/ui/*.java src/App.java
 
 if [ $? -eq 0 ]; then

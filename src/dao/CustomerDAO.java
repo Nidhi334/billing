@@ -130,5 +130,18 @@ public class CustomerDAO {
         } catch (Exception ignored) {}
         return new double[]{0.0, 0.0};
     }
+
+    public java.util.Map<Integer, double[]> getAllCustomerStats() {
+        java.util.Map<Integer, double[]> map = new java.util.HashMap<>();
+        String sql = "SELECT customer_id, COUNT(*) AS total_orders, COALESCE(SUM(total_amount), 0) AS total_spent FROM sales WHERE customer_id IS NOT NULL GROUP BY customer_id";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                map.put(rs.getInt("customer_id"), new double[]{rs.getDouble("total_orders"), rs.getDouble("total_spent")});
+            }
+        } catch (Exception ignored) {}
+        return map;
+    }
 }
 

@@ -136,19 +136,35 @@ INSERT IGNORE INTO users (id, username, password, full_name, role) VALUES
 INSERT IGNORE INTO categories (id, name, description) VALUES
 (1, 'Electronics', 'Laptops, Monitors, Gadgets'),
 (2, 'Accessories', 'Mice, Keyboards, Cables'),
-(3, 'Stationery', 'Office supplies, paper, notebooks');
-`
+(3, 'Stationery', 'Office supplies, paper, notebooks'),
+(4, 'Storage & Networking', 'USB Drives, Adapters, Cables');
+
 -- Suppliers
 INSERT IGNORE INTO suppliers (id, name, company_name, phone, email, address) VALUES
 (1, 'Tech Wholesale Ltd', 'Tech Distributors Co.', '9876543210', 'sales@techwholesale.com', 'Plot 42, Industrial Area, Delhi'),
 (2, 'Global Office Hub', 'Global Supplies Inc', '9811223344', 'contact@globalsupplies.com', 'MG Road, Bangalore');
 
--- Sample Products
-INSERT IGNORE INTO products (id, code, name, category_id, purchase_price, selling_price, quantity, min_stock_level) VALUES
-(1, 'PRD-001', 'Dell Inspiron Laptop', 1, 42000.00, 50000.00, 10, 3),
-(2, 'PRD-002', 'Wireless Optical Mouse', 2, 350.00, 500.00, 25, 5),
-(3, 'PRD-003', 'Mechanical Keyboard', 2, 550.00, 800.00, 15, 4),
-(4, 'PRD-004', 'A4 Paper Ream (500 Sheets)', 3, 200.00, 320.00, 4, 10);
+-- Sample 10 Products with Fixed, Permanent Barcodes and Images
+INSERT INTO products (id, code, barcode, name, category_id, purchase_price, selling_price, quantity, min_stock_level, image_path) VALUES
+(1, 'PRD-001', '8901030383124', 'Dell Inspiron 15 Laptop', 1, 42000.00, 50000.00, 15, 3, 'data/product_images/PRD-001.jpg'),
+(2, 'PRD-002', '8901499028145', 'Logitech B170 Wireless Mouse', 2, 450.00, 799.00, 35, 5, 'data/product_images/PRD-002.jpg'),
+(3, 'PRD-003', '8901262010051', 'Mechanical Gaming Keyboard RGB', 2, 1200.00, 1899.00, 20, 4, 'data/product_images/PRD-003.jpg'),
+(4, 'PRD-004', '8901058852336', 'Samsung 24-inch FHD Monitor', 1, 7500.00, 9499.00, 12, 3, 'data/product_images/PRD-004.jpg'),
+(5, 'PRD-005', '8901030584910', 'Boat Rockerz 450 Bluetooth Headphones', 2, 850.00, 1499.00, 28, 5, 'data/product_images/PRD-005.jpg'),
+(6, 'PRD-006', '8901725131013', 'JK Copier A4 Paper Ream (500 Sheets)', 3, 210.00, 340.00, 60, 10, 'data/product_images/PRD-006.jpg'),
+(7, 'PRD-007', '8901324021038', 'Parker Classic Gold Ballpoint Pen', 3, 220.00, 350.00, 40, 8, 'data/product_images/PRD-007.jpg'),
+(8, 'PRD-008', '8902579100142', 'SanDisk 128GB Ultra USB 3.0 Flash Drive', 4, 480.00, 799.00, 45, 6, 'data/product_images/PRD-008.jpg'),
+(9, 'PRD-009', '8901030822197', 'Portronics 6-in-1 USB-C Hub Adapter', 2, 950.00, 1599.00, 18, 4, 'data/product_images/PRD-009.jpg'),
+(10, 'PRD-010', '8901058002151', 'Classmate Pulse Spiral Hardbound Notebook', 3, 110.00, 195.00, 50, 10, 'data/product_images/PRD-010.jpg')
+ON DUPLICATE KEY UPDATE 
+    barcode = VALUES(barcode),
+    name = VALUES(name),
+    category_id = VALUES(category_id),
+    purchase_price = VALUES(purchase_price),
+    selling_price = VALUES(selling_price),
+    quantity = VALUES(quantity),
+    min_stock_level = VALUES(min_stock_level),
+    image_path = VALUES(image_path);
 
 -- Sample Customers
 INSERT IGNORE INTO customers (id, name, phone, email, address) VALUES

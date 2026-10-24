@@ -1,16 +1,16 @@
 package ui;
 
-import config.DBConnection;
+import dao.CategoryDAO;
 import dao.ProductDAO;
-import dao.PurchaseDAO;
 import dao.ReportDAO;
 import dao.SupplierDAO;
+import model.Category;
 import model.Product;
 import model.Supplier;
+import util.ProductImageUtil;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -19,31 +19,29 @@ import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.geom.RoundRectangle2D;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Modern Inventory & Stock Management Hub adhering to Keyra Admin Design System.
- * Features:
- * - Elevated Header Strip with pill badge and fast actions
- * - 4 Interactive KPI Metric Cards (Total SKUs, Low Stock, Critical Out of Stock, Stock Valuation)
- * - Left Inward Stock-In Entry card with live product calculation & preview widget
- * - Right Multi-View Workspace with modern segmented tabs:
- *     1. Stock Reorder Alerts (Low & Out-of-Stock)
- *     2. Stock Movement History (Audit Trail)
- *     3. Complete Inventory Ledger
- * - Fast Search & Filter Chips across all views
- * - Instant "⚡ Restock" quick-action shortcut from tables to form
+ * Unified Modern Products & Stock Management Workspace.
+ * Adheres strictly to the Keyra Minimalist Design System:
+ * - Minimal, borderless header matching Dashboard style
+ * - SVG vector icons for tabs, actions, and status pills (zero emoji clutter)
+ * - Single unified workspace for both product catalog management and stock levels
+ * - Product image thumbnails displayed directly in each row
+ * - Dual inline action buttons per row: [Edit] and [Restock]
+ * - Smooth modal dialogs for editing product catalog details and inward restocking
+ * - Ambient drop shadow card with arc = 36 matching Dashboard
  */
 public class InventoryPanel extends JPanel {
 
     // DAOs
     private final ProductDAO productDAO = new ProductDAO();
     private final SupplierDAO supplierDAO = new SupplierDAO();
-    private final PurchaseDAO purchaseDAO = new PurchaseDAO();
     private final ReportDAO reportDAO = new ReportDAO();
+    private final CategoryDAO categoryDAO = new CategoryDAO();
 
     // Data Caches
     private List<Product> allProducts = new ArrayList<>();
@@ -52,27 +50,23 @@ public class InventoryPanel extends JPanel {
     private List<String[]> stockHistoryList = new ArrayList<>();
 
     // State
-    private String currentTab = "ALERTS"; // "ALERTS", "HISTORY", "LEDGER"
+    private String currentTab = "LEDGER"; // Default view: "LEDGER" (All Products & Stock), "ALERTS", "HISTORY"
+    private String ledgerFilter = "ALL";  // "ALL", "HEALTHY", "LOW", "OUT"
     private String alertsFilter = "ALL";  // "ALL", "OUT_OF_STOCK", "LOW_STOCK"
     private String historyFilter = "ALL"; // "ALL", "IN", "OUT"
-    private String ledgerFilter = "ALL";  // "ALL", "HEALTHY", "REORDER"
     private String searchQuery = "";
-    private Product selectedProduct = null;
 
-    // KPI Summary Labels
-    private JLabel lblKpiTotalSkus;
-    private JLabel lblKpiLowStock;
-    private JLabel lblKpiOutOfStock;
-    private JLabel lblKpiValuation;
-
-    // Segmented Tab Buttons
+    // Segmented Tab Buttons (Vector SVG icons)
+    private JButton btnTabLedger;
     private JButton btnTabAlerts;
     private JButton btnTabHistory;
-    private JButton btnTabLedger;
 
     // Table Cards & Models
     private CardLayout tableCardLayout;
     private JPanel tableCardContainer;
+
+    private JTable ledgerTable;
+    private DefaultTableModel ledgerModel;
 
     private JTable alertsTable;
     private DefaultTableModel alertsModel;
@@ -80,34 +74,15 @@ public class InventoryPanel extends JPanel {
     private JTable historyTable;
     private DefaultTableModel historyModel;
 
-    private JTable ledgerTable;
-    private DefaultTableModel ledgerModel;
-
     // Search & Filter Components
     private ModernSearchField txtSearch;
     private JPanel filterChipsPanel;
     private JLabel lblRecordCount;
 
-    // Stock-In Form Components
-    private JComboBox<Product> cmbProducts;
-    private JComboBox<Supplier> cmbSuppliers;
-    private ModernInputField txtQty;
-    private ModernInputField txtCostPrice;
-    private JButton btnAddStock;
-    private JButton btnClearForm;
-
-    // Live Product Preview & Math Widget
-    private JPanel pnlProductPreview;
-    private JLabel lblPreviewName;
-    private JLabel lblPreviewMeta;
-    private JLabel lblPreviewStockPill;
-    private JLabel lblPreviewMath;
-    private JLabel lblPreviewInvestment;
-
     public InventoryPanel() {
-        setLayout(new BorderLayout(0, 12));
+        setLayout(new BorderLayout(0, 14));
         setBackground(AppTheme.BG_CANVAS);
-        setBorder(new EmptyBorder(12, 14, 12, 14));
+        setBorder(new EmptyBorder(14, 18, 16, 18));
 
         initComponents();
         loadDropdownData();
@@ -116,356 +91,87 @@ public class InventoryPanel extends JPanel {
 
     private void initComponents() {
         // =========================================================================
-        // TOP SECTION: Elevated Header Strip + 4 Interactive KPI Summary Cards
+        // TOP SECTION: Minimal Header (Dashboard style, borderless & clean)
         // =========================================================================
-        JPanel topContainer = new JPanel(new BorderLayout(0, 10));
-        topContainer.setOpaque(false);
+        JPanel headerPanel = new JPanel(new BorderLayout(16, 0));
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(new EmptyBorder(4, 4, 16, 4));
 
-        // 1. Elevated Header Strip
-        JPanel headerStrip = new JPanel(new BorderLayout(14, 0)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-                int r = 18;
-                g2.setColor(new Color(0, 50, 30, 5));
-                g2.fillRoundRect(1, 2, w - 2, h - 2, r, r);
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        headerStrip.setOpaque(false);
-        headerStrip.setBorder(new EmptyBorder(8, 14, 8, 14));
-
-        JPanel headerLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        headerLeft.setOpaque(false);
-
-        JLabel lblTitle = new JLabel("📦 Inventory & Stock Control Hub");
-        lblTitle.setFont(AppTheme.font(Font.BOLD, 15));
+        JLabel lblTitle = new JLabel("Products & Stock");
+        lblTitle.setFont(AppTheme.font(Font.BOLD, 24));
         lblTitle.setForeground(AppTheme.TEXT_PRIMARY);
+        headerPanel.add(lblTitle, BorderLayout.WEST);
 
-        JLabel lblBadge = new JLabel(" SUPPLY & WAREHOUSE ") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getBackground());
-                int h = getHeight();
-                g2.fillRoundRect(0, 0, getWidth(), h, h, h);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        lblBadge.setFont(AppTheme.font(Font.BOLD, 9));
-        lblBadge.setOpaque(false);
-        lblBadge.setBackground(new Color(230, 245, 236));
-        lblBadge.setForeground(AppTheme.FOREST_DEEP);
-        lblBadge.setBorder(new EmptyBorder(3, 8, 3, 8));
-
-        JLabel lblSubtitle = new JLabel("Monitor warehouse stock levels, receive supplier shipments & track audit trails");
-        lblSubtitle.setFont(AppTheme.font(Font.PLAIN, 11));
-        lblSubtitle.setForeground(AppTheme.TEXT_MUTED);
-
-        headerLeft.add(lblTitle);
-        headerLeft.add(lblBadge);
-        headerLeft.add(lblSubtitle);
-        headerStrip.add(headerLeft, BorderLayout.WEST);
-
-        // Header Right Action Buttons
-        JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        // Header Right: Quick Categories Button, "+ Add Product / Stock" CTA & Smooth Refresh
+        JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         headerRight.setOpaque(false);
 
-        JButton btnQuickRestock = createPillButton("➕ Inward Stock-In", AppTheme.FOREST_GREEN, AppTheme.FOREST_GREEN, Color.WHITE);
-        btnQuickRestock.setFont(AppTheme.font(Font.BOLD, 11));
-        btnQuickRestock.addActionListener(e -> {
-            if (txtQty != null) txtQty.requestFocusInWindow();
-        });
-
-        JButton btnHeaderRefresh = createPillButton("🔄 Refresh Data", Color.WHITE, AppTheme.BORDER_SAGE, AppTheme.TEXT_SECONDARY);
-        btnHeaderRefresh.setFont(AppTheme.font(Font.BOLD, 11));
-        btnHeaderRefresh.addActionListener(e -> {
+        JButton btnCategories = createSecondaryActionButton("Categories", "tag");
+        btnCategories.addActionListener(e -> {
+            Window win = SwingUtilities.getWindowAncestor(this);
+            Frame frame = (win instanceof Frame) ? (Frame) win : null;
+            CategoryDialog dlg = new CategoryDialog(frame);
+            dlg.setVisible(true);
             loadDropdownData();
             refreshData();
         });
 
-        headerRight.add(btnQuickRestock);
-        headerRight.add(btnHeaderRefresh);
-        headerStrip.add(headerRight, BorderLayout.EAST);
+        JButton btnAddStock = createPrimaryActionButton("Add Product / Stock", "plus");
+        btnAddStock.addActionListener(e -> openAddStockDialog(null));
 
-        topContainer.add(headerStrip, BorderLayout.NORTH);
+        JButton btnRefresh = createCircularRefreshButton();
 
-        // 2. Row of 4 Elevated KPI Summary Metric Cards
-        JPanel kpiRow = new JPanel(new GridLayout(1, 4, 10, 0));
-        kpiRow.setOpaque(false);
-        kpiRow.setPreferredSize(new Dimension(0, 76));
+        headerRight.add(btnCategories);
+        headerRight.add(btnAddStock);
+        headerRight.add(btnRefresh);
 
-        lblKpiTotalSkus = new JLabel("0");
-        lblKpiLowStock = new JLabel("0");
-        lblKpiOutOfStock = new JLabel("0");
-        lblKpiValuation = new JLabel("₹0.00");
-
-        JPanel cardTotal = createKpiCard("TOTAL INVENTORY SKUs", lblKpiTotalSkus, "Active catalog products", AppTheme.FOREST_MID, "products", () -> {
-            switchTab("LEDGER");
-        });
-        JPanel cardLowStock = createKpiCard("LOW STOCK ALERTS", lblKpiLowStock, "Needs replenishment", new Color(234, 88, 12), "alert_triangle", () -> {
-            switchTab("ALERTS");
-            alertsFilter = "LOW_STOCK";
-            rebuildFilterChips();
-            applyActiveFilters();
-        });
-        JPanel cardOutOfStock = createKpiCard("OUT OF STOCK (CRITICAL)", lblKpiOutOfStock, "Depleted inventory (0)", new Color(220, 38, 38), "zap", () -> {
-            switchTab("ALERTS");
-            alertsFilter = "OUT_OF_STOCK";
-            rebuildFilterChips();
-            applyActiveFilters();
-        });
-        JPanel cardValuation = createKpiCard("STOCK VALUATION", lblKpiValuation, "Total warehouse cost asset", AppTheme.FOREST_DEEP, "wallet", () -> {
-            refreshData();
-        });
-
-        kpiRow.add(cardTotal);
-        kpiRow.add(cardLowStock);
-        kpiRow.add(cardOutOfStock);
-        kpiRow.add(cardValuation);
-
-        topContainer.add(kpiRow, BorderLayout.SOUTH);
-        add(topContainer, BorderLayout.NORTH);
+        headerPanel.add(headerRight, BorderLayout.EAST);
+        add(headerPanel, BorderLayout.NORTH);
 
         // =========================================================================
-        // CENTER: 2-COLUMN WORKSPACE (Left Form Card + Right Intelligence Workspace)
+        // CENTER: FULL-WIDTH MULTI-VIEW WORKSPACE CARD (Uncluttered, Spacious)
+        // Matching Dashboard card styling: borderless, subtle drop shadow, arc = 36
         // =========================================================================
-        JPanel centerSplit = new JPanel(new BorderLayout(12, 0));
-        centerSplit.setOpaque(false);
+        JPanel tableCard = createElevatedCard(36);
+        tableCard.setLayout(new BorderLayout(0, 10));
+        tableCard.setBorder(new EmptyBorder(18, 20, 18, 20));
 
-        // -------------------------------------------------------------------------
-        // LEFT COLUMN: Elevated Inward Stock-In Card (380px)
-        // -------------------------------------------------------------------------
-        JPanel formCard = createElevatedCard(20);
-        formCard.setPreferredSize(new Dimension(380, 0));
-        formCard.setLayout(new BorderLayout(0, 10));
-        formCard.setBorder(new EmptyBorder(12, 14, 12, 14));
-
-        // Form Card Header
-        JPanel formHeader = new JPanel(new BorderLayout(8, 0));
-        formHeader.setOpaque(false);
-
-        JPanel formTitleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        formTitleRow.setOpaque(false);
-
-        JLabel lblFormTitle = new JLabel("📥 Inward Stock-In Entry");
-        lblFormTitle.setFont(AppTheme.font(Font.BOLD, 14));
-        lblFormTitle.setForeground(AppTheme.TEXT_PRIMARY);
-
-        JLabel lblFormBadge = new JLabel("PURCHASE INWARD") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getBackground());
-                int h = getHeight();
-                g2.fillRoundRect(0, 0, getWidth(), h, h, h);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        lblFormBadge.setFont(AppTheme.font(Font.BOLD, 9));
-        lblFormBadge.setOpaque(false);
-        lblFormBadge.setBackground(new Color(230, 248, 238));
-        lblFormBadge.setForeground(AppTheme.FOREST_GREEN);
-        lblFormBadge.setBorder(new EmptyBorder(2, 6, 2, 6));
-
-        formTitleRow.add(lblFormTitle);
-        formTitleRow.add(lblFormBadge);
-        formHeader.add(formTitleRow, BorderLayout.WEST);
-
-        btnClearForm = createPillButton("Reset", new Color(248, 250, 252), new Color(226, 232, 240), AppTheme.TEXT_MUTED);
-        btnClearForm.setFont(AppTheme.font(Font.PLAIN, 11));
-        btnClearForm.setPreferredSize(new Dimension(64, 26));
-        btnClearForm.addActionListener(e -> clearForm());
-        formHeader.add(btnClearForm, BorderLayout.EAST);
-
-        formCard.add(formHeader, BorderLayout.NORTH);
-
-        // Form Fields Container
-        JPanel formBody = new JPanel();
-        formBody.setLayout(new BoxLayout(formBody, BoxLayout.Y_AXIS));
-        formBody.setOpaque(false);
-        formBody.setBorder(new EmptyBorder(0, 0, 8, 2));
-
-        // Dynamic Live Product Calculation & Preview Hero Card
-        pnlProductPreview = createProductPreviewHeroWidget();
-        formBody.add(pnlProductPreview);
-        formBody.add(Box.createVerticalStrut(10));
-
-        // Field 1: Product Selection
-        JPanel prodRow = new JPanel(new BorderLayout(0, 4));
-        prodRow.setOpaque(false);
-        prodRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 58));
-        prodRow.add(createFieldLabel("Select Target Product:"), BorderLayout.NORTH);
-
-        cmbProducts = new JComboBox<>();
-        styleComboBox(cmbProducts);
-        cmbProducts.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                JLabel l = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                l.setBorder(new EmptyBorder(4, 8, 4, 8));
-                if (value instanceof Product) {
-                    Product p = (Product) value;
-                    String stockStatus = p.getQuantity() <= 0 ? " (OUT OF STOCK)" : " (Stock: " + p.getQuantity() + ")";
-                    l.setText(p.getName() + " [" + p.getCode() + "]" + stockStatus);
-                } else if (value == null) {
-                    l.setText("— Choose a Product to Restock —");
-                }
-                return l;
-            }
-        });
-        cmbProducts.addActionListener(e -> onProductSelected());
-        prodRow.add(cmbProducts, BorderLayout.CENTER);
-        formBody.add(prodRow);
-        formBody.add(Box.createVerticalStrut(8));
-
-        // Field 2: Supplier Selection
-        JPanel suppRow = new JPanel(new BorderLayout(0, 4));
-        suppRow.setOpaque(false);
-        suppRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 58));
-        suppRow.add(createFieldLabel("Select Vendor / Supplier:"), BorderLayout.NORTH);
-
-        cmbSuppliers = new JComboBox<>();
-        styleComboBox(cmbSuppliers);
-        cmbSuppliers.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                JLabel l = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                l.setBorder(new EmptyBorder(4, 8, 4, 8));
-                if (value instanceof Supplier) {
-                    Supplier s = (Supplier) value;
-                    String comp = s.getCompanyName() != null && !s.getCompanyName().isEmpty() ? " (" + s.getCompanyName() + ")" : "";
-                    l.setText(s.getName() + comp);
-                } else if (value == null) {
-                    l.setText("— Direct Purchase / No Vendor —");
-                }
-                return l;
-            }
-        });
-        suppRow.add(cmbSuppliers, BorderLayout.CENTER);
-        formBody.add(suppRow);
-        formBody.add(Box.createVerticalStrut(8));
-
-        // Field 3 & 4: Quantity & Unit Cost Price in dual column
-        JPanel dualRow = new JPanel(new GridLayout(1, 2, 8, 0));
-        dualRow.setOpaque(false);
-        dualRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 58));
-
-        JPanel qtyCol = new JPanel(new BorderLayout(0, 4));
-        qtyCol.setOpaque(false);
-        qtyCol.add(createFieldLabel("Inward Qty (Units):"), BorderLayout.NORTH);
-        txtQty = new ModernInputField("e.g. 20");
-        txtQty.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { updateMathPreview(); }
-            public void removeUpdate(DocumentEvent e) { updateMathPreview(); }
-            public void changedUpdate(DocumentEvent e) { updateMathPreview(); }
-        });
-        qtyCol.add(txtQty, BorderLayout.CENTER);
-
-        JPanel costCol = new JPanel(new BorderLayout(0, 4));
-        costCol.setOpaque(false);
-        costCol.add(createFieldLabel("Unit Cost Price (₹):"), BorderLayout.NORTH);
-        txtCostPrice = new ModernInputField("e.g. 250.00");
-        txtCostPrice.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { updateMathPreview(); }
-            public void removeUpdate(DocumentEvent e) { updateMathPreview(); }
-            public void changedUpdate(DocumentEvent e) { updateMathPreview(); }
-        });
-        costCol.add(txtCostPrice, BorderLayout.CENTER);
-
-        dualRow.add(qtyCol);
-        dualRow.add(costCol);
-        formBody.add(dualRow);
-        formBody.add(Box.createVerticalStrut(12));
-
-        // Inward Notes / Help Card
-        JPanel helpCard = new JPanel(new BorderLayout());
-        helpCard.setBackground(new Color(245, 252, 248));
-        helpCard.setOpaque(true);
-        helpCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 54));
-        helpCard.setPreferredSize(new Dimension(0, 54));
-        helpCard.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(AppTheme.BORDER_SAGE, 1, true),
-                new EmptyBorder(6, 10, 6, 10)
-        ));
-        JLabel lblHelp = new JLabel("<html><body style='color:#047857; font-size:10px; font-family:Segoe UI; line-height:1.2;'>"
-                + "<b>✓ Audit Guarantee:</b> Inward entries automatically raise stock, generate purchases &amp; log audit trails.</body></html>");
-        helpCard.add(lblHelp, BorderLayout.CENTER);
-        formBody.add(helpCard);
-        formBody.add(Box.createVerticalGlue());
-
-        formCard.add(formBody, BorderLayout.CENTER);
-
-        // Form Bottom Action Bar
-        JPanel formBottom = new JPanel(new BorderLayout(0, 0));
-        formBottom.setOpaque(false);
-
-        btnAddStock = createPillButton("➕ Record Inward Stock", AppTheme.FOREST_GREEN, AppTheme.FOREST_GREEN, Color.WHITE);
-        btnAddStock.setFont(AppTheme.font(Font.BOLD, 12));
-        btnAddStock.setPreferredSize(new Dimension(0, 38));
-        btnAddStock.addActionListener(e -> processStockIn());
-        formBottom.add(btnAddStock, BorderLayout.CENTER);
-
-        formCard.add(formBottom, BorderLayout.SOUTH);
-        centerSplit.add(formCard, BorderLayout.WEST);
-
-        // -------------------------------------------------------------------------
-        // RIGHT COLUMN: Multi-View Intelligence & Audit Card (Flex width)
-        // -------------------------------------------------------------------------
-        JPanel tableCard = createElevatedCard(20);
-        tableCard.setLayout(new BorderLayout(0, 8));
-        tableCard.setBorder(new EmptyBorder(12, 14, 12, 14));
-
-        // Right Card Top: Segmented Tab Bar + Search & Filters
+        // Top Toolbar: Segmented Tabs + Search & Filters
         JPanel tableHeaderBox = new JPanel();
         tableHeaderBox.setLayout(new BoxLayout(tableHeaderBox, BoxLayout.Y_AXIS));
         tableHeaderBox.setOpaque(false);
 
-        // Row 1: Segmented Pill Tab Switcher
+        // Row 1: Segmented Pill Tab Switcher (SVG Icons, Zero Emojis)
         JPanel tabSwitcherRow = new JPanel(new BorderLayout());
         tabSwitcherRow.setOpaque(false);
 
         JPanel tabPills = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         tabPills.setOpaque(false);
 
-        btnTabAlerts = createTabButton("⚠️ Stock Alerts (Low & Out)", "ALERTS");
-        btnTabHistory = createTabButton("📋 Movement History (Audit Log)", "HISTORY");
-        btnTabLedger = createTabButton("📦 Full Inventory Ledger", "LEDGER");
+        btnTabLedger = createSvgTabButton("All Products & Stock", "products", "LEDGER");
+        btnTabAlerts = createSvgTabButton("Stock Alerts", "alert_triangle", "ALERTS");
+        btnTabHistory = createSvgTabButton("Movement History", "bill_history", "HISTORY");
 
+        tabPills.add(btnTabLedger);
         tabPills.add(btnTabAlerts);
         tabPills.add(btnTabHistory);
-        tabPills.add(btnTabLedger);
         tabSwitcherRow.add(tabPills, BorderLayout.WEST);
 
-        lblRecordCount = new JLabel("0 records");
-        lblRecordCount.setFont(AppTheme.font(Font.BOLD, 11));
+        lblRecordCount = new JLabel("0 products");
+        lblRecordCount.setFont(AppTheme.font(Font.BOLD, 12));
         lblRecordCount.setForeground(AppTheme.TEXT_MUTED);
-        lblRecordCount.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(AppTheme.BORDER_SAGE, 1, true),
-                new EmptyBorder(3, 10, 3, 10)
-        ));
+        lblRecordCount.setBorder(new EmptyBorder(4, 6, 4, 6));
         tabSwitcherRow.add(lblRecordCount, BorderLayout.EAST);
 
         tableHeaderBox.add(tabSwitcherRow);
-        tableHeaderBox.add(Box.createVerticalStrut(10));
+        tableHeaderBox.add(Box.createVerticalStrut(12));
 
         // Row 2: Search Bar + Filter Chips
-        JPanel toolbarRow = new JPanel(new BorderLayout(10, 0));
+        JPanel toolbarRow = new JPanel(new BorderLayout(12, 0));
         toolbarRow.setOpaque(false);
 
-        txtSearch = new ModernSearchField("Search by product code, name, category, or invoice ref...");
-        txtSearch.setPreferredSize(new Dimension(320, 32));
+        txtSearch = new ModernSearchField("Search products by name, code, category, or barcode...");
+        txtSearch.setPreferredSize(new Dimension(380, 34));
         txtSearch.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) { searchQuery = txtSearch.getText().trim(); applyActiveFilters(); }
             public void removeUpdate(DocumentEvent e) { searchQuery = txtSearch.getText().trim(); applyActiveFilters(); }
@@ -485,285 +191,156 @@ public class InventoryPanel extends JPanel {
         tableCardContainer = new JPanel(tableCardLayout);
         tableCardContainer.setOpaque(false);
 
-        // View 1: Stock Alerts Table
-        initAlertsTable();
-        tableCardContainer.add(createTableScrollPane(alertsTable, "alerts"), "ALERTS");
-
-        // View 2: Stock History Table
-        initHistoryTable();
-        tableCardContainer.add(createTableScrollPane(historyTable, "history"), "HISTORY");
-
-        // View 3: Complete Inventory Ledger Table
+        // View 1: Complete Products Catalog & Stock Ledger Table (Default)
         initLedgerTable();
         tableCardContainer.add(createTableScrollPane(ledgerTable, "ledger"), "LEDGER");
 
+        // View 2: Stock Alerts Table
+        initAlertsTable();
+        tableCardContainer.add(createTableScrollPane(alertsTable, "alerts"), "ALERTS");
+
+        // View 3: Stock Movement Audit History Table
+        initHistoryTable();
+        tableCardContainer.add(createTableScrollPane(historyTable, "history"), "HISTORY");
+
         tableCard.add(tableCardContainer, BorderLayout.CENTER);
-        centerSplit.add(tableCard, BorderLayout.CENTER);
+        add(tableCard, BorderLayout.CENTER);
 
-        add(centerSplit, BorderLayout.CENTER);
-
-        // Build default filter chips
+        // Default Filter Chips
         rebuildFilterChips();
     }
 
     // =========================================================================
-    // DYNAMIC PRODUCT PREVIEW & MATH HERO WIDGET
+    // MODAL DIALOG TRIGGERS
     // =========================================================================
-    private JPanel createProductPreviewHeroWidget() {
-        JPanel hero = new JPanel(new BorderLayout(8, 6)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-                int r = 14;
-                g2.setColor(new Color(245, 252, 248));
-                g2.fillRoundRect(0, 0, w, h, r, r);
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.dispose();
-                super.paintComponent(g);
-            }
+    public void openAddStockDialog(Product preselected) {
+        Window parent = SwingUtilities.getWindowAncestor(this);
+        AddStockDialog dialog = new AddStockDialog(parent, preselected, () -> {
+            loadDropdownData();
+            refreshData();
+        });
+        dialog.setVisible(true);
+    }
+
+    public void openEditProductDialog(Product product) {
+        if (product == null) return;
+        Window parent = SwingUtilities.getWindowAncestor(this);
+        EditProductDialog dialog = new EditProductDialog(parent, product, () -> {
+            loadDropdownData();
+            refreshData();
+        });
+        dialog.setVisible(true);
+    }
+
+    // =========================================================================
+    // TABLES SETUP & CLEAN RENDERING (Product Thumbnails + Dual Action Buttons)
+    // =========================================================================
+    private void initLedgerTable() {
+        String[] cols = {"#", "Product Details", "Barcode", "Cost Price", "Sell Price", "Stock & Status", "Actions"};
+        ledgerModel = new DefaultTableModel(cols, 0) {
+            @Override public boolean isCellEditable(int r, int c) { return false; }
         };
-        hero.setOpaque(false);
-        hero.setBorder(new EmptyBorder(8, 10, 8, 10));
-        hero.setMaximumSize(new Dimension(Integer.MAX_VALUE, 98));
+        ledgerTable = new JTable(ledgerModel);
+        setupTableStyle(ledgerTable, 56);
 
-        JPanel topRow = new JPanel(new BorderLayout(6, 0));
-        topRow.setOpaque(false);
+        ledgerTable.getColumnModel().getColumn(0).setPreferredWidth(45);  // #
+        ledgerTable.getColumnModel().getColumn(1).setPreferredWidth(320); // Product Details (Thumbnail 4:3 + Info)
+        ledgerTable.getColumnModel().getColumn(2).setPreferredWidth(130); // Barcode Button
+        ledgerTable.getColumnModel().getColumn(3).setPreferredWidth(100); // Cost Price
+        ledgerTable.getColumnModel().getColumn(4).setPreferredWidth(100); // Sell Price
+        ledgerTable.getColumnModel().getColumn(5).setPreferredWidth(130); // Stock & Status
+        ledgerTable.getColumnModel().getColumn(6).setPreferredWidth(155); // Actions ([Edit] [Restock])
 
-        lblPreviewName = new JLabel("Select a product to view stock");
-        lblPreviewName.setFont(AppTheme.font(Font.BOLD, 12));
-        lblPreviewName.setForeground(AppTheme.TEXT_PRIMARY);
-        topRow.add(lblPreviewName, BorderLayout.WEST);
+        // Column 0: Center index
+        DefaultTableCellRenderer centerRender = new DefaultTableCellRenderer();
+        centerRender.setHorizontalAlignment(SwingConstants.CENTER);
+        centerRender.setFont(AppTheme.font(Font.BOLD, 12));
+        ledgerTable.getColumnModel().getColumn(0).setCellRenderer(centerRender);
 
-        lblPreviewStockPill = new JLabel("No Selection") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getBackground());
-                int h = getHeight();
-                g2.fillRoundRect(0, 0, getWidth(), h, h, h);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        lblPreviewStockPill.setFont(AppTheme.font(Font.BOLD, 9));
-        lblPreviewStockPill.setOpaque(false);
-        lblPreviewStockPill.setBackground(new Color(241, 245, 249));
-        lblPreviewStockPill.setForeground(AppTheme.TEXT_MUTED);
-        lblPreviewStockPill.setBorder(new EmptyBorder(2, 6, 2, 6));
-        topRow.add(lblPreviewStockPill, BorderLayout.EAST);
-        hero.add(topRow, BorderLayout.NORTH);
+        // Column 1: Product Thumbnail & Details
+        ledgerTable.getColumnModel().getColumn(1).setCellRenderer(new ProductDetailsCellRenderer());
 
-        JPanel midRow = new JPanel(new BorderLayout(4, 0));
-        midRow.setOpaque(false);
+        // Column 2: Dedicated Barcode Pill Button
+        ledgerTable.getColumnModel().getColumn(2).setCellRenderer(new BarcodeCellRenderer());
 
-        lblPreviewMeta = new JLabel("Code: — • Category: — • Min Alert: —");
-        lblPreviewMeta.setFont(AppTheme.font(Font.PLAIN, 10));
-        lblPreviewMeta.setForeground(AppTheme.TEXT_MUTED);
-        midRow.add(lblPreviewMeta, BorderLayout.WEST);
-        hero.add(midRow, BorderLayout.CENTER);
+        // Column 3 & 4: Currency Alignments
+        DefaultTableCellRenderer rightRender = new DefaultTableCellRenderer();
+        rightRender.setHorizontalAlignment(SwingConstants.RIGHT);
+        rightRender.setFont(AppTheme.font(Font.PLAIN, 12));
+        rightRender.setBorder(new EmptyBorder(0, 4, 0, 14));
+        ledgerTable.getColumnModel().getColumn(3).setCellRenderer(rightRender);
+        ledgerTable.getColumnModel().getColumn(4).setCellRenderer(rightRender);
 
-        JPanel bottomBox = new JPanel(new GridLayout(2, 1, 0, 2));
-        bottomBox.setOpaque(false);
+        // Column 5: Merged Stock Count & Status Pill
+        ledgerTable.getColumnModel().getColumn(5).setCellRenderer(new StockStatusCellRenderer());
 
-        lblPreviewMath = new JLabel("➔ Projected Stock: —");
-        lblPreviewMath.setFont(AppTheme.font(Font.BOLD, 11));
-        lblPreviewMath.setForeground(AppTheme.FOREST_MID);
+        // Column 6: Dual Action Buttons ([Edit] and [Restock])
+        ledgerTable.getColumnModel().getColumn(6).setCellRenderer(new DualActionCellRenderer());
 
-        lblPreviewInvestment = new JLabel("💰 Purchase Investment: ₹0.00");
-        lblPreviewInvestment.setFont(AppTheme.font(Font.PLAIN, 10));
-        lblPreviewInvestment.setForeground(AppTheme.TEXT_SECONDARY);
-
-        bottomBox.add(lblPreviewMath);
-        bottomBox.add(lblPreviewInvestment);
-        hero.add(bottomBox, BorderLayout.SOUTH);
-
-        return hero;
+        setupTableActionMouseListener(ledgerTable, 6, 1, 2);
     }
 
-    private void onProductSelected() {
-        Object item = cmbProducts.getSelectedItem();
-        if (item instanceof Product) {
-            selectedProduct = (Product) item;
-            lblPreviewName.setText(selectedProduct.getName());
-            lblPreviewMeta.setText("Code: " + selectedProduct.getCode() + " • Cat: " 
-                    + (selectedProduct.getCategoryName() != null ? selectedProduct.getCategoryName() : "General")
-                    + " • Min Alert: " + selectedProduct.getMinStockLevel());
-
-            int stock = selectedProduct.getQuantity();
-            if (stock <= 0) {
-                lblPreviewStockPill.setText("🔴 OUT OF STOCK (0)");
-                lblPreviewStockPill.setBackground(new Color(254, 226, 226));
-                lblPreviewStockPill.setForeground(new Color(185, 28, 28));
-            } else if (stock <= selectedProduct.getMinStockLevel()) {
-                lblPreviewStockPill.setText("🟠 LOW STOCK (" + stock + ")");
-                lblPreviewStockPill.setBackground(new Color(254, 243, 199));
-                lblPreviewStockPill.setForeground(new Color(180, 83, 9));
-            } else {
-                lblPreviewStockPill.setText("🟢 IN STOCK (" + stock + ")");
-                lblPreviewStockPill.setBackground(new Color(220, 252, 231));
-                lblPreviewStockPill.setForeground(new Color(21, 128, 61));
-            }
-
-            txtCostPrice.setText(String.format("%.2f", selectedProduct.getPurchasePrice()));
-            updateMathPreview();
-        } else {
-            selectedProduct = null;
-            lblPreviewName.setText("Select a product to view stock");
-            lblPreviewMeta.setText("Code: — • Category: — • Min Alert: —");
-            lblPreviewStockPill.setText("No Selection");
-            lblPreviewStockPill.setBackground(new Color(241, 245, 249));
-            lblPreviewStockPill.setForeground(AppTheme.TEXT_MUTED);
-            lblPreviewMath.setText("➔ Projected Stock: —");
-            lblPreviewInvestment.setText("💰 Purchase Investment: ₹0.00");
-        }
-    }
-
-    private void updateMathPreview() {
-        if (selectedProduct == null) {
-            lblPreviewMath.setText("➔ Projected Stock: —");
-            lblPreviewInvestment.setText("💰 Purchase Investment: ₹0.00");
-            return;
-        }
-
-        int currStock = selectedProduct.getQuantity();
-        int addQty = 0;
-        try {
-            String qStr = txtQty.getText().trim();
-            if (!qStr.isEmpty()) addQty = Integer.parseInt(qStr);
-        } catch (Exception ignored) {}
-
-        double cost = 0.0;
-        try {
-            String cStr = txtCostPrice.getText().trim();
-            if (!cStr.isEmpty()) cost = Double.parseDouble(cStr);
-        } catch (Exception ignored) {}
-
-        int projected = currStock + addQty;
-        double investment = addQty * cost;
-
-        if (addQty > 0) {
-            lblPreviewMath.setText("➔ Current: " + currStock + " + Inward: " + addQty + " ➔ Projected: " + projected + " units");
-            lblPreviewInvestment.setText(String.format("💰 Purchase Investment: ₹%,.2f (%d units @ ₹%.2f)", investment, addQty, cost));
-        } else {
-            lblPreviewMath.setText("➔ Current Stock: " + currStock + " units");
-            lblPreviewInvestment.setText("💰 Purchase Investment: ₹0.00");
-        }
-    }
-
-    // =========================================================================
-    // TABLES SETUP & RENDERING
-    // =========================================================================
     private void initAlertsTable() {
-        String[] cols = {"#", "Product Details", "Stock Status", "Current Stock", "Min Alert Level", "Unit Sell Price", "Action"};
+        String[] cols = {"#", "Product Details", "Barcode", "Stock & Status", "Min Alert Level", "Unit Sell Price", "Actions"};
         alertsModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         alertsTable = new JTable(alertsModel);
-        setupTableStyle(alertsTable);
+        setupTableStyle(alertsTable, 56);
 
-        alertsTable.getColumnModel().getColumn(0).setPreferredWidth(35);  // #
-        alertsTable.getColumnModel().getColumn(1).setPreferredWidth(210); // Product
-        alertsTable.getColumnModel().getColumn(2).setPreferredWidth(125); // Status
-        alertsTable.getColumnModel().getColumn(3).setPreferredWidth(95);  // Current
-        alertsTable.getColumnModel().getColumn(4).setPreferredWidth(95);  // Min
-        alertsTable.getColumnModel().getColumn(5).setPreferredWidth(100); // Price
-        alertsTable.getColumnModel().getColumn(6).setPreferredWidth(85);  // Action
+        alertsTable.getColumnModel().getColumn(0).setPreferredWidth(45);  // #
+        alertsTable.getColumnModel().getColumn(1).setPreferredWidth(320); // Product Details (Thumbnail 4:3 + Info)
+        alertsTable.getColumnModel().getColumn(2).setPreferredWidth(130); // Barcode
+        alertsTable.getColumnModel().getColumn(3).setPreferredWidth(130); // Stock & Status
+        alertsTable.getColumnModel().getColumn(4).setPreferredWidth(105); // Min Alert
+        alertsTable.getColumnModel().getColumn(5).setPreferredWidth(100); // Unit Sell Price
+        alertsTable.getColumnModel().getColumn(6).setPreferredWidth(155); // Actions ([Edit] [Restock])
 
-        // Column 1: HTML Dual-line Product Details
-        alertsTable.getColumnModel().getColumn(1).setCellRenderer(new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
-                JLabel l = (JLabel) super.getTableCellRendererComponent(t, val, sel, focus, r, c);
-                String raw = String.valueOf(val != null ? val : "");
-                String[] parts = raw.split("###");
-                String name = parts[0];
-                String sub = parts.length > 1 ? parts[1] : "";
-                l.setText("<html><body style='font-family:Segoe UI;'><b style='color:#111827; font-size:11px;'>" 
-                        + escapeHtml(name) + "</b><br><span style='color:#6b7280; font-size:9px;'>" 
-                        + escapeHtml(sub) + "</span></body></html>");
-                l.setBorder(new EmptyBorder(2, 8, 2, 6));
-                return l;
-            }
-        });
-
-        // Column 2: Stock Status Pill Badge
-        alertsTable.getColumnModel().getColumn(2).setCellRenderer(new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
-                JLabel l = (JLabel) super.getTableCellRendererComponent(t, val, sel, focus, r, c);
-                l.setHorizontalAlignment(SwingConstants.CENTER);
-                String status = String.valueOf(val != null ? val : "");
-                if (status.contains("OUT")) {
-                    l.setText("🔴 Out of Stock");
-                    l.setForeground(new Color(185, 28, 28));
-                    l.setFont(AppTheme.font(Font.BOLD, 10));
-                } else {
-                    l.setText("🟠 Low Stock");
-                    l.setForeground(new Color(194, 65, 12));
-                    l.setFont(AppTheme.font(Font.BOLD, 10));
-                }
-                return l;
-            }
-        });
-
-        // Column 3 & 4: Bold Centered Counts
         DefaultTableCellRenderer centerRender = new DefaultTableCellRenderer();
         centerRender.setHorizontalAlignment(SwingConstants.CENTER);
-        centerRender.setFont(AppTheme.font(Font.BOLD, 11));
+        centerRender.setFont(AppTheme.font(Font.BOLD, 12));
         alertsTable.getColumnModel().getColumn(0).setCellRenderer(centerRender);
-        alertsTable.getColumnModel().getColumn(3).setCellRenderer(centerRender);
+
+        // Column 1: Product Thumbnail & Details
+        alertsTable.getColumnModel().getColumn(1).setCellRenderer(new ProductDetailsCellRenderer());
+
+        // Column 2: Barcode Pill Button
+        alertsTable.getColumnModel().getColumn(2).setCellRenderer(new BarcodeCellRenderer());
+
+        // Column 3: Merged Stock Count & Status Pill
+        alertsTable.getColumnModel().getColumn(3).setCellRenderer(new StockStatusCellRenderer());
+
+        // Column 4: Min Alert Count
         alertsTable.getColumnModel().getColumn(4).setCellRenderer(centerRender);
 
         // Column 5: Currency
         DefaultTableCellRenderer rightRender = new DefaultTableCellRenderer();
         rightRender.setHorizontalAlignment(SwingConstants.RIGHT);
-        rightRender.setFont(AppTheme.font(Font.PLAIN, 11));
-        rightRender.setBorder(new EmptyBorder(0, 4, 0, 10));
+        rightRender.setFont(AppTheme.font(Font.PLAIN, 12));
+        rightRender.setBorder(new EmptyBorder(0, 4, 0, 14));
         alertsTable.getColumnModel().getColumn(5).setCellRenderer(rightRender);
 
-        // Column 6: Action "⚡ Restock"
-        alertsTable.getColumnModel().getColumn(6).setCellRenderer(new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
-                JLabel l = (JLabel) super.getTableCellRendererComponent(t, val, sel, focus, r, c);
-                l.setHorizontalAlignment(SwingConstants.CENTER);
-                l.setFont(AppTheme.font(Font.BOLD, 11));
-                l.setForeground(AppTheme.FOREST_GREEN);
-                l.setText("⚡ Restock");
-                return l;
-            }
-        });
+        // Column 6: Dual Action Buttons
+        alertsTable.getColumnModel().getColumn(6).setCellRenderer(new DualActionCellRenderer());
 
-        alertsTable.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                int row = alertsTable.getSelectedRow();
-                if (row != -1) {
-                    handleQuickRestockFromRow(alertsTable, row, 1);
-                }
-            }
-        });
+        setupTableActionMouseListener(alertsTable, 6, 1, 2);
     }
 
     private void initHistoryTable() {
-        String[] cols = {"#", "Date & Time", "Product", "Movement", "Quantity", "Ref / Invoice", "Audit Notes"};
+        String[] cols = {"#", "Date & Time", "Product Details", "Movement", "Quantity", "Ref / Invoice", "Audit Notes"};
         historyModel = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
         historyTable = new JTable(historyModel);
-        setupTableStyle(historyTable);
+        setupTableStyle(historyTable, 44);
 
-        historyTable.getColumnModel().getColumn(0).setPreferredWidth(35);  // #
-        historyTable.getColumnModel().getColumn(1).setPreferredWidth(135); // Date
-        historyTable.getColumnModel().getColumn(2).setPreferredWidth(190); // Product
-        historyTable.getColumnModel().getColumn(3).setPreferredWidth(100); // Movement
-        historyTable.getColumnModel().getColumn(4).setPreferredWidth(75);  // Qty
-        historyTable.getColumnModel().getColumn(5).setPreferredWidth(135); // Ref
-        historyTable.getColumnModel().getColumn(6).setPreferredWidth(170); // Notes
+        historyTable.getColumnModel().getColumn(0).setPreferredWidth(45);  // #
+        historyTable.getColumnModel().getColumn(1).setPreferredWidth(150); // Date
+        historyTable.getColumnModel().getColumn(2).setPreferredWidth(260); // Product
+        historyTable.getColumnModel().getColumn(3).setPreferredWidth(120); // Movement
+        historyTable.getColumnModel().getColumn(4).setPreferredWidth(90);  // Qty
+        historyTable.getColumnModel().getColumn(5).setPreferredWidth(150); // Ref
+        historyTable.getColumnModel().getColumn(6).setPreferredWidth(200); // Notes
 
         DefaultTableCellRenderer centerRender = new DefaultTableCellRenderer();
         centerRender.setHorizontalAlignment(SwingConstants.CENTER);
@@ -772,23 +349,7 @@ public class InventoryPanel extends JPanel {
         historyTable.getColumnModel().getColumn(4).setCellRenderer(centerRender);
 
         // Column 3: Movement Pill (IN vs OUT)
-        historyTable.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
-                JLabel l = (JLabel) super.getTableCellRendererComponent(t, val, sel, focus, r, c);
-                l.setHorizontalAlignment(SwingConstants.CENTER);
-                String tStr = String.valueOf(val != null ? val : "");
-                l.setFont(AppTheme.font(Font.BOLD, 11));
-                if ("IN".equalsIgnoreCase(tStr) || tStr.contains("IN")) {
-                    l.setText("⬇️ IN (Inward)");
-                    l.setForeground(AppTheme.FOREST_GREEN);
-                } else {
-                    l.setText("⬆️ OUT (Sale)");
-                    l.setForeground(new Color(220, 38, 38));
-                }
-                return l;
-            }
-        });
+        historyTable.getColumnModel().getColumn(3).setCellRenderer(new MovementPillCellRenderer());
 
         // Column 5: Reference Monospaced
         historyTable.getColumnModel().getColumn(5).setCellRenderer(new DefaultTableCellRenderer() {
@@ -804,78 +365,8 @@ public class InventoryPanel extends JPanel {
         });
     }
 
-    private void initLedgerTable() {
-        String[] cols = {"#", "Code", "Product Name", "Category", "Stock", "Cost Valuation", "Sell Price", "Status", "Action"};
-        ledgerModel = new DefaultTableModel(cols, 0) {
-            @Override public boolean isCellEditable(int r, int c) { return false; }
-        };
-        ledgerTable = new JTable(ledgerModel);
-        setupTableStyle(ledgerTable);
-
-        ledgerTable.getColumnModel().getColumn(0).setPreferredWidth(35);  // #
-        ledgerTable.getColumnModel().getColumn(1).setPreferredWidth(75);  // Code
-        ledgerTable.getColumnModel().getColumn(2).setPreferredWidth(175); // Name
-        ledgerTable.getColumnModel().getColumn(3).setPreferredWidth(100); // Category
-        ledgerTable.getColumnModel().getColumn(4).setPreferredWidth(80);  // Stock
-        ledgerTable.getColumnModel().getColumn(5).setPreferredWidth(105); // Cost Valuation
-        ledgerTable.getColumnModel().getColumn(6).setPreferredWidth(90);  // Sell Price
-        ledgerTable.getColumnModel().getColumn(7).setPreferredWidth(100); // Status
-        ledgerTable.getColumnModel().getColumn(8).setPreferredWidth(75);  // Action
-
-        DefaultTableCellRenderer centerRender = new DefaultTableCellRenderer();
-        centerRender.setHorizontalAlignment(SwingConstants.CENTER);
-        ledgerTable.getColumnModel().getColumn(0).setCellRenderer(centerRender);
-        ledgerTable.getColumnModel().getColumn(1).setCellRenderer(centerRender);
-        ledgerTable.getColumnModel().getColumn(4).setCellRenderer(centerRender);
-
-        // Column 7: Status Pill
-        ledgerTable.getColumnModel().getColumn(7).setCellRenderer(new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
-                JLabel l = (JLabel) super.getTableCellRendererComponent(t, val, sel, focus, r, c);
-                l.setHorizontalAlignment(SwingConstants.CENTER);
-                l.setFont(AppTheme.font(Font.BOLD, 10));
-                String s = String.valueOf(val != null ? val : "");
-                if (s.contains("OUT")) {
-                    l.setText("🔴 Out of Stock");
-                    l.setForeground(new Color(185, 28, 28));
-                } else if (s.contains("LOW")) {
-                    l.setText("🟠 Low Stock");
-                    l.setForeground(new Color(194, 65, 12));
-                } else {
-                    l.setText("🟢 Healthy");
-                    l.setForeground(AppTheme.FOREST_GREEN);
-                }
-                return l;
-            }
-        });
-
-        // Column 8: Restock Action
-        ledgerTable.getColumnModel().getColumn(8).setCellRenderer(new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
-                JLabel l = (JLabel) super.getTableCellRendererComponent(t, val, sel, focus, r, c);
-                l.setHorizontalAlignment(SwingConstants.CENTER);
-                l.setFont(AppTheme.font(Font.BOLD, 11));
-                l.setForeground(AppTheme.FOREST_GREEN);
-                l.setText("⚡ Restock");
-                return l;
-            }
-        });
-
-        ledgerTable.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                int row = ledgerTable.getSelectedRow();
-                if (row != -1) {
-                    handleQuickRestockFromRow(ledgerTable, row, 1);
-                }
-            }
-        });
-    }
-
-    private void setupTableStyle(JTable t) {
-        t.setRowHeight(42);
+    private void setupTableStyle(JTable t, int rowHeight) {
+        t.setRowHeight(rowHeight);
         t.setFont(AppTheme.font(Font.PLAIN, 12));
         t.setShowVerticalLines(false);
         t.setGridColor(new Color(241, 246, 243));
@@ -892,14 +383,16 @@ public class InventoryPanel extends JPanel {
                 JLabel l = (JLabel) super.getTableCellRendererComponent(tbl, val, sel, focus, r, c);
                 l.setFont(AppTheme.font(Font.BOLD, 11));
                 l.setForeground(AppTheme.TEXT_PRIMARY);
-                l.setBackground(new Color(240, 250, 244));
+                l.setBackground(new Color(245, 250, 247));
                 l.setOpaque(true);
                 l.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createMatteBorder(0, 0, 1, 0, AppTheme.BORDER_SAGE),
-                        new EmptyBorder(0, 8, 0, 8)
+                        new EmptyBorder(0, 10, 0, 10)
                 ));
-                if (c == 0 || c == tbl.getColumnCount() - 1) {
+                if (c == 0 || c == 2 || c == tbl.getColumnCount() - 1 || (tbl == ledgerTable && c == 5) || (tbl == alertsTable && (c == 3 || c == 4))) {
                     l.setHorizontalAlignment(SwingConstants.CENTER);
+                } else if ((tbl == ledgerTable && (c == 3 || c == 4)) || (tbl == alertsTable && c == 5)) {
+                    l.setHorizontalAlignment(SwingConstants.RIGHT);
                 } else {
                     l.setHorizontalAlignment(SwingConstants.LEFT);
                 }
@@ -908,10 +401,117 @@ public class InventoryPanel extends JPanel {
         });
     }
 
+    private void setupTableActionMouseListener(JTable table, int actionColIndex, int productColIndex, int barcodeColIndex) {
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                int col = table.columnAtPoint(e.getPoint());
+                if (row < 0) return;
+
+                Object val = table.getValueAt(row, productColIndex);
+                Product target = null;
+                if (val instanceof Product) {
+                    target = (Product) val;
+                } else if (val != null) {
+                    String str = val.toString();
+                    for (Product p : allProducts) {
+                        if (p.getCode().equalsIgnoreCase(str) || p.getName().equalsIgnoreCase(str)) {
+                            target = p;
+                            break;
+                        }
+                    }
+                }
+                if (target == null) return;
+
+                // Click on dedicated Barcode column button
+                if (col == barcodeColIndex) {
+                    Window parent = SwingUtilities.getWindowAncestor(InventoryPanel.this);
+                    Frame frame = (parent instanceof Frame) ? (Frame) parent : null;
+                    BarcodeUtil.showBarcodeDialog(frame, target);
+                    return;
+                }
+
+                if (col != actionColIndex) return;
+
+                Rectangle cellRect = table.getCellRect(row, col, false);
+                int relX = e.getX() - cellRect.x;
+                int relY = e.getY() - cellRect.y;
+                int cellW = cellRect.width;
+
+                int editW = 58;
+                int restockW = 76;
+                int gap = 8;
+                int totalW = editW + gap + restockW;
+                int startX = (cellW - totalW) / 2;
+
+                int editX1 = startX;
+                int editX2 = startX + editW;
+                int restockX1 = startX + editW + gap;
+                int restockX2 = startX + totalW;
+
+                int pillH = 26;
+                int btnY = (table.getRowHeight() - pillH) / 2;
+
+                if (relY >= btnY - 2 && relY <= btnY + pillH + 2) {
+                    if (relX >= editX1 && relX <= editX2) {
+                        openEditProductDialog(target);
+                    } else if (relX >= restockX1 && relX <= restockX2) {
+                        openAddStockDialog(target);
+                    }
+                }
+            }
+        });
+
+        table.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                int col = table.columnAtPoint(e.getPoint());
+
+                // Hover over dedicated Barcode button column
+                if (row >= 0 && col == barcodeColIndex) {
+                    table.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                    table.setToolTipText("View, print or download barcode");
+                    return;
+                }
+
+                if (row >= 0 && col == actionColIndex) {
+                    Rectangle cellRect = table.getCellRect(row, col, false);
+                    int relX = e.getX() - cellRect.x;
+                    int relY = e.getY() - cellRect.y;
+                    int cellW = cellRect.width;
+
+                    int editW = 58;
+                    int restockW = 76;
+                    int gap = 8;
+                    int totalW = editW + gap + restockW;
+                    int startX = (cellW - totalW) / 2;
+
+                    int editX1 = startX;
+                    int editX2 = startX + editW;
+                    int restockX1 = startX + editW + gap;
+                    int restockX2 = startX + totalW;
+
+                    int pillH = 26;
+                    int btnY = (table.getRowHeight() - pillH) / 2;
+
+                    if (relY >= btnY - 2 && relY <= btnY + pillH + 2 &&
+                            ((relX >= editX1 && relX <= editX2) || (relX >= restockX1 && relX <= restockX2))) {
+                        table.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                        return;
+                    }
+                }
+
+                table.setToolTipText(null);
+                table.setCursor(Cursor.getDefaultCursor());
+            }
+        });
+    }
+
     private JScrollPane createTableScrollPane(JTable table, String type) {
         JScrollPane scroll = new JScrollPane();
 
-        // Custom Viewport with empty state watermark
         JViewport customViewport = new JViewport() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -924,11 +524,11 @@ public class InventoryPanel extends JPanel {
                     int w = getWidth(), h = getHeight();
                     String msg;
                     if ("alerts".equals(type)) {
-                        msg = "🎉 Excellent! Zero low-stock or out-of-stock alerts found.";
+                        msg = "Zero low stock alerts. All warehouse inventory levels are healthy.";
                     } else if ("history".equals(type)) {
-                        msg = "No inventory movements recorded in audit log.";
+                        msg = "No inventory movements recorded in audit history.";
                     } else {
-                        msg = "No products found matching query.";
+                        msg = "No catalog products found matching your search.";
                     }
 
                     g2.setFont(AppTheme.font(Font.BOLD, 13));
@@ -965,42 +565,8 @@ public class InventoryPanel extends JPanel {
                 b.setPreferredSize(new Dimension(0, 0));
                 return b;
             }
-            @Override
-            protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
-                if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) return;
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(thumbColor);
-                g2.fillRoundRect(thumbBounds.x + 1, thumbBounds.y + 1, thumbBounds.width - 2, thumbBounds.height - 2, 6, 6);
-                g2.dispose();
-            }
         });
         return scroll;
-    }
-
-    private void handleQuickRestockFromRow(JTable table, int row, int codeColIndex) {
-        Object codeVal = table.getValueAt(row, codeColIndex);
-        String codeStr = "";
-        if (codeVal != null) {
-            String raw = codeVal.toString();
-            if (raw.contains("Code: ")) {
-                int idx = raw.indexOf("Code: ");
-                codeStr = raw.substring(idx + 6).split("•")[0].trim();
-            } else {
-                codeStr = raw.trim();
-            }
-        }
-
-        if (!codeStr.isEmpty()) {
-            for (int i = 0; i < cmbProducts.getItemCount(); i++) {
-                Product p = cmbProducts.getItemAt(i);
-                if (p != null && (p.getCode().equalsIgnoreCase(codeStr) || p.getName().equalsIgnoreCase(codeStr))) {
-                    cmbProducts.setSelectedIndex(i);
-                    txtQty.requestFocusInWindow();
-                    break;
-                }
-            }
-        }
     }
 
     // =========================================================================
@@ -1008,34 +574,24 @@ public class InventoryPanel extends JPanel {
     // =========================================================================
     public void loadDropdownData() {
         try {
-            cmbProducts.removeAllItems();
             List<Product> products = productDAO.getAllProducts();
             if (products != null) {
                 this.allProducts = products;
-                for (Product p : products) {
-                    cmbProducts.addItem(p);
-                }
             }
-
-            cmbSuppliers.removeAllItems();
             List<Supplier> suppliers = supplierDAO.getAllSuppliers();
             if (suppliers != null) {
                 this.allSuppliers = suppliers;
-                for (Supplier s : suppliers) {
-                    cmbSuppliers.addItem(s);
-                }
             }
         } catch (Exception e) {
-            System.err.println("Notice: Could not load dropdowns: " + e.getMessage());
+            System.err.println("Notice: Could not load data: " + e.getMessage());
         }
     }
 
     public void refreshData() {
-        // 1. Fetch products & calculate stats
         try {
             allProducts = productDAO.getAllProducts();
         } catch (Exception e) {
-            System.err.println("Notice: Could not load all products: " + e.getMessage());
+            System.err.println("Notice: Could not load products: " + e.getMessage());
         }
 
         try {
@@ -1050,15 +606,14 @@ public class InventoryPanel extends JPanel {
             System.err.println("Notice: Could not load stock history: " + e.getMessage());
         }
 
-        updateKpiStats();
+        updateCounts();
         applyActiveFilters();
     }
 
-    private void updateKpiStats() {
+    private void updateCounts() {
         int totalSkus = allProducts != null ? allProducts.size() : 0;
         int lowStock = 0;
         int outOfStock = 0;
-        double totalValuation = 0.0;
 
         if (allProducts != null) {
             for (Product p : allProducts) {
@@ -1068,32 +623,57 @@ public class InventoryPanel extends JPanel {
                 } else if (q <= p.getMinStockLevel()) {
                     lowStock++;
                 }
-                totalValuation += (q * p.getPurchasePrice());
             }
         }
 
-        if (lblKpiTotalSkus != null) lblKpiTotalSkus.setText(totalSkus + " SKUs");
-        if (lblKpiLowStock != null) lblKpiLowStock.setText(lowStock + " Items");
-        if (lblKpiOutOfStock != null) lblKpiOutOfStock.setText(outOfStock + " Items");
-        if (lblKpiValuation != null) lblKpiValuation.setText(String.format("₹%,.2f", totalValuation));
-
-        // Update tab pill badge labels
+        // Update tab pill labels with clean counts
+        if (btnTabLedger != null) {
+            btnTabLedger.setText("All Products & Stock (" + totalSkus + ")");
+        }
         if (btnTabAlerts != null) {
-            btnTabAlerts.setText("⚠️ Stock Alerts (" + (lowStock + outOfStock) + ")");
+            btnTabAlerts.setText("Stock Alerts (" + (lowStock + outOfStock) + ")");
         }
         if (btnTabHistory != null) {
             int histCount = stockHistoryList != null ? stockHistoryList.size() : 0;
-            btnTabHistory.setText("📋 Movement History (" + histCount + ")");
-        }
-        if (btnTabLedger != null) {
-            btnTabLedger.setText("📦 Full Inventory (" + totalSkus + ")");
+            btnTabHistory.setText("Movement History (" + histCount + ")");
         }
     }
 
     private void applyActiveFilters() {
         String q = searchQuery.toLowerCase();
 
-        if ("ALERTS".equals(currentTab)) {
+        if ("LEDGER".equals(currentTab)) {
+            ledgerModel.setRowCount(0);
+            int idx = 1;
+            for (Product p : allProducts) {
+                boolean isOut = p.getQuantity() <= 0;
+                boolean isLow = p.getQuantity() <= p.getMinStockLevel() && !isOut;
+
+                if ("HEALTHY".equals(ledgerFilter) && (isLow || isOut)) continue;
+                if ("LOW".equals(ledgerFilter) && !isLow) continue;
+                if ("OUT".equals(ledgerFilter) && !isOut) continue;
+
+                if (!q.isEmpty()) {
+                    boolean match = p.getName().toLowerCase().contains(q)
+                            || p.getCode().toLowerCase().contains(q)
+                            || (p.getCategoryName() != null && p.getCategoryName().toLowerCase().contains(q))
+                            || (p.getBarcode() != null && p.getBarcode().toLowerCase().contains(q));
+                    if (!match) continue;
+                }
+
+                ledgerModel.addRow(new Object[]{
+                        idx++,
+                        p, // Product object for ProductDetailsCellRenderer
+                        p, // Product object for BarcodeCellRenderer
+                        String.format("₹%.2f", p.getPurchasePrice()),
+                        String.format("₹%.2f", p.getSellingPrice()),
+                        p, // Product object for StockStatusCellRenderer (merged Stock & Status)
+                        "" // DualActionCellRenderer paints [Edit] and [Restock]
+                });
+            }
+            lblRecordCount.setText(ledgerModel.getRowCount() + " products");
+
+        } else if ("ALERTS".equals(currentTab)) {
             alertsModel.setRowCount(0);
             int idx = 1;
             for (Product p : lowStockProducts) {
@@ -1104,19 +684,19 @@ public class InventoryPanel extends JPanel {
                 if (!q.isEmpty()) {
                     boolean match = p.getName().toLowerCase().contains(q)
                             || p.getCode().toLowerCase().contains(q)
-                            || (p.getCategoryName() != null && p.getCategoryName().toLowerCase().contains(q));
+                            || (p.getCategoryName() != null && p.getCategoryName().toLowerCase().contains(q))
+                            || (p.getBarcode() != null && p.getBarcode().toLowerCase().contains(q));
                     if (!match) continue;
                 }
 
-                String meta = "Code: " + p.getCode() + " • " + (p.getCategoryName() != null ? p.getCategoryName() : "General");
                 alertsModel.addRow(new Object[]{
                         idx++,
-                        p.getName() + "###" + meta,
-                        isOut ? "OUT_OF_STOCK" : "LOW_STOCK",
-                        p.getQuantity() + " units",
+                        p, // Product object for ProductDetailsCellRenderer
+                        p, // Product object for BarcodeCellRenderer
+                        p, // Product object for StockStatusCellRenderer (merged Stock & Status)
                         p.getMinStockLevel() + " units",
                         String.format("₹%.2f", p.getSellingPrice()),
-                        "⚡ Restock"
+                        "" // DualActionCellRenderer paints [Edit] and [Restock]
                 });
             }
             lblRecordCount.setText(alertsModel.getRowCount() + " alerts");
@@ -1126,6 +706,7 @@ public class InventoryPanel extends JPanel {
             int idx = 1;
             for (String[] row : stockHistoryList) {
                 if (row.length < 7) continue;
+
                 String type = row[3];
                 if ("IN".equals(historyFilter) && !"IN".equalsIgnoreCase(type)) continue;
                 if ("OUT".equals(historyFilter) && !"OUT".equalsIgnoreCase(type)) continue;
@@ -1149,49 +730,15 @@ public class InventoryPanel extends JPanel {
                 });
             }
             lblRecordCount.setText(historyModel.getRowCount() + " records");
-
-        } else if ("LEDGER".equals(currentTab)) {
-            ledgerModel.setRowCount(0);
-            int idx = 1;
-            for (Product p : allProducts) {
-                boolean isOut = p.getQuantity() <= 0;
-                boolean isLow = p.getQuantity() <= p.getMinStockLevel();
-
-                if ("HEALTHY".equals(ledgerFilter) && isLow) continue;
-                if ("REORDER".equals(ledgerFilter) && !isLow) continue;
-
-                if (!q.isEmpty()) {
-                    boolean match = p.getName().toLowerCase().contains(q)
-                            || p.getCode().toLowerCase().contains(q)
-                            || (p.getCategoryName() != null && p.getCategoryName().toLowerCase().contains(q));
-                    if (!match) continue;
-                }
-
-                String status = isOut ? "OUT" : (isLow ? "LOW" : "HEALTHY");
-                double costValuation = p.getQuantity() * p.getPurchasePrice();
-
-                ledgerModel.addRow(new Object[]{
-                        idx++,
-                        p.getCode(),
-                        p.getName(),
-                        p.getCategoryName() != null ? p.getCategoryName() : "General",
-                        p.getQuantity() + " units",
-                        String.format("₹%,.2f", costValuation),
-                        String.format("₹%.2f", p.getSellingPrice()),
-                        status,
-                        "⚡ Restock"
-                });
-            }
-            lblRecordCount.setText(ledgerModel.getRowCount() + " products");
         }
     }
 
     private void switchTab(String tabKey) {
         this.currentTab = tabKey;
         tableCardLayout.show(tableCardContainer, tabKey);
+        btnTabLedger.repaint();
         btnTabAlerts.repaint();
         btnTabHistory.repaint();
-        btnTabLedger.repaint();
         rebuildFilterChips();
         applyActiveFilters();
     }
@@ -1199,18 +746,19 @@ public class InventoryPanel extends JPanel {
     private void rebuildFilterChips() {
         filterChipsPanel.removeAll();
 
-        if ("ALERTS".equals(currentTab)) {
+        if ("LEDGER".equals(currentTab)) {
+            filterChipsPanel.add(createFilterChip("All Items", "ALL", ledgerFilter, k -> { ledgerFilter = k; applyActiveFilters(); }));
+            filterChipsPanel.add(createFilterChip("Healthy", "HEALTHY", ledgerFilter, k -> { ledgerFilter = k; applyActiveFilters(); }));
+            filterChipsPanel.add(createFilterChip("Low Stock", "LOW", ledgerFilter, k -> { ledgerFilter = k; applyActiveFilters(); }));
+            filterChipsPanel.add(createFilterChip("Out of Stock", "OUT", ledgerFilter, k -> { ledgerFilter = k; applyActiveFilters(); }));
+        } else if ("ALERTS".equals(currentTab)) {
             filterChipsPanel.add(createFilterChip("All Alerts", "ALL", alertsFilter, k -> { alertsFilter = k; applyActiveFilters(); }));
-            filterChipsPanel.add(createFilterChip("🔴 Out of Stock (0)", "OUT_OF_STOCK", alertsFilter, k -> { alertsFilter = k; applyActiveFilters(); }));
-            filterChipsPanel.add(createFilterChip("🟠 Low Stock (>0)", "LOW_STOCK", alertsFilter, k -> { alertsFilter = k; applyActiveFilters(); }));
+            filterChipsPanel.add(createFilterChip("Out of Stock", "OUT_OF_STOCK", alertsFilter, k -> { alertsFilter = k; applyActiveFilters(); }));
+            filterChipsPanel.add(createFilterChip("Low Stock", "LOW_STOCK", alertsFilter, k -> { alertsFilter = k; applyActiveFilters(); }));
         } else if ("HISTORY".equals(currentTab)) {
             filterChipsPanel.add(createFilterChip("All Movements", "ALL", historyFilter, k -> { historyFilter = k; applyActiveFilters(); }));
-            filterChipsPanel.add(createFilterChip("⬇️ Stock IN", "IN", historyFilter, k -> { historyFilter = k; applyActiveFilters(); }));
-            filterChipsPanel.add(createFilterChip("⬆️ Stock OUT", "OUT", historyFilter, k -> { historyFilter = k; applyActiveFilters(); }));
-        } else if ("LEDGER".equals(currentTab)) {
-            filterChipsPanel.add(createFilterChip("All Products", "ALL", ledgerFilter, k -> { ledgerFilter = k; applyActiveFilters(); }));
-            filterChipsPanel.add(createFilterChip("🟢 Healthy Stock", "HEALTHY", ledgerFilter, k -> { ledgerFilter = k; applyActiveFilters(); }));
-            filterChipsPanel.add(createFilterChip("⚠️ Needs Reorder", "REORDER", ledgerFilter, k -> { ledgerFilter = k; applyActiveFilters(); }));
+            filterChipsPanel.add(createFilterChip("Stock In (IN)", "IN", historyFilter, k -> { historyFilter = k; applyActiveFilters(); }));
+            filterChipsPanel.add(createFilterChip("Stock Out (OUT)", "OUT", historyFilter, k -> { historyFilter = k; applyActiveFilters(); }));
         }
 
         filterChipsPanel.revalidate();
@@ -1218,74 +766,152 @@ public class InventoryPanel extends JPanel {
     }
 
     // =========================================================================
-    // INWARD PURCHASE TRANSACTION LOGIC
+    // UI BUILDER HELPERS
     // =========================================================================
-    private void processStockIn() {
-        Product prod = (Product) cmbProducts.getSelectedItem();
-        Supplier supp = (Supplier) cmbSuppliers.getSelectedItem();
-        String qtyStr = txtQty.getText().trim();
-        String costStr = txtCostPrice.getText().trim();
-
-        if (prod == null || qtyStr.isEmpty() || costStr.isEmpty()) {
-            if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(this, "Please select a product and enter valid quantity and cost price.", "Inward Validation", JOptionPane.WARNING_MESSAGE);
-            }
-            return;
-        }
-
-        try {
-            int qty = Integer.parseInt(qtyStr);
-            double cost = Double.parseDouble(costStr);
-            if (qty <= 0 || cost < 0) {
-                if (!GraphicsEnvironment.isHeadless()) {
-                    JOptionPane.showMessageDialog(this, "Quantity must be positive and cost cannot be negative.", "Validation Error", JOptionPane.WARNING_MESSAGE);
+    private JButton createPrimaryActionButton(String text, String iconName) {
+        JButton btn = new JButton(text) {
+            private boolean hovered = false;
+            {
+                if (iconName != null) {
+                    setIcon(new SidebarIcon(iconName, 14, Color.WHITE));
                 }
-                return;
+                addMouseListener(new MouseAdapter() {
+                    @Override public void mouseEntered(MouseEvent e) { hovered = true; repaint(); }
+                    @Override public void mouseExited(MouseEvent e)  { hovered = false; repaint(); }
+                });
             }
-
-            String invoiceNo = purchaseDAO.generateNextPurchaseInvoiceNo();
-            int supplierId = supp != null ? supp.getId() : 0;
-
-            boolean success = purchaseDAO.recordPurchase(invoiceNo, supplierId, prod.getId(), qty, cost);
-            if (success) {
-                if (!GraphicsEnvironment.isHeadless()) {
-                    JOptionPane.showMessageDialog(this,
-                            "Stock updated successfully!\n"
-                            + "Purchase Invoice: " + invoiceNo + "\n"
-                            + "Product: " + prod.getName() + " (+" + qty + " units)\n"
-                            + "Total Inward Cost: ₹" + String.format("%.2f", (qty * cost)),
-                            "Inward Success", JOptionPane.INFORMATION_MESSAGE);
-                }
-                txtQty.setText("");
-                refreshData();
-                loadDropdownData();
-            } else {
-                if (!GraphicsEnvironment.isHeadless()) {
-                    JOptionPane.showMessageDialog(this, "Failed to update warehouse stock in database.", "Database Error", JOptionPane.ERROR_MESSAGE);
-                }
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int w = getWidth(), h = getHeight();
+                g2.setColor(hovered ? AppTheme.FOREST_MID : AppTheme.FOREST_GREEN);
+                g2.fillRoundRect(0, 0, w, h, h, h);
+                g2.dispose();
+                super.paintComponent(g);
             }
-        } catch (NumberFormatException ex) {
-            if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(this, "Invalid number format for Quantity or Cost Price.", "Validation Error", JOptionPane.ERROR_MESSAGE);
-            }
-        } catch (Exception ex) {
-            if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(this, "Database Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
+        };
+        btn.setFont(AppTheme.font(Font.BOLD, 12));
+        btn.setForeground(Color.WHITE);
+        btn.setPreferredSize(new Dimension(175, 36));
+        btn.setIconTextGap(8);
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return btn;
     }
 
-    private void clearForm() {
-        if (cmbProducts.getItemCount() > 0) cmbProducts.setSelectedIndex(0);
-        if (cmbSuppliers.getItemCount() > 0) cmbSuppliers.setSelectedIndex(0);
-        txtQty.setText("");
-        txtCostPrice.setText("");
-        onProductSelected();
+    private JButton createSecondaryActionButton(String text, String iconKey) {
+        JButton btn = new JButton(text) {
+            private final SidebarIcon icon = (iconKey != null) ? new SidebarIcon(iconKey, 14, new Color(51, 65, 85)) : null;
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int w = getWidth(), h = getHeight();
+                int r = h;
+
+                g2.setColor(getModel().isRollover() ? new Color(241, 245, 249) : Color.WHITE);
+                g2.fillRoundRect(0, 0, w, h, r, r);
+
+                g2.setColor(new Color(226, 232, 240));
+                g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
+
+                int contentW = 0;
+                if (icon != null) contentW += icon.getIconWidth() + 6;
+                g2.setFont(AppTheme.font(Font.BOLD, 12));
+                FontMetrics fm = g2.getFontMetrics();
+                contentW += fm.stringWidth(getText());
+
+                int curX = (w - contentW) / 2;
+                if (icon != null) {
+                    icon.paintIcon(this, g2, curX, (h - icon.getIconHeight()) / 2);
+                    curX += icon.getIconWidth() + 6;
+                }
+
+                g2.setColor(new Color(51, 65, 85));
+                int ty = (h + fm.getAscent() - fm.getDescent()) / 2;
+                g2.drawString(getText(), curX, ty);
+                g2.dispose();
+            }
+        };
+        btn.setPreferredSize(new Dimension(115, 36));
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return btn;
     }
 
-    // =========================================================================
-    // UI BUILDER HELPERS & DESIGN SYSTEM COMPONENTS
-    // =========================================================================
+    private JButton createCircularRefreshButton() {
+        JButton btn = new JButton() {
+            private boolean hovered = false;
+            private double currentAngle = 0.0;
+            private javax.swing.Timer animTimer = null;
+            private final SidebarIcon refreshIcon = new SidebarIcon("refresh", 16, AppTheme.FOREST_GREEN);
+            {
+                addMouseListener(new MouseAdapter() {
+                    @Override public void mouseEntered(MouseEvent e) { hovered = true; repaint(); }
+                    @Override public void mouseExited(MouseEvent e)  { hovered = false; repaint(); }
+                });
+                addActionListener(e -> {
+                    startRotateAnimation();
+                    loadDropdownData();
+                    refreshData();
+                });
+            }
+
+            private void startRotateAnimation() {
+                if (animTimer != null && animTimer.isRunning()) return;
+                final long startTime = System.currentTimeMillis();
+                final long duration = 400;
+                final double startA = currentAngle;
+
+                animTimer = new javax.swing.Timer(16, evt -> {
+                    long elapsed = System.currentTimeMillis() - startTime;
+                    if (elapsed >= duration) {
+                        currentAngle = startA + Math.PI;
+                        animTimer.stop();
+                        repaint();
+                    } else {
+                        double progress = (double) elapsed / duration;
+                        currentAngle = startA + (Math.PI * (1.0 - Math.pow(1.0 - progress, 2)));
+                        repaint();
+                    }
+                });
+                animTimer.start();
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int w = getWidth(), h = getHeight();
+
+                g2.setColor(hovered ? new Color(230, 248, 238) : Color.WHITE);
+                g2.fillOval(0, 0, w - 1, h - 1);
+                g2.setColor(AppTheme.BORDER_SAGE);
+                g2.drawOval(0, 0, w - 1, h - 1);
+
+                int cx = w / 2;
+                int cy = h / 2;
+                g2.rotate(currentAngle, cx, cy);
+                int sz = refreshIcon.getIconWidth();
+                refreshIcon.paintIcon(this, g2, cx - sz / 2, cy - sz / 2);
+                g2.dispose();
+            }
+        };
+        btn.setPreferredSize(new Dimension(36, 36));
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setToolTipText("Refresh inventory & products data");
+        return btn;
+    }
+
     private JPanel createElevatedCard(int arc) {
         JPanel card = new JPanel() {
             @Override
@@ -1293,15 +919,12 @@ public class InventoryPanel extends JPanel {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 int w = getWidth(), h = getHeight();
-                // Ambient drop shadow
+                // Subtle ambient drop shadow matching dashboard
                 g2.setColor(new Color(0, 50, 30, 6));
                 g2.fillRoundRect(1, 2, w - 2, h - 2, arc, arc);
-                // Surface
+                // Card surface - Pure crisp white, NO BORDER!
                 g2.setColor(Color.WHITE);
                 g2.fillRoundRect(0, 0, w - 1, h - 1, arc, arc);
-                // Border
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
                 g2.dispose();
                 super.paintComponent(g);
             }
@@ -1310,136 +933,14 @@ public class InventoryPanel extends JPanel {
         return card;
     }
 
-    private JPanel createKpiCard(String title, JLabel valueLabel, String subtitle, Color accentColor, String iconName, Runnable onClick) {
-        SidebarIcon bgIcon = new SidebarIcon(iconName, 44, accentColor);
-        JPanel card = new JPanel(new BorderLayout()) {
+    private JButton createSvgTabButton(String text, String iconName, String tabKey) {
+        JButton btn = new JButton(text) {
             private boolean hovered = false;
+            private final SidebarIcon icon = new SidebarIcon(iconName, 14);
             {
                 addMouseListener(new MouseAdapter() {
                     @Override public void mouseEntered(MouseEvent e) { hovered = true; repaint(); }
                     @Override public void mouseExited(MouseEvent e)  { hovered = false; repaint(); }
-                    @Override public void mouseClicked(MouseEvent e) { if (onClick != null) onClick.run(); }
-                });
-            }
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                int r = 18;
-                int w = getWidth(), h = getHeight();
-
-                g2.setColor(new Color(0, 50, 30, hovered ? 10 : 5));
-                g2.fillRoundRect(1, 2, w - 2, h - 2, r, r);
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.setColor(hovered ? AppTheme.FOREST_MID : AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
-
-                Shape clip = new RoundRectangle2D.Float(0, 0, w, h, r, r);
-                g2.setClip(clip);
-
-                // Watermark icon
-                int iconSz = 44;
-                int iconX = w - iconSz - 10;
-                int iconY = (h - iconSz) / 2;
-                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, hovered ? 0.22f : 0.12f));
-                bgIcon.paintIcon(this, g2, iconX, iconY);
-
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        card.setOpaque(false);
-        card.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        card.setBorder(new EmptyBorder(8, 14, 8, 14));
-        card.setPreferredSize(new Dimension(160, 76));
-
-        JPanel textCol = new JPanel();
-        textCol.setLayout(new BoxLayout(textCol, BoxLayout.Y_AXIS));
-        textCol.setOpaque(false);
-
-        JLabel lblTitle = new JLabel(title);
-        lblTitle.setFont(AppTheme.font(Font.BOLD, 10));
-        lblTitle.setForeground(AppTheme.TEXT_MUTED);
-        lblTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        valueLabel.setFont(AppTheme.font(Font.BOLD, 18));
-        valueLabel.setForeground(AppTheme.TEXT_PRIMARY);
-        valueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel lblSub = new JLabel(subtitle);
-        lblSub.setFont(AppTheme.font(Font.PLAIN, 10));
-        lblSub.setForeground(AppTheme.TEXT_SECONDARY);
-        lblSub.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        textCol.add(lblTitle);
-        textCol.add(Box.createVerticalStrut(2));
-        textCol.add(valueLabel);
-        textCol.add(Box.createVerticalStrut(2));
-        textCol.add(lblSub);
-
-        card.add(textCol, BorderLayout.CENTER);
-        return card;
-    }
-
-    private JButton createPillButton(String text, Color bg, Color border, Color fg) {
-        JButton btn = new JButton(text) {
-            private boolean hovered = false;
-            {
-                addMouseListener(new MouseAdapter() {
-                    @Override public void mouseEntered(MouseEvent e) { hovered = true; repaint(); }
-                    @Override public void mouseExited(MouseEvent e) { hovered = false; repaint(); }
-                });
-            }
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-                int r = h;
-
-                if (hovered) {
-                    if (bg.equals(AppTheme.FOREST_GREEN)) {
-                        g2.setColor(AppTheme.FOREST_MID);
-                    } else {
-                        g2.setColor(new Color(Math.max(0, bg.getRed() - 8), Math.max(0, bg.getGreen() - 8), Math.max(0, bg.getBlue() - 8)));
-                    }
-                } else {
-                    g2.setColor(bg);
-                }
-                g2.fillRoundRect(0, 0, w, h, r, r);
-
-                if (border != null) {
-                    g2.setColor(border);
-                    g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
-                }
-
-                g2.setColor(fg);
-                g2.setFont(getFont());
-                FontMetrics fm = g2.getFontMetrics();
-                int tx = (w - fm.stringWidth(getText())) / 2;
-                int ty = ((h - fm.getHeight()) / 2) + fm.getAscent();
-                g2.drawString(getText(), tx, ty);
-                g2.dispose();
-            }
-        };
-        btn.setFont(AppTheme.font(Font.BOLD, 11));
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setOpaque(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return btn;
-    }
-
-    private JButton createTabButton(String text, String tabKey) {
-        JButton btn = new JButton(text) {
-            private boolean hovered = false;
-            {
-                addMouseListener(new MouseAdapter() {
-                    @Override public void mouseEntered(MouseEvent e) { hovered = true; repaint(); }
-                    @Override public void mouseExited(MouseEvent e) { hovered = false; repaint(); }
                 });
                 addActionListener(e -> switchTab(tabKey));
             }
@@ -1456,24 +957,36 @@ public class InventoryPanel extends JPanel {
                     g2.setColor(AppTheme.FOREST_GREEN);
                     g2.fillRoundRect(0, 0, w, h, r, r);
                     g2.setColor(Color.WHITE);
+                    icon.setOverrideColor(Color.WHITE);
                 } else {
                     g2.setColor(hovered ? new Color(240, 252, 244) : Color.WHITE);
                     g2.fillRoundRect(0, 0, w, h, r, r);
                     g2.setColor(AppTheme.BORDER_SAGE);
                     g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
-                    g2.setColor(hovered ? AppTheme.FOREST_GREEN : AppTheme.TEXT_SECONDARY);
+                    Color fg = hovered ? AppTheme.FOREST_GREEN : AppTheme.TEXT_SECONDARY;
+                    g2.setColor(fg);
+                    icon.setOverrideColor(fg);
                 }
 
                 g2.setFont(getFont());
                 FontMetrics fm = g2.getFontMetrics();
-                int tx = (w - fm.stringWidth(getText())) / 2;
+                int iconW = icon.getIconWidth();
+                int gap = 8;
+                int textW = fm.stringWidth(getText());
+                int totalW = iconW + gap + textW;
+                int startX = (w - totalW) / 2;
+
+                // Draw SVG icon
+                icon.paintIcon(this, g2, startX, (h - icon.getIconHeight()) / 2);
+
+                // Draw Tab text
                 int ty = ((h - fm.getHeight()) / 2) + fm.getAscent();
-                g2.drawString(getText(), tx, ty);
+                g2.drawString(getText(), startX + iconW + gap, ty);
                 g2.dispose();
             }
         };
         btn.setFont(AppTheme.font(Font.BOLD, 11));
-        btn.setPreferredSize(new Dimension(195, 30));
+        btn.setPreferredSize(new Dimension(195, 32));
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
         btn.setContentAreaFilled(false);
@@ -1513,9 +1026,9 @@ public class InventoryPanel extends JPanel {
                 g2.dispose();
             }
         };
-        btn.setFont(AppTheme.font(Font.BOLD, 10));
+        btn.setFont(AppTheme.font(Font.BOLD, 11));
         int strW = btn.getFontMetrics(btn.getFont()).stringWidth(text);
-        btn.setPreferredSize(new Dimension(strW + 24, 26));
+        btn.setPreferredSize(new Dimension(strW + 24, 28));
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
         btn.setContentAreaFilled(false);
@@ -1528,111 +1041,477 @@ public class InventoryPanel extends JPanel {
         return btn;
     }
 
-    private JLabel createFieldLabel(String text) {
-        JLabel l = new JLabel(text);
-        l.setFont(AppTheme.font(Font.BOLD, 11));
-        l.setForeground(AppTheme.TEXT_PRIMARY);
-        return l;
-    }
+    // =========================================================================
+    // CUSTOM TABLE CELL RENDERERS (Product Image Thumbnail, Dual Actions, Pills)
+    // =========================================================================
 
-    private void styleComboBox(JComboBox<?> box) {
-        box.setFont(AppTheme.font(Font.PLAIN, 12));
-        box.setBackground(Color.WHITE);
-        box.setForeground(AppTheme.TEXT_PRIMARY);
-        box.setPreferredSize(new Dimension(0, 32));
-        box.setFocusable(false);
-        box.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(AppTheme.BORDER_SAGE, 1, true),
-                new EmptyBorder(2, 6, 2, 4)
-        ));
-        box.setUI(new javax.swing.plaf.basic.BasicComboBoxUI() {
-            @Override
-            protected JButton createArrowButton() {
-                JButton btn = new JButton() {
-                    @Override
-                    protected void paintComponent(Graphics g) {
-                        Graphics2D g2 = (Graphics2D) g.create();
-                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                        int w = getWidth(), h = getHeight();
-                        g2.setColor(new Color(245, 252, 248));
+    /**
+     * Renders a 4:3 aspect-ratio thumbnail of the product image with object-fit: cover,
+     * decreased vertical spacing for larger image presence, and product details beside it.
+     */
+    private static class ProductDetailsCellRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
+            return new JComponent() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                    g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+
+                    int w = getWidth(), h = getHeight();
+
+                    if (sel) {
+                        g2.setColor(new Color(230, 248, 238));
                         g2.fillRect(0, 0, w, h);
-                        g2.setColor(AppTheme.FOREST_MID);
-                        int cx = w / 2, cy = h / 2;
-                        java.awt.geom.Path2D p = new java.awt.geom.Path2D.Float();
-                        p.moveTo(cx - 4, cy - 2);
-                        p.lineTo(cx + 4, cy - 2);
-                        p.lineTo(cx, cy + 3);
-                        p.closePath();
-                        g2.fill(p);
-                        g2.dispose();
                     }
-                };
-                btn.setBorder(BorderFactory.createEmptyBorder());
-                btn.setContentAreaFilled(false);
-                btn.setFocusPainted(false);
-                btn.setPreferredSize(new Dimension(24, 0));
-                return btn;
-            }
-        });
-    }
 
-    private String escapeHtml(String s) {
-        if (s == null) return "";
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
-    }
+                    Product p = null;
+                    if (val instanceof Product) {
+                        p = (Product) val;
+                    }
 
-    // =========================================================================
-    // MODERN INPUT & SEARCH FIELDS
-    // =========================================================================
-    private static class ModernInputField extends JTextField {
-        private final String placeholder;
-        private boolean focused = false;
+                    String name = (p != null && p.getName() != null) ? p.getName() : (val != null ? val.toString() : "—");
+                    String code = (p != null && p.getCode() != null) ? p.getCode() : "";
+                    String cat = (p != null && p.getCategoryName() != null) ? p.getCategoryName() : "General";
 
-        public ModernInputField(String placeholder) {
-            this.placeholder = placeholder;
-            setFont(AppTheme.font(Font.PLAIN, 12));
-            setForeground(AppTheme.TEXT_PRIMARY);
-            setOpaque(false);
-            setBorder(new EmptyBorder(6, 10, 6, 10));
-            setPreferredSize(new Dimension(0, 32));
+                    // 1. Draw 4:3 Aspect-Ratio Thumbnail (clean, uncropped contain scaling, no overlay or border)
+                    int thumbH = Math.max(36, h - 8);  // 48px height when h = 56
+                    int thumbW = (thumbH * 4) / 3;      // 64px width for exact 4:3 aspect ratio
+                    int thumbX = 10;
+                    int thumbY = (h - thumbH) / 2;
 
-            addFocusListener(new java.awt.event.FocusAdapter() {
-                @Override public void focusGained(java.awt.event.FocusEvent e) { focused = true; repaint(); }
-                @Override public void focusLost(java.awt.event.FocusEvent e) { focused = false; repaint(); }
-            });
+                    // Clip to rounded 4:3 card
+                    RoundRectangle2D thumbClip = new RoundRectangle2D.Float(thumbX, thumbY, thumbW, thumbH, 8, 8);
+                    Shape oldClip = g2.getClip();
+                    g2.setClip(thumbClip);
+
+                    // Pure white backdrop
+                    g2.setColor(Color.WHITE);
+                    g2.fillRect(thumbX, thumbY, thumbW, thumbH);
+
+                    // Uncropped contain mode image rendering
+                    java.awt.image.BufferedImage rawImg = (p != null) ? ProductImageUtil.getProductRawImage(p) : null;
+                    if (rawImg != null && rawImg.getWidth() > 0 && rawImg.getHeight() > 0) {
+                        int imgW = rawImg.getWidth();
+                        int imgH = rawImg.getHeight();
+                        double scale = Math.min((double) thumbW / imgW, (double) thumbH / imgH);
+                        int drawW = Math.max(1, (int) Math.round(imgW * scale));
+                        int drawH = Math.max(1, (int) Math.round(imgH * scale));
+                        int drawX = thumbX + (thumbW - drawW) / 2;
+                        int drawY = thumbY + (thumbH - drawH) / 2;
+                        g2.drawImage(rawImg, drawX, drawY, drawW, drawH, null);
+                    } else {
+                        ImageIcon icon = (p != null) ? ProductImageUtil.getProductIcon(p, thumbW, thumbH)
+                                                     : ProductImageUtil.getProductIcon(null, cat, name, thumbW, thumbH);
+                        if (icon != null && icon.getImage() != null) {
+                            int drawW = icon.getIconWidth();
+                            int drawH = icon.getIconHeight();
+                            int drawX = thumbX + (thumbW - drawW) / 2;
+                            int drawY = thumbY + (thumbH - drawH) / 2;
+                            g2.drawImage(icon.getImage(), drawX, drawY, drawW, drawH, null);
+                        }
+                    }
+                    g2.setClip(oldClip);
+
+                    // 2. Text layout beside thumbnail (vertically centered in row)
+                    int textX = thumbX + thumbW + 12;
+                    int midY = h / 2;
+                    int nameY = midY - 2;
+                    int subY = midY + 14;
+
+                    // Line 1: Product Name
+                    g2.setFont(AppTheme.font(Font.BOLD, 12));
+                    g2.setColor(AppTheme.TEXT_PRIMARY);
+                    FontMetrics fmName = g2.getFontMetrics();
+
+                    int maxTextW = w - textX - 8;
+                    String displayName = name;
+                    if (fmName.stringWidth(displayName) > maxTextW && maxTextW > 20) {
+                        while (displayName.length() > 3 && fmName.stringWidth(displayName + "...") > maxTextW) {
+                            displayName = displayName.substring(0, displayName.length() - 1);
+                        }
+                        displayName = displayName + "...";
+                    }
+                    g2.drawString(displayName, textX, nameY);
+
+                    // Line 2: Code • Category
+                    g2.setFont(AppTheme.font(Font.PLAIN, 11));
+                    g2.setColor(AppTheme.TEXT_MUTED);
+                    String sub = code.isEmpty() ? cat : (code + "  •  " + cat);
+                    g2.drawString(sub, textX, subY);
+
+                    g2.dispose();
+                }
+            };
         }
+    }
+
+    /**
+     * Dedicated Barcode Button Cell Renderer:
+     * - Renders a sleek, clickable pill button in its own column
+     * - Features vector barcode icon + monospaced barcode string
+     */
+    private static class BarcodeCellRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
+            Product p = null;
+            if (val instanceof Product) {
+                p = (Product) val;
+            }
+            final String bcode = (p != null && p.getBarcode() != null && !p.getBarcode().trim().isEmpty())
+                    ? p.getBarcode().trim()
+                    : (p != null && p.getCode() != null ? p.getCode() : (val != null ? val.toString() : "—"));
+
+            return new JComponent() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                    int w = getWidth(), h = getHeight();
+
+                    if (sel) {
+                        g2.setColor(new Color(230, 248, 238));
+                        g2.fillRect(0, 0, w, h);
+                    }
+
+                    int pillH = 28;
+                    int pillW = Math.min(w - 14, 116);
+                    int px = (w - pillW) / 2;
+                    int py = (h - pillH) / 2;
+
+                    // Button surface: subtle modern slate/white pill
+                    g2.setColor(new Color(248, 250, 252));
+                    g2.fillRoundRect(px, py, pillW, pillH, 8, 8);
+                    g2.setColor(new Color(226, 232, 240));
+                    g2.drawRoundRect(px, py, pillW - 1, pillH - 1, 8, 8);
+
+                    // Mini Barcode Vector Icon (distinct barcode bars)
+                    int iconX = px + 9;
+                    int iconY = py + 7;
+                    int iconH = 14;
+                    g2.setColor(new Color(15, 23, 42));
+                    int[] bars = {1, 2, 1, 3, 1, 2, 1};
+                    int curX = iconX;
+                    for (int i = 0; i < bars.length; i++) {
+                        g2.fillRect(curX, iconY, bars[i], iconH);
+                        curX += bars[i] + 2;
+                    }
+
+                    // Barcode Text
+                    g2.setFont(new Font("Monospaced", Font.BOLD, 10));
+                    g2.setColor(new Color(30, 41, 59));
+                    FontMetrics fm = g2.getFontMetrics();
+
+                    String displayStr = bcode;
+                    int textStartX = curX + 5;
+                    int maxTextW = (px + pillW - 6) - textStartX;
+                    if (fm.stringWidth(displayStr) > maxTextW && maxTextW > 10) {
+                        while (displayStr.length() > 2 && fm.stringWidth(displayStr + "..") > maxTextW) {
+                            displayStr = displayStr.substring(0, displayStr.length() - 1);
+                        }
+                        displayStr += "..";
+                    }
+
+                    int textY = py + ((pillH - fm.getHeight()) / 2) + fm.getAscent();
+                    g2.drawString(displayStr, textStartX, textY);
+
+                    g2.dispose();
+                }
+            };
+        }
+    }
+
+    /**
+     * Merged Stock Level & Status Cell:
+     * - Line 1: Bold stock quantity ("X units")
+     * - Line 2: Status pill badge (In Stock / Low Stock / Out of Stock)
+     */
+    private static class StockStatusCellRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
+            Product p = null;
+            if (val instanceof Product) {
+                p = (Product) val;
+            }
+
+            final int qty = (p != null) ? p.getQuantity() : 0;
+            final int minLevel = (p != null) ? p.getMinStockLevel() : 5;
+            final boolean isOut = qty <= 0;
+            final boolean isLow = !isOut && qty <= minLevel;
+
+            final Color badgeBg;
+            final Color badgeBorder;
+            final Color dotColor;
+            final Color statusFg;
+            final String statusText;
+
+            if (isOut) {
+                badgeBg = new Color(254, 242, 242);
+                badgeBorder = new Color(254, 202, 202);
+                dotColor = new Color(220, 38, 38);
+                statusFg = new Color(185, 28, 28);
+                statusText = "Out of Stock";
+            } else if (isLow) {
+                badgeBg = new Color(255, 251, 235);
+                badgeBorder = new Color(254, 226, 154);
+                dotColor = new Color(217, 119, 6);
+                statusFg = new Color(180, 83, 9);
+                statusText = "Low Stock";
+            } else {
+                badgeBg = new Color(240, 253, 244);
+                badgeBorder = new Color(187, 247, 208);
+                dotColor = new Color(22, 163, 74);
+                statusFg = new Color(21, 128, 61);
+                statusText = "In Stock";
+            }
+
+            return new JComponent() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                    int w = getWidth(), h = getHeight();
+
+                    if (sel) {
+                        g2.setColor(new Color(230, 248, 238));
+                        g2.fillRect(0, 0, w, h);
+                    }
+
+                    // Line 1: Stock Quantity (Bold 12px)
+                    g2.setFont(AppTheme.font(Font.BOLD, 12));
+                    g2.setColor(isOut ? new Color(220, 38, 38) : AppTheme.TEXT_PRIMARY);
+                    String qtyStr = qty + " units";
+                    FontMetrics fmQty = g2.getFontMetrics();
+                    int qtyX = (w - fmQty.stringWidth(qtyStr)) / 2;
+                    int qtyY = (h / 2) - 4;
+                    g2.drawString(qtyStr, qtyX, qtyY);
+
+                    // Line 2: Status Pill Badge
+                    int pillH = 18;
+                    int pillW = 86;
+                    int px = (w - pillW) / 2;
+                    int py = (h / 2) + 4;
+
+                    g2.setColor(badgeBg);
+                    g2.fillRoundRect(px, py, pillW, pillH, pillH, pillH);
+                    g2.setColor(badgeBorder);
+                    g2.drawRoundRect(px, py, pillW - 1, pillH - 1, pillH, pillH);
+
+                    // Indicator dot
+                    int dotSz = 5;
+                    int dotX = px + 8;
+                    int dotY = py + (pillH - dotSz) / 2;
+                    g2.setColor(dotColor);
+                    g2.fillOval(dotX, dotY, dotSz, dotSz);
+
+                    // Status text
+                    g2.setFont(AppTheme.font(Font.BOLD, 9));
+                    g2.setColor(statusFg);
+                    FontMetrics fmStatus = g2.getFontMetrics();
+                    int stX = dotX + dotSz + 5;
+                    int stY = py + ((pillH - fmStatus.getHeight()) / 2) + fmStatus.getAscent();
+                    g2.drawString(statusText, stX, stY);
+
+                    g2.dispose();
+                }
+            };
+        }
+    }
+
+    /**
+     * Renders two clean, interactive action buttons in the row:
+     * - [Edit] pill: subtle slate border & text with pencil vector
+     * - [Restock] pill: mint-green background & forest green text with plus icon
+     */
+    private static class DualActionCellRenderer extends DefaultTableCellRenderer {
+        private final SidebarIcon plusIcon = new SidebarIcon("plus", 10, AppTheme.FOREST_GREEN);
 
         @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            int w = getWidth(), h = getHeight();
-            int r = 12;
+        public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
+            return new JComponent() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-            g2.setColor(new Color(250, 253, 251));
-            g2.fillRoundRect(0, 0, w, h, r, r);
+                    int w = getWidth(), h = getHeight();
 
-            if (focused) {
-                g2.setColor(AppTheme.FOREST_GREEN);
-                g2.setStroke(new BasicStroke(1.5f));
-            } else {
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.setStroke(new BasicStroke(1f));
-            }
-            g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
-            super.paintComponent(g);
+                    if (sel) {
+                        g2.setColor(new Color(230, 248, 238));
+                        g2.fillRect(0, 0, w, h);
+                    }
 
-            if (getText().isEmpty() && !focused && placeholder != null) {
-                g2.setColor(AppTheme.TEXT_MUTED);
-                g2.setFont(getFont());
-                FontMetrics fm = g2.getFontMetrics();
-                int ty = (h + fm.getAscent() - fm.getDescent()) / 2;
-                g2.drawString(placeholder, 10, ty);
-            }
-            g2.dispose();
+                    int editW = 58;
+                    int restockW = 76;
+                    int gap = 8;
+                    int totalW = editW + gap + restockW;
+                    int pillH = 26;
+                    int py = (h - pillH) / 2;
+                    int startX = (w - totalW) / 2;
+
+                    // 1. "Edit" Button Pill
+                    int editX = startX;
+                    g2.setColor(new Color(248, 250, 252));
+                    g2.fillRoundRect(editX, py, editW, pillH, pillH, pillH);
+                    g2.setColor(new Color(226, 232, 240));
+                    g2.drawRoundRect(editX, py, editW - 1, pillH - 1, pillH, pillH);
+
+                    // Edit Icon (small pencil vector)
+                    g2.setColor(new Color(71, 85, 105));
+                    g2.setStroke(new BasicStroke(1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                    int iconX = editX + 11;
+                    int iconY = py + 7;
+                    g2.drawLine(iconX, iconY + 8, iconX + 8, iconY);
+                    g2.drawLine(iconX - 1, iconY + 11, iconX + 2, iconY + 11);
+
+                    g2.setFont(AppTheme.font(Font.BOLD, 11));
+                    g2.setColor(new Color(51, 65, 85));
+                    FontMetrics fm = g2.getFontMetrics();
+                    int editTy = py + ((pillH - fm.getHeight()) / 2) + fm.getAscent();
+                    g2.drawString("Edit", editX + 24, editTy);
+
+                    // 2. "Restock" Button Pill
+                    int restockX = startX + editW + gap;
+                    g2.setColor(new Color(240, 252, 244));
+                    g2.fillRoundRect(restockX, py, restockW, pillH, pillH, pillH);
+                    g2.setColor(AppTheme.BORDER_SAGE);
+                    g2.drawRoundRect(restockX, py, restockW - 1, pillH - 1, pillH, pillH);
+
+                    int plusSz = plusIcon.getIconWidth();
+                    plusIcon.paintIcon(this, g2, restockX + 8, py + (pillH - plusSz) / 2);
+
+                    g2.setFont(AppTheme.font(Font.BOLD, 11));
+                    g2.setColor(AppTheme.FOREST_GREEN);
+                    fm = g2.getFontMetrics();
+                    int restockTy = py + ((pillH - fm.getHeight()) / 2) + fm.getAscent();
+                    g2.drawString("Restock", restockX + 8 + plusSz + 4, restockTy);
+
+                    g2.dispose();
+                }
+            };
         }
     }
 
+    private static class StatusPillCellRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
+            String status = String.valueOf(val != null ? val : "");
+            final Color bg;
+            final Color border;
+            final Color dotColor;
+            final Color fg;
+            final String text;
+
+            if (status.contains("OUT")) {
+                bg = new Color(254, 242, 242);
+                border = new Color(254, 202, 202);
+                dotColor = new Color(220, 38, 38);
+                fg = new Color(185, 28, 28);
+                text = "Out of Stock";
+            } else if (status.contains("LOW")) {
+                bg = new Color(255, 251, 235);
+                border = new Color(254, 226, 154);
+                dotColor = new Color(217, 119, 6);
+                fg = new Color(180, 83, 9);
+                text = "Low Stock";
+            } else {
+                bg = new Color(240, 253, 244);
+                border = new Color(187, 247, 208);
+                dotColor = new Color(22, 163, 74);
+                fg = new Color(21, 128, 61);
+                text = "In Stock";
+            }
+
+            return new JComponent() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                    int w = getWidth(), h = getHeight();
+                    int pillH = 24;
+                    int pillW = 100;
+                    int px = (w - pillW) / 2;
+                    int py = (h - pillH) / 2;
+
+                    // Background pill
+                    g2.setColor(bg);
+                    g2.fillRoundRect(px, py, pillW, pillH, pillH, pillH);
+                    g2.setColor(border);
+                    g2.drawRoundRect(px, py, pillW - 1, pillH - 1, pillH, pillH);
+
+                    // Indicator dot
+                    int dotSz = 6;
+                    int dotX = px + 10;
+                    int dotY = py + (pillH - dotSz) / 2;
+                    g2.setColor(dotColor);
+                    g2.fillOval(dotX, dotY, dotSz, dotSz);
+
+                    // Text
+                    g2.setFont(AppTheme.font(Font.BOLD, 10));
+                    g2.setColor(fg);
+                    FontMetrics fm = g2.getFontMetrics();
+                    int tx = dotX + dotSz + 6;
+                    int ty = py + ((pillH - fm.getHeight()) / 2) + fm.getAscent();
+                    g2.drawString(text, tx, ty);
+
+                    g2.dispose();
+                }
+            };
+        }
+    }
+
+    private static class MovementPillCellRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
+            String move = String.valueOf(val != null ? val : "");
+            final boolean isIn = "IN".equalsIgnoreCase(move) || move.contains("IN");
+            final Color bg = isIn ? new Color(240, 253, 244) : new Color(248, 250, 252);
+            final Color border = isIn ? new Color(187, 247, 208) : new Color(226, 232, 240);
+            final Color fg = isIn ? AppTheme.FOREST_GREEN : AppTheme.TEXT_SECONDARY;
+            final String text = isIn ? "Stock In" : "Stock Out";
+
+            return new JComponent() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                    int w = getWidth(), h = getHeight();
+                    int pillH = 22;
+                    int pillW = 80;
+                    int px = (w - pillW) / 2;
+                    int py = (h - pillH) / 2;
+
+                    g2.setColor(bg);
+                    g2.fillRoundRect(px, py, pillW, pillH, pillH, pillH);
+                    g2.setColor(border);
+                    g2.drawRoundRect(px, py, pillW - 1, pillH - 1, pillH, pillH);
+
+                    g2.setFont(AppTheme.font(Font.BOLD, 10));
+                    g2.setColor(fg);
+                    FontMetrics fm = g2.getFontMetrics();
+                    int tx = px + (pillW - fm.stringWidth(text)) / 2;
+                    int ty = py + ((pillH - fm.getHeight()) / 2) + fm.getAscent();
+                    g2.drawString(text, tx, ty);
+                    g2.dispose();
+                }
+            };
+        }
+    }
+
+    // =========================================================================
+    // MODERN SEARCH FIELD (SVG Vector Magnifying Glass, Crisp Round Pill)
+    // =========================================================================
     private static class ModernSearchField extends JTextField {
         private final String placeholder;
         private boolean focused = false;
@@ -1642,7 +1521,7 @@ public class InventoryPanel extends JPanel {
             setFont(AppTheme.font(Font.PLAIN, 12));
             setForeground(AppTheme.TEXT_PRIMARY);
             setOpaque(false);
-            setBorder(new EmptyBorder(6, 30, 6, 10));
+            setBorder(new EmptyBorder(6, 32, 6, 12));
 
             addFocusListener(new java.awt.event.FocusAdapter() {
                 @Override public void focusGained(java.awt.event.FocusEvent e) { focused = true; repaint(); }
@@ -1669,12 +1548,12 @@ public class InventoryPanel extends JPanel {
             }
             g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
 
-            // Search magnifying glass icon
+            // Search icon via Java2D vector
             g2.setColor(focused ? AppTheme.FOREST_GREEN : AppTheme.TEXT_MUTED);
-            g2.setStroke(new BasicStroke(1.6f));
+            g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
             int cy = h / 2 - 1;
-            g2.drawOval(10, cy - 4, 8, 8);
-            g2.drawLine(16, cy + 3, 21, cy + 8);
+            g2.drawOval(11, cy - 4, 8, 8);
+            g2.drawLine(17, cy + 3, 22, cy + 8);
 
             super.paintComponent(g);
 
@@ -1683,7 +1562,7 @@ public class InventoryPanel extends JPanel {
                 g2.setFont(getFont());
                 FontMetrics fm = g2.getFontMetrics();
                 int ty = (h + fm.getAscent() - fm.getDescent()) / 2;
-                g2.drawString(placeholder, 32, ty);
+                g2.drawString(placeholder, 34, ty);
             }
             g2.dispose();
         }

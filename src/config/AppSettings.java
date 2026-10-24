@@ -42,6 +42,10 @@ public class AppSettings {
     public static final String KEY_STORE_GST = "store.gst";
     public static final String KEY_STORE_UPI_ID = "store.upi_id";
 
+    // Terminal & Session
+    public static final String KEY_REMEMBER_TERMINAL = "terminal.remember_me";
+    public static final String KEY_REMEMBERED_USERNAME = "terminal.remembered_user";
+
     static {
         loadSettings();
     }
@@ -63,25 +67,7 @@ public class AppSettings {
     private static void applyDefaults() {
         properties.setProperty(KEY_SCREEN_MODE, "TOUCH"); // Default to Touch-optimized
 
-        properties.setProperty(KEY_SHOW_POS_NAV, "true");
-        properties.setProperty(KEY_SHOW_NUMPAD, "true");
-        properties.setProperty(KEY_SHOW_HELD_BILLS, "true");
-        properties.setProperty(KEY_SHOW_QUICK_CASH, "true");
-        properties.setProperty(KEY_SHOW_DISCOUNT, "true");
-        properties.setProperty(KEY_SHOW_UPI_QR, "true");
-        properties.setProperty(KEY_SHOW_BARCODE_SEARCH, "true");
-        properties.setProperty(KEY_SHOW_CART_ACTIONS, "true");
-
-        properties.setProperty(KEY_BARCODE_BEEP, "true");
-        properties.setProperty(KEY_AUTO_PRINT, "true");
-        properties.setProperty(KEY_THERMAL_PRINTER_NAME, "Default 58mm/2-inch POS Printer");
         properties.setProperty(KEY_RECEIPT_PRINT_SIZE, "2_INCH");
-
-        properties.setProperty(KEY_NAV_PRODUCTS, "true");
-        properties.setProperty(KEY_NAV_INVENTORY, "true");
-        properties.setProperty(KEY_NAV_CUSTOMERS, "true");
-        properties.setProperty(KEY_NAV_SUPPLIERS, "true");
-        properties.setProperty(KEY_NAV_REPORTS, "true");
 
         properties.setProperty(KEY_STORE_NAME, "SmartBilling Supermarket");
         properties.setProperty(KEY_STORE_PHONE, "9876543210");
@@ -90,7 +76,7 @@ public class AppSettings {
     }
 
     public static boolean isTouchMode() {
-        return "TOUCH".equalsIgnoreCase(getString(KEY_SCREEN_MODE, "TOUCH"));
+        return true; // Auto-adapts: supports touch, keyboard shortcuts, scanner, and mouse seamlessly
     }
 
     public static boolean getBoolean(String key, boolean defaultValue) {

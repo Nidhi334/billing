@@ -46,7 +46,7 @@ public class ProductPanel extends JPanel {
 
     // Buttons
     private JButton btnAdd, btnUpdate, btnDelete, btnClear, btnCancelEdit, btnManageCategories;
-    private JButton btnGenBarcode, btnAutoSku, btnViewBarcode, btnPrintBarcode;
+    private JButton btnGenBarcode, btnAutoSku, btnViewBarcode, btnDownloadBarcode, btnPrintBarcode, btnExportAllBarcodes;
     private JButton btnFilterAll, btnFilterInStock, btnFilterLowStock, btnFilterOutOfStock;
 
     // KPI Summary Labels
@@ -67,6 +67,7 @@ public class ProductPanel extends JPanel {
         setBorder(new EmptyBorder(12, 14, 12, 14));
         initComponents();
         loadCategories();
+        clearForm();
         loadProductTable();
     }
 
@@ -310,20 +311,29 @@ public class ProductPanel extends JPanel {
         lblBarcodePreview.setHorizontalAlignment(SwingConstants.CENTER);
         barcodePreviewCard.add(lblBarcodePreview, BorderLayout.CENTER);
 
-        JPanel barcodeActionsRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 2));
+        JPanel barcodeActionsRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 2));
         barcodeActionsRow.setOpaque(false);
 
         btnViewBarcode = createPillButton("🔍 Fullscreen", new Color(238, 242, 255), new Color(199, 210, 254), new Color(67, 56, 202));
         btnViewBarcode.setFont(AppTheme.font(Font.BOLD, 10));
-        btnViewBarcode.setPreferredSize(new Dimension(98, 24));
+        btnViewBarcode.setPreferredSize(new Dimension(86, 24));
+        btnViewBarcode.setToolTipText("View barcode in fullscreen dialog");
         btnViewBarcode.addActionListener(e -> viewSelectedBarcode());
 
-        btnPrintBarcode = createPillButton("🖨️ Print Label", new Color(240, 253, 250), new Color(153, 246, 228), new Color(15, 118, 110));
+        btnDownloadBarcode = createPillButton("⬇ Save PNG", new Color(236, 253, 245), new Color(167, 243, 208), new Color(6, 95, 70));
+        btnDownloadBarcode.setFont(AppTheme.font(Font.BOLD, 10));
+        btnDownloadBarcode.setPreferredSize(new Dimension(84, 24));
+        btnDownloadBarcode.setToolTipText("Download barcode image as PNG");
+        btnDownloadBarcode.addActionListener(e -> downloadSelectedBarcode());
+
+        btnPrintBarcode = createPillButton("🖨️ Print", new Color(240, 253, 250), new Color(153, 246, 228), new Color(15, 118, 110));
         btnPrintBarcode.setFont(AppTheme.font(Font.BOLD, 10));
-        btnPrintBarcode.setPreferredSize(new Dimension(102, 24));
+        btnPrintBarcode.setPreferredSize(new Dimension(72, 24));
+        btnPrintBarcode.setToolTipText("Print thermal barcode label");
         btnPrintBarcode.addActionListener(e -> printSelectedBarcode());
 
         barcodeActionsRow.add(btnViewBarcode);
+        barcodeActionsRow.add(btnDownloadBarcode);
         barcodeActionsRow.add(btnPrintBarcode);
         barcodePreviewCard.add(barcodeActionsRow, BorderLayout.SOUTH);
 
@@ -589,6 +599,20 @@ public class ProductPanel extends JPanel {
 
         JPanel line1Right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         line1Right.setOpaque(false);
+
+        btnExportAllBarcodes = createPillButton("⬇ Export Barcodes", new Color(236, 253, 245), new Color(167, 243, 208), new Color(6, 95, 70));
+        btnExportAllBarcodes.setFont(AppTheme.font(Font.BOLD, 10));
+        btnExportAllBarcodes.setPreferredSize(new Dimension(128, 30));
+        btnExportAllBarcodes.setToolTipText("Export all product barcodes to PNG images & printable sheet");
+        btnExportAllBarcodes.addActionListener(e -> exportAllBarcodes());
+        line1Right.add(btnExportAllBarcodes);
+
+        JButton btnPackageBoxes = createPillButton("📦 Package Boxes", new Color(241, 245, 249), new Color(203, 213, 225), new Color(51, 65, 85));
+        btnPackageBoxes.setFont(AppTheme.font(Font.BOLD, 10));
+        btnPackageBoxes.setPreferredSize(new Dimension(124, 30));
+        btnPackageBoxes.setToolTipText("Open folder with retail package box mockups for scanner testing");
+        btnPackageBoxes.addActionListener(e -> util.PackageBoxGenerator.openPackagesFolder(this));
+        line1Right.add(btnPackageBoxes);
 
         cmbCategoryFilter = new JComboBox<>(new String[]{"All Categories"});
         cmbCategoryFilter.setFont(AppTheme.font(Font.PLAIN, 12));
@@ -863,6 +887,37 @@ public class ProductPanel extends JPanel {
         table.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && table.getSelectedRow() != -1) {
                 populateFormFromSelectedRow();
+            }
+        });
+
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) handleTablePopup(e);
+            }
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) handleTablePopup(e);
+            }
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int r = table.rowAtPoint(e.getPoint());
+                    int c = table.columnAtPoint(e.getPoint());
+                    if (r >= 0) {
+                        table.setRowSelectionInterval(r, r);
+                        if (c == 2) {
+                            viewSelectedBarcode();
+                        }
+                    }
+                }
+            }
+            private void handleTablePopup(MouseEvent e) {
+                int r = table.rowAtPoint(e.getPoint());
+                if (r >= 0) {
+                    table.setRowSelectionInterval(r, r);
+                    showTableRowContextMenu(e.getComponent(), e.getX(), e.getY());
+                }
             }
         });
 
@@ -1355,8 +1410,7 @@ public class ProductPanel extends JPanel {
     }
 
     private void generateRandomBarcode() {
-        long ts = System.currentTimeMillis() % 10000000000L;
-        String val = String.format("890%09d", ts % 1000000000L);
+        String val = ProductDAO.generateUniqueBarcode();
         txtBarcode.setText(val);
         updateLiveBarcodePreview();
     }
@@ -1391,6 +1445,68 @@ public class ProductPanel extends JPanel {
         }
         Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
         BarcodeUtil.showBarcodeDialog(owner, p);
+    }
+
+    private void downloadSelectedBarcode() {
+        Product p = getSelectedOrBuiltProduct();
+        if (p == null) {
+            JOptionPane.showMessageDialog(this, "Please select a product from the table or fill in barcode/code.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        BarcodeUtil.saveBarcodeImage(this, p);
+    }
+
+    private void exportAllBarcodes() {
+        try {
+            List<Product> list = productDAO.getAllProducts();
+            if (list == null || list.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "No products available to export.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            BarcodeUtil.exportAllBarcodes(this, list);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Failed to export barcodes: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void showTableRowContextMenu(Component comp, int x, int y) {
+        Product p = getSelectedOrBuiltProduct();
+        if (p == null) return;
+
+        JPopupMenu menu = new JPopupMenu();
+        menu.setBorder(BorderFactory.createLineBorder(AppTheme.BORDER_SAGE));
+
+        JMenuItem itemView = new JMenuItem("🔍 View Barcode Fullscreen");
+        itemView.setFont(AppTheme.font(Font.PLAIN, 12));
+        itemView.addActionListener(e -> viewSelectedBarcode());
+        menu.add(itemView);
+
+        JMenuItem itemSave = new JMenuItem("⬇ Download Barcode PNG");
+        itemSave.setFont(AppTheme.font(Font.PLAIN, 12));
+        itemSave.addActionListener(e -> downloadSelectedBarcode());
+        menu.add(itemSave);
+
+        JMenuItem itemPrint = new JMenuItem("🖨️ Print Barcode Label");
+        itemPrint.setFont(AppTheme.font(Font.PLAIN, 12));
+        itemPrint.addActionListener(e -> printSelectedBarcode());
+        menu.add(itemPrint);
+
+        JMenuItem itemViewBox = new JMenuItem("📦 View Package Box Mockup");
+        itemViewBox.setFont(AppTheme.font(Font.PLAIN, 12));
+        itemViewBox.addActionListener(e -> {
+            Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+            util.PackageBoxGenerator.showBoxDialog(owner, p);
+        });
+        menu.add(itemViewBox);
+
+        menu.addSeparator();
+
+        JMenuItem itemEdit = new JMenuItem("✏️ Edit Product Details");
+        itemEdit.setFont(AppTheme.font(Font.PLAIN, 12));
+        itemEdit.addActionListener(e -> populateFormFromSelectedRow());
+        menu.add(itemEdit);
+
+        menu.show(comp, x, y);
     }
 
     private void printSelectedBarcode() {
@@ -1576,8 +1692,8 @@ public class ProductPanel extends JPanel {
     public void clearForm() {
         selectedProductId = -1;
         selectedImagePath = null;
-        txtCode.setText("");
-        txtBarcode.setText("");
+        generateRandomSku();
+        generateRandomBarcode();
         txtName.setText("");
         txtPurchasePrice.setText("");
         txtSellingPrice.setText("");
@@ -1660,8 +1776,15 @@ public class ProductPanel extends JPanel {
 
     private Product validateAndBuildProduct() {
         String code = txtCode.getText().trim();
+        if (code.isEmpty()) {
+            code = "PRD-" + (System.currentTimeMillis() % 100000);
+            txtCode.setText(code);
+        }
         String barcode = txtBarcode.getText().trim();
-        if (barcode.isEmpty()) barcode = code;
+        if (barcode.isEmpty()) {
+            barcode = ProductDAO.generateUniqueBarcode();
+            txtBarcode.setText(barcode);
+        }
         String name = txtName.getText().trim();
         String buyStr = txtPurchasePrice.getText().trim();
         String sellStr = txtSellingPrice.getText().trim();

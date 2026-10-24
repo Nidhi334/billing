@@ -156,29 +156,136 @@ public class ReportDAO {
     }
 
     public List<String[]> getProfitLossReport() throws SQLException {
+        return getProfitLossReport(null, null);
+    }
+
+    public List<String[]> getProfitLossReport(String fromDate, String toDate) throws SQLException {
         List<String[]> list = new ArrayList<>();
-        String sql = "SELECT p.code, p.name, " +
-                     "COALESCE(SUM(si.quantity), 0) AS total_sold, " +
-                     "COALESCE(SUM(si.subtotal), 0) AS sales_revenue, " +
-                     "COALESCE(SUM(si.quantity * p.purchase_price), 0) AS cost_of_goods, " +
-                     "(COALESCE(SUM(si.subtotal), 0) - COALESCE(SUM(si.quantity * p.purchase_price), 0)) AS profit " +
-                     "FROM products p " +
-                     "LEFT JOIN sale_items si ON p.id = si.product_id " +
-                     "GROUP BY p.id, p.code, p.name, p.purchase_price " +
-                     "ORDER BY profit DESC";
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT p.code, p.name, ")
+           .append("COALESCE(SUM(si.quantity), 0) AS total_sold, ")
+           .append("COALESCE(SUM(si.subtotal), 0) AS sales_revenue, ")
+           .append("COALESCE(SUM(si.quantity * p.purchase_price), 0) AS cost_of_goods, ")
+           .append("(COALESCE(SUM(si.subtotal), 0) - COALESCE(SUM(si.quantity * p.purchase_price), 0)) AS profit ")
+           .append("FROM products p ")
+           .append("LEFT JOIN sale_items si ON p.id = si.product_id ");
+
+        if ((fromDate != null && !fromDate.trim().isEmpty()) || (toDate != null && !toDate.trim().isEmpty())) {
+            sql.append("LEFT JOIN sales s ON si.sale_id = s.id WHERE 1=1 ");
+            if (fromDate != null && !fromDate.trim().isEmpty()) {
+                sql.append(" AND DATE(s.sale_date) >= '").append(fromDate.trim()).append("'");
+            }
+            if (toDate != null && !toDate.trim().isEmpty()) {
+                sql.append(" AND DATE(s.sale_date) <= '").append(toDate.trim()).append("'");
+            }
+        }
+
+        sql.append(" GROUP BY p.id, p.code, p.name, p.purchase_price ")
+           .append("HAVING total_sold > 0 ")
+           .append("ORDER BY profit DESC");
+
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
+             PreparedStatement ps = conn.prepareStatement(sql.toString());
              ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
+                double rev = rs.getDouble("sales_revenue");
+                double prof = rs.getDouble("profit");
+                double margin = rev > 0 ? (prof / rev) * 100.0 : 0.0;
                 list.add(new String[]{
                         rs.getString("code"),
                         rs.getString("name"),
                         String.valueOf(rs.getInt("total_sold")),
-                        String.format("₹%.2f", rs.getDouble("sales_revenue")),
+                        String.format("₹%.2f", rev),
                         String.format("₹%.2f", rs.getDouble("cost_of_goods")),
-                        String.format("₹%.2f", rs.getDouble("profit"))
+                        String.format("₹%.2f", prof),
+                        String.format("%.1f%%", margin)
                 });
             }
+        }
+        return list;
+    }
+
+    public List<String[]> getTaxReport(String fromDate, String toDate) throws SQLException {
+        List<String[]> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT s.invoice_no, DATE_FORMAT(s.sale_date, '%d/%m/%Y %H:%i') as s_date, ")
+           .append("COALESCE(c.name, 'Walk-in Customer') AS cust, ")
+           .append("s.subtotal, s.gst_rate, s.gst_amount, s.total_amount ")
+           .append("FROM sales s ")
+           .append("LEFT JOIN customers c ON s.customer_id = c.id WHERE 1=1 ");
+
+        if (fromDate != null && !fromDate.trim().isEmpty()) {
+            sql.append(" AND DATE(s.sale_date) >= '").append(fromDate.trim()).append("'");
+        }
+        if (toDate != null && !toDate.trim().isEmpty()) {
+            sql.append(" AND DATE(s.sale_date) <= '").append(toDate.trim()).append("'");
+        }
+        sql.append(" ORDER BY s.id DESC");
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString());
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                double gst = rs.getDouble("gst_amount");
+                double halfGst = gst / 2.0;
+                list.add(new String[]{
+                        rs.getString("invoice_no"),
+                        rs.getString("s_date"),
+                        rs.getString("cust"),
+                        String.format("₹%.2f", rs.getDouble("subtotal")),
+                        String.format("%.1f%%", rs.getDouble("gst_rate")),
+                        String.format("₹%.2f", halfGst),
+                        String.format("₹%.2f", halfGst),
+                        String.format("₹%.2f", gst),
+                        String.format("₹%.2f", rs.getDouble("total_amount"))
+                });
+            }
+        }
+        return list;
+    }
+
+    public List<String[]> getCashReconciliation(String fromDate, String toDate) throws SQLException {
+        List<String[]> list = new ArrayList<>();
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT UPPER(COALESCE(payment_mode, 'OTHER')) as pmode, ")
+           .append("COUNT(*) as bill_count, ")
+           .append("COALESCE(SUM(total_amount), 0) as total_amt ")
+           .append("FROM sales WHERE 1=1 ");
+
+        if (fromDate != null && !fromDate.trim().isEmpty()) {
+            sql.append(" AND DATE(sale_date) >= '").append(fromDate.trim()).append("'");
+        }
+        if (toDate != null && !toDate.trim().isEmpty()) {
+            sql.append(" AND DATE(sale_date) <= '").append(toDate.trim()).append("'");
+        }
+        sql.append(" GROUP BY UPPER(COALESCE(payment_mode, 'OTHER')) ORDER BY total_amt DESC");
+
+        double grandTotal = 0;
+        List<Object[]> temp = new ArrayList<>();
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString());
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                String m = rs.getString("pmode");
+                int cnt = rs.getInt("bill_count");
+                double amt = rs.getDouble("total_amt");
+                grandTotal += amt;
+                temp.add(new Object[]{m, cnt, amt});
+            }
+        }
+
+        for (Object[] r : temp) {
+            String m = (String) r[0];
+            int cnt = (Integer) r[1];
+            double amt = (Double) r[2];
+            double pct = grandTotal > 0 ? (amt / grandTotal) * 100.0 : 0.0;
+            list.add(new String[]{
+                    m,
+                    String.valueOf(cnt),
+                    String.format("₹%.2f", amt),
+                    String.format("%.1f%%", pct),
+                    "Reconciled / Settled"
+            });
         }
         return list;
     }
@@ -391,23 +498,51 @@ public class ReportDAO {
     }
 
     public Map<String, Object> getFinancialOverview() throws SQLException {
+        return getFinancialOverview(null, null);
+    }
+
+    public Map<String, Object> getFinancialOverview(String fromDate, String toDate) throws SQLException {
         Map<String, Object> fin = new HashMap<>();
         double totalRevenue = 0.0;
         double costOfGoods = 0.0;
         double totalPurchases = 0.0;
+        double totalGst = 0.0;
+        int totalInvoices = 0;
         double cashRevenue = 0.0;
         double upiRevenue = 0.0;
         double cardRevenue = 0.0;
 
+        StringBuilder dateFilter = new StringBuilder();
+        if (fromDate != null && !fromDate.trim().isEmpty()) {
+            dateFilter.append(" AND DATE(sale_date) >= '").append(fromDate.trim()).append("'");
+        }
+        if (toDate != null && !toDate.trim().isEmpty()) {
+            dateFilter.append(" AND DATE(sale_date) <= '").append(toDate.trim()).append("'");
+        }
+
         try (Connection conn = DBConnection.getConnection()) {
-            String sqlRevenue = "SELECT COALESCE(SUM(total_amount), 0) FROM sales";
+            String sqlRevenue = "SELECT COALESCE(SUM(total_amount), 0), COALESCE(SUM(gst_amount), 0), COUNT(*) FROM sales WHERE 1=1 " + dateFilter;
             try (PreparedStatement ps = conn.prepareStatement(sqlRevenue);
                  ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) totalRevenue = rs.getDouble(1);
+                if (rs.next()) {
+                    totalRevenue = rs.getDouble(1);
+                    totalGst = rs.getDouble(2);
+                    totalInvoices = rs.getInt(3);
+                }
+            }
+
+            StringBuilder cogsFilter = new StringBuilder();
+            if (fromDate != null && !fromDate.trim().isEmpty()) {
+                cogsFilter.append(" AND DATE(s.sale_date) >= '").append(fromDate.trim()).append("'");
+            }
+            if (toDate != null && !toDate.trim().isEmpty()) {
+                cogsFilter.append(" AND DATE(s.sale_date) <= '").append(toDate.trim()).append("'");
             }
 
             String sqlCogs = "SELECT COALESCE(SUM(si.quantity * p.purchase_price), 0) " +
-                            "FROM sale_items si JOIN products p ON si.product_id = p.id";
+                            "FROM sale_items si " +
+                            "JOIN products p ON si.product_id = p.id " +
+                            "JOIN sales s ON si.sale_id = s.id WHERE 1=1 " + cogsFilter;
             try (PreparedStatement ps = conn.prepareStatement(sqlCogs);
                  ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) costOfGoods = rs.getDouble(1);
@@ -420,7 +555,7 @@ public class ReportDAO {
             }
 
             String sqlModes = "SELECT UPPER(COALESCE(payment_mode, 'OTHER')) as pmode, COALESCE(SUM(total_amount), 0) as amt " +
-                              "FROM sales GROUP BY UPPER(COALESCE(payment_mode, 'OTHER'))";
+                              "FROM sales WHERE 1=1 " + dateFilter + " GROUP BY UPPER(COALESCE(payment_mode, 'OTHER'))";
             try (PreparedStatement ps = conn.prepareStatement(sqlModes);
                  ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -441,6 +576,8 @@ public class ReportDAO {
         fin.put("totalPurchases", totalPurchases);
         fin.put("grossProfit", grossProfit);
         fin.put("profitMargin", profitMargin);
+        fin.put("totalGst", totalGst);
+        fin.put("totalInvoices", totalInvoices);
         fin.put("cashRevenue", cashRevenue);
         fin.put("upiRevenue", upiRevenue);
         fin.put("cardRevenue", cardRevenue);

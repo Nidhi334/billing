@@ -84,25 +84,13 @@ public class BillHistoryPanel extends JPanel {
         topContainer.setOpaque(false);
         topContainer.setBorder(new EmptyBorder(0, 2, 6, 2));
 
-        JPanel headerPanel = new JPanel();
-        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         headerPanel.setOpaque(false);
-
-        JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        titleRow.setOpaque(false);
 
         JLabel lblTitle = new JLabel("Orders & Billing History");
         lblTitle.setFont(AppTheme.font(Font.BOLD, 22));
         lblTitle.setForeground(AppTheme.TEXT_PRIMARY);
-        titleRow.add(lblTitle);
-
-        JLabel lblSub = new JLabel("Complete ledger of completed customer bills, sales history, search, and reprint receipts");
-        lblSub.setFont(AppTheme.font(Font.PLAIN, 12));
-        lblSub.setForeground(AppTheme.TEXT_SECONDARY);
-
-        headerPanel.add(titleRow);
-        headerPanel.add(Box.createVerticalStrut(3));
-        headerPanel.add(lblSub);
+        headerPanel.add(lblTitle);
 
         JPanel topActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         topActions.setOpaque(false);
@@ -147,56 +135,7 @@ public class BillHistoryPanel extends JPanel {
         btnRefresh.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnRefresh.setToolTipText("Refresh Order Records");
 
-        // Primary View Details Button
-        JButton btnViewPrint = new JButton("View Bill Details") {
-            private boolean hovered = false;
-            {
-                addMouseListener(new MouseAdapter() {
-                    @Override public void mouseEntered(MouseEvent e) { hovered = true; repaint(); }
-                    @Override public void mouseExited(MouseEvent e) { hovered = false; repaint(); }
-                });
-            }
-
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                int w = getWidth(), h = getHeight();
-                int r = h;
-
-                // Ambient shadow
-                g2.setColor(new Color(0, 50, 30, hovered ? 22 : 12));
-                g2.fillRoundRect(1, 2, w - 2, h - 2, r, r);
-
-                // Button fill
-                g2.setColor(hovered ? AppTheme.FOREST_MID : AppTheme.FOREST_GREEN);
-                g2.fillRoundRect(0, 0, w, h, r, r);
-
-                // Icon & Text
-                g2.setColor(Color.WHITE);
-                g2.setFont(getFont());
-                FontMetrics fm = g2.getFontMetrics();
-                String text = "👁️ View Bill Details";
-                int tx = (w - fm.stringWidth(text)) / 2;
-                int ty = ((h - fm.getHeight()) / 2) + fm.getAscent();
-                g2.drawString(text, tx, ty);
-
-                g2.dispose();
-            }
-        };
-        btnViewPrint.setFont(AppTheme.font(Font.BOLD, 12));
-        btnViewPrint.setForeground(Color.WHITE);
-        btnViewPrint.setFocusPainted(false);
-        btnViewPrint.setContentAreaFilled(false);
-        btnViewPrint.setBorderPainted(false);
-        btnViewPrint.setOpaque(false);
-        btnViewPrint.setPreferredSize(new Dimension(160, 38));
-        btnViewPrint.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnViewPrint.addActionListener(e -> viewSelectedBill());
-
         topActions.add(btnRefresh);
-        topActions.add(btnViewPrint);
 
         topContainer.add(headerPanel, BorderLayout.WEST);
         topContainer.add(topActions, BorderLayout.EAST);
@@ -665,7 +604,7 @@ public class BillHistoryPanel extends JPanel {
         lblTableStatus.setFont(AppTheme.font(Font.BOLD, 12));
         lblTableStatus.setForeground(AppTheme.TEXT_SECONDARY);
 
-        JLabel lblHint = new JLabel("💡 Tip: Click '👁️ Details' or double-click any row to view full bill items & reprint");
+        JLabel lblHint = new JLabel("Tip: Click 'Details' or double-click any row to view full bill items & reprint");
         lblHint.setFont(AppTheme.font(Font.PLAIN, 11));
         lblHint.setForeground(AppTheme.TEXT_MUTED);
 
@@ -822,7 +761,7 @@ public class BillHistoryPanel extends JPanel {
                         phone,
                         s.getPaymentMode() != null ? s.getPaymentMode() : "CASH",
                         AppTheme.formatCurrency(total),
-                        "👁️ Details"
+                        "Details"
                 });
             }
 
@@ -836,7 +775,7 @@ public class BillHistoryPanel extends JPanel {
 
         } catch (Exception ex) {
             System.err.println("Notice: Could not load bill history from database: " + ex.getMessage());
-            lblTableStatus.setText("⚠️ MySQL Disconnected. (Start MySQL service to sync live records)");
+            lblTableStatus.setText("Notice: MySQL Disconnected. (Start MySQL service to sync live records)");
 
             if (currentSalesList.isEmpty()) {
                 loadOfflineDemoSales();
@@ -900,7 +839,7 @@ public class BillHistoryPanel extends JPanel {
                     d[3],
                     d[4],
                     AppTheme.formatCurrency(amt),
-                    "👁️ Details"
+                    "Details"
             });
         }
 
@@ -1196,8 +1135,10 @@ public class BillHistoryPanel extends JPanel {
     // ACTION BUTTON RENDERER & EDITOR FOR JTABLE
     // =========================================================================
     private static class ActionButtonRenderer extends JButton implements TableCellRenderer {
+        private final SidebarIcon eyeIcon = new SidebarIcon("eye", 12, AppTheme.FOREST_GREEN);
+
         public ActionButtonRenderer() {
-            super("👁️ Details");
+            super("Details");
             setFont(AppTheme.font(Font.BOLD, 11));
             setForeground(AppTheme.FOREST_GREEN);
             setFocusPainted(false);
@@ -1219,8 +1160,8 @@ public class BillHistoryPanel extends JPanel {
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
             int w = getWidth(), h = getHeight();
-            int btnW = Math.min(w - 16, 104);
-            int btnH = 28;
+            int btnW = Math.min(w - 16, 92);
+            int btnH = 26;
             int btnX = (w - btnW) / 2;
             int btnY = (h - btnH) / 2;
             int arc = btnH;
@@ -1232,13 +1173,17 @@ public class BillHistoryPanel extends JPanel {
             g2.setColor(AppTheme.BORDER_SAGE);
             g2.drawRoundRect(btnX, btnY, btnW - 1, btnH - 1, arc, arc);
 
-            g2.setColor(AppTheme.FOREST_GREEN);
             g2.setFont(getFont());
             FontMetrics fm = g2.getFontMetrics();
-            String text = "👁️ Details";
-            int tx = btnX + (btnW - fm.stringWidth(text)) / 2;
+            String text = "Details";
+            int totalW = eyeIcon.getIconWidth() + 6 + fm.stringWidth(text);
+            int sx = btnX + (btnW - totalW) / 2;
+
+            eyeIcon.paintIcon(this, g2, sx, btnY + (btnH - eyeIcon.getIconHeight()) / 2);
+
+            g2.setColor(AppTheme.FOREST_GREEN);
             int ty = btnY + ((btnH - fm.getHeight()) / 2) + fm.getAscent();
-            g2.drawString(text, tx, ty);
+            g2.drawString(text, sx + eyeIcon.getIconWidth() + 6, ty);
 
             g2.dispose();
         }
@@ -1247,18 +1192,19 @@ public class BillHistoryPanel extends JPanel {
     private class ActionButtonEditor extends DefaultCellEditor {
         private final JButton btn;
         private int clickedRow;
+        private final SidebarIcon eyeIcon = new SidebarIcon("eye", 12, Color.WHITE);
 
         public ActionButtonEditor() {
             super(new JCheckBox());
-            btn = new JButton("👁️ Details") {
+            btn = new JButton("Details") {
                 @Override
                 protected void paintComponent(Graphics g) {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                     g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
                     int w = getWidth(), h = getHeight();
-                    int btnW = Math.min(w - 16, 104);
-                    int btnH = 28;
+                    int btnW = Math.min(w - 16, 92);
+                    int btnH = 26;
                     int btnX = (w - btnW) / 2;
                     int btnY = (h - btnH) / 2;
                     int arc = btnH;
@@ -1267,13 +1213,18 @@ public class BillHistoryPanel extends JPanel {
                     g2.setColor(AppTheme.FOREST_GREEN);
                     g2.fillRoundRect(btnX, btnY, btnW, btnH, arc, arc);
 
-                    g2.setColor(Color.WHITE);
                     g2.setFont(getFont());
                     FontMetrics fm = g2.getFontMetrics();
-                    String text = "👁️ Details";
-                    int tx = btnX + (btnW - fm.stringWidth(text)) / 2;
+                    String text = "Details";
+                    int totalW = eyeIcon.getIconWidth() + 6 + fm.stringWidth(text);
+                    int sx = btnX + (btnW - totalW) / 2;
+
+                    eyeIcon.paintIcon(this, g2, sx, btnY + (btnH - eyeIcon.getIconHeight()) / 2);
+
+                    g2.setColor(Color.WHITE);
                     int ty = btnY + ((btnH - fm.getHeight()) / 2) + fm.getAscent();
-                    g2.drawString(text, tx, ty);
+                    g2.drawString(text, sx + eyeIcon.getIconWidth() + 6, ty);
+
                     g2.dispose();
                 }
             };
@@ -1298,7 +1249,7 @@ public class BillHistoryPanel extends JPanel {
 
         @Override
         public Object getCellEditorValue() {
-            return "👁️ Details";
+            return "Details";
         }
     }
 }
