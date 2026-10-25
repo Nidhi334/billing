@@ -1,5 +1,6 @@
 package ui;
 
+import config.AppSettings;
 import dao.BillingDAO;
 import dao.CustomerDAO;
 import dao.ProductDAO;
@@ -11,6 +12,7 @@ import model.SaleItem;
 import model.User;
 
 import util.ProductImageUtil;
+import util.QrCodeGenerator;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -20,6 +22,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import java.awt.*;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.*;
 import java.awt.geom.Path2D;
 import java.awt.geom.RoundRectangle2D;
@@ -29,6 +32,7 @@ import javax.imageio.ImageIO;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Modern 2-Card Sale & Billing Terminal
@@ -1209,6 +1213,7 @@ public class BillingPanel extends JPanel {
 
         lblBillCount.setText(cartItems.size() + " Item" + (cartItems.size() == 1 ? "" : "s") + " (" + totalUnits + " Units)");
         btnCheckout.setEnabled(!cartItems.isEmpty());
+        updatePaymentPillStates();
     }
 
     public void resetBillingDesk() {
@@ -1847,6 +1852,19 @@ public class BillingPanel extends JPanel {
         if (btnPayCash != null) btnPayCash.repaint();
         if (btnPayUpi != null) btnPayUpi.repaint();
         if (btnPayCard != null) btnPayCard.repaint();
+
+        if (btnCheckout != null) {
+            if ("UPI".equalsIgnoreCase(selectedPaymentMode)) {
+                btnCheckout.setText("📱 Scan UPI & Checkout (" + String.format(Locale.US, "₹%.2f", grandTotal) + ")");
+                btnCheckout.setIcon(new SidebarIcon("smartphone", 16, Color.WHITE));
+            } else if ("CARD".equalsIgnoreCase(selectedPaymentMode)) {
+                btnCheckout.setText("💳 Card Checkout (" + String.format(Locale.US, "₹%.2f", grandTotal) + ")");
+                btnCheckout.setIcon(new SidebarIcon("credit_card", 16, Color.WHITE));
+            } else {
+                btnCheckout.setText("Proceed to Checkout (" + String.format(Locale.US, "₹%.2f", grandTotal) + ")");
+                btnCheckout.setIcon(new SidebarIcon("wallet", 16, Color.WHITE));
+            }
+        }
     }
 
     // ── REUSABLE PILL BUTTON COMPONENT ───────────────────────────────────────
@@ -1966,6 +1984,18 @@ public class BillingPanel extends JPanel {
         private String modalPaymentMode;
         private JButton btnModalCash, btnModalUpi, btnModalCard;
 
+        private String currentStoreUpi;
+        private String currentStoreName;
+        private String currentUpiUri;
+        private BufferedImage currentQrImage;
+
+        private JPanel upiQrSection;
+        private JPanel qrCanvas;
+        private JLabel lblUpiAmountLocked;
+        private JLabel lblUpiPayee;
+        private JScrollPane modalScrollPane;
+        private JPanel modalBody;
+
         private JTextField txtPhone;
         private JTextField txtName;
         private JTextField txtEmail;
@@ -1987,13 +2017,19 @@ public class BillingPanel extends JPanel {
             this.taxRate = rate;
             this.modalPaymentMode = (mode != null && !mode.trim().isEmpty()) ? mode.toUpperCase() : "CASH";
 
-            setSize(510, 600);
+            this.currentStoreUpi = AppSettings.getString(AppSettings.KEY_STORE_UPI_ID, "bazaarpoint@upi").trim();
+            if (this.currentStoreUpi.isEmpty()) this.currentStoreUpi = "bazaarpoint@upi";
+            this.currentStoreName = AppSettings.getString(AppSettings.KEY_STORE_NAME, "SmartBilling Store").trim();
+            if (this.currentStoreName.isEmpty()) this.currentStoreName = "SmartBilling Store";
+
+            setSize(540, 720);
             setLocationRelativeTo(owner);
             setResizable(false);
             setLayout(new BorderLayout());
             getContentPane().setBackground(Color.WHITE);
 
             buildModalUI();
+            setModalPaymentMode(this.modalPaymentMode);
         }
 
         private JTextField createStyledInputField(String placeholder, int height, int fontSize) {
@@ -2084,13 +2120,57 @@ public class BillingPanel extends JPanel {
             btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
             btn.setPreferredSize(new Dimension(0, 36));
             btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-            btn.addActionListener(e -> {
-                modalPaymentMode = mode;
-                if (btnModalCash != null) btnModalCash.repaint();
-                if (btnModalUpi != null) btnModalUpi.repaint();
-                if (btnModalCard != null) btnModalCard.repaint();
-            });
+            btn.addActionListener(e -> setModalPaymentMode(mode));
             return btn;
+        }
+
+        private void setModalPaymentMode(String mode) {
+            this.modalPaymentMode = (mode != null) ? mode.toUpperCase() : "CASH";
+            if (btnModalCash != null) btnModalCash.repaint();
+            if (btnModalUpi != null) btnModalUpi.repaint();
+            if (btnModalCard != null) btnModalCard.repaint();
+
+            if ("UPI".equalsIgnoreCase(modalPaymentMode)) {
+                refreshUpiQr();
+                if (upiQrSection != null) {
+                    upiQrSection.setVisible(true);
+                    SwingUtilities.invokeLater(() -> {
+                        if (modalScrollPane != null) {
+                            modalScrollPane.validate();
+                            JScrollBar bar = modalScrollPane.getVerticalScrollBar();
+                            bar.setValue(bar.getMaximum());
+                        }
+                    });
+                }
+            } else {
+                if (upiQrSection != null) {
+                    upiQrSection.setVisible(false);
+                }
+            }
+            if (modalBody != null) {
+                modalBody.revalidate();
+                modalBody.repaint();
+            }
+        }
+
+        private void refreshUpiQr() {
+            this.currentStoreUpi = AppSettings.getString(AppSettings.KEY_STORE_UPI_ID, "bazaarpoint@upi").trim();
+            if (this.currentStoreUpi.isEmpty()) this.currentStoreUpi = "bazaarpoint@upi";
+            this.currentStoreName = AppSettings.getString(AppSettings.KEY_STORE_NAME, "SmartBilling Store").trim();
+            if (this.currentStoreName.isEmpty()) this.currentStoreName = "SmartBilling Store";
+
+            this.currentUpiUri = QrCodeGenerator.buildUpiUri(this.currentStoreUpi, this.currentStoreName, this.totalAmount, this.invoiceNo);
+            this.currentQrImage = QrCodeGenerator.generateQrImage(this.currentUpiUri, 200);
+
+            if (qrCanvas != null) {
+                qrCanvas.repaint();
+            }
+            if (lblUpiAmountLocked != null) {
+                lblUpiAmountLocked.setText(String.format(Locale.US, "₹%.2f", totalAmount));
+            }
+            if (lblUpiPayee != null) {
+                lblUpiPayee.setText("Paying to: " + currentStoreName + " (" + currentStoreUpi + ")");
+            }
         }
 
         private void buildModalUI() {
@@ -2330,13 +2410,18 @@ public class BillingPanel extends JPanel {
             modeGrid.add(btnModalUpi);
             modeGrid.add(btnModalCard);
             body.add(modeGrid);
+            body.add(Box.createVerticalStrut(12));
 
-            JScrollPane scrollPane = new JScrollPane(body);
-            scrollPane.setBorder(null);
-            scrollPane.setOpaque(false);
-            scrollPane.getViewport().setOpaque(false);
-            scrollPane.getVerticalScrollBar().setUnitIncrement(14);
-            add(scrollPane, BorderLayout.CENTER);
+            upiQrSection = createUpiQrSection();
+            body.add(upiQrSection);
+
+            modalBody = body;
+            modalScrollPane = new JScrollPane(body);
+            modalScrollPane.setBorder(null);
+            modalScrollPane.setOpaque(false);
+            modalScrollPane.getViewport().setOpaque(false);
+            modalScrollPane.getVerticalScrollBar().setUnitIncrement(14);
+            add(modalScrollPane, BorderLayout.CENTER);
 
             // ── FOOTER ACTIONS ────────────────────────────────────────────────
             JPanel footer = new JPanel(new BorderLayout(10, 0));
@@ -2368,6 +2453,270 @@ public class BillingPanel extends JPanel {
             add(footer, BorderLayout.SOUTH);
 
             SwingUtilities.invokeLater(() -> txtPhone.requestFocusInWindow());
+        }
+
+        private JPanel createUpiQrSection() {
+            JPanel card = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    int w = getWidth(), h = getHeight();
+                    int r = 16;
+                    g2.setColor(new Color(246, 252, 248));
+                    g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
+                    g2.setColor(new Color(205, 235, 220));
+                    g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
+                    g2.dispose();
+                    super.paintComponent(g);
+                }
+            };
+            card.setOpaque(false);
+            card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+            card.setBorder(new EmptyBorder(12, 14, 12, 14));
+            card.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.setVisible(false);
+
+            // Row 1: Header (Title, Auto-amount Badge, Change UPI Button)
+            JPanel topRow = new JPanel(new BorderLayout(8, 0));
+            topRow.setOpaque(false);
+            topRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+
+            JPanel titleBox = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+            titleBox.setOpaque(false);
+
+            JLabel lblTitle = new JLabel("Dynamic UPI Payment QR", new SidebarIcon("smartphone", 13, AppTheme.FOREST_DEEP), SwingConstants.LEFT);
+            lblTitle.setIconTextGap(5);
+            lblTitle.setFont(AppTheme.font(Font.BOLD, 12));
+            lblTitle.setForeground(AppTheme.FOREST_DEEP);
+            titleBox.add(lblTitle);
+
+            JLabel lblBadge = new JLabel(" AUTO-AMOUNT LOCKED ") {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setColor(new Color(230, 248, 238));
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
+                    g2.setColor(new Color(196, 228, 210));
+                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, getHeight(), getHeight());
+                    g2.dispose();
+                    super.paintComponent(g);
+                }
+            };
+            lblBadge.setFont(AppTheme.font(Font.BOLD, 9));
+            lblBadge.setForeground(AppTheme.FOREST_MID);
+            lblBadge.setOpaque(false);
+            titleBox.add(lblBadge);
+            topRow.add(titleBox, BorderLayout.WEST);
+
+            JButton btnChangeUpi = new JButton("Edit UPI", new SidebarIcon("pencil", 10, AppTheme.FOREST_MID)) {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setColor(Color.WHITE);
+                    g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, getHeight(), getHeight());
+                    g2.setColor(new Color(205, 235, 220));
+                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, getHeight(), getHeight());
+                    g2.dispose();
+                    super.paintComponent(g);
+                }
+            };
+            btnChangeUpi.setIconTextGap(4);
+            btnChangeUpi.setFont(AppTheme.font(Font.BOLD, 10));
+            btnChangeUpi.setForeground(AppTheme.FOREST_MID);
+            btnChangeUpi.setOpaque(false);
+            btnChangeUpi.setContentAreaFilled(false);
+            btnChangeUpi.setBorderPainted(false);
+            btnChangeUpi.setFocusPainted(false);
+            btnChangeUpi.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            btnChangeUpi.setPreferredSize(new Dimension(84, 24));
+            btnChangeUpi.addActionListener(e -> promptChangeStoreUpi());
+            topRow.add(btnChangeUpi, BorderLayout.EAST);
+
+            card.add(topRow);
+            card.add(Box.createVerticalStrut(8));
+
+            // Row 2: Exact Amount Banner
+            JPanel amtBanner = new JPanel(new BorderLayout(8, 0));
+            amtBanner.setBackground(new Color(236, 253, 245));
+            amtBanner.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(167, 243, 208), 1, true),
+                    new EmptyBorder(5, 12, 5, 12)
+            ));
+            amtBanner.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+
+            JLabel lblAmtTitle = new JLabel("Exact Bill Amount:", new SidebarIcon("shield", 12, new Color(22, 101, 52)), SwingConstants.LEFT);
+            lblAmtTitle.setIconTextGap(6);
+            lblAmtTitle.setFont(AppTheme.font(Font.PLAIN, 12));
+            lblAmtTitle.setForeground(new Color(22, 101, 52));
+            amtBanner.add(lblAmtTitle, BorderLayout.WEST);
+
+            lblUpiAmountLocked = new JLabel(String.format(Locale.US, "₹%.2f", totalAmount));
+            lblUpiAmountLocked.setFont(AppTheme.font(Font.BOLD, 17));
+            lblUpiAmountLocked.setForeground(new Color(21, 128, 61));
+            amtBanner.add(lblUpiAmountLocked, BorderLayout.EAST);
+            card.add(amtBanner);
+            card.add(Box.createVerticalStrut(4));
+
+            JLabel lblLockHint = new JLabel("Exact bill amount is auto-encoded in QR. Customer scans & pays without typing.", SwingConstants.CENTER);
+            lblLockHint.setFont(AppTheme.font(Font.PLAIN, 10));
+            lblLockHint.setForeground(new Color(22, 101, 52));
+            lblLockHint.setAlignmentX(Component.CENTER_ALIGNMENT);
+            card.add(lblLockHint);
+            card.add(Box.createVerticalStrut(6));
+
+            // Row 3: QR Code Canvas
+            qrCanvas = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+
+                    int w = getWidth();
+                    int h = getHeight();
+                    int boxSize = 175;
+                    int bx = (w - boxSize) / 2;
+                    int by = (h - boxSize) / 2;
+
+                    // White surface with soft drop shadow and border
+                    g2.setColor(Color.WHITE);
+                    g2.fillRoundRect(bx - 6, by - 6, boxSize + 12, boxSize + 12, 14, 14);
+                    g2.setColor(new Color(210, 230, 220));
+                    g2.setStroke(new BasicStroke(1.2f));
+                    g2.drawRoundRect(bx - 6, by - 6, boxSize + 12, boxSize + 12, 14, 14);
+
+                    if (currentQrImage != null) {
+                        g2.drawImage(currentQrImage, bx, by, boxSize, boxSize, null);
+                    } else {
+                        g2.setColor(Color.RED);
+                        g2.drawString("Generating QR Code...", bx + 20, by + 100);
+                    }
+
+                    // Center mini UPI badge
+                    int badgeW = 42;
+                    int badgeH = 20;
+                    int badgeX = bx + (boxSize - badgeW) / 2;
+                    int badgeY = by + (boxSize - badgeH) / 2;
+
+                    g2.setColor(Color.WHITE);
+                    g2.fillRoundRect(badgeX - 2, badgeY - 2, badgeW + 4, badgeH + 4, 8, 8);
+                    g2.setColor(new Color(79, 70, 229)); // Indigo
+                    g2.fillRoundRect(badgeX, badgeY, badgeW, badgeH, 6, 6);
+
+                    g2.setColor(Color.WHITE);
+                    g2.setFont(AppTheme.font(Font.BOLD, 10));
+                    FontMetrics fm = g2.getFontMetrics();
+                    int tx = badgeX + (badgeW - fm.stringWidth("UPI")) / 2;
+                    int ty = badgeY + ((badgeH - fm.getHeight()) / 2) + fm.getAscent();
+                    g2.drawString("UPI", tx, ty);
+
+                    g2.dispose();
+                }
+            };
+            qrCanvas.setPreferredSize(new Dimension(280, 185));
+            qrCanvas.setMaximumSize(new Dimension(Integer.MAX_VALUE, 185));
+            qrCanvas.setOpaque(false);
+            qrCanvas.setAlignmentX(Component.CENTER_ALIGNMENT);
+            card.add(qrCanvas);
+            card.add(Box.createVerticalStrut(5));
+
+            // Row 4: Payee & Supported Apps
+            lblUpiPayee = new JLabel("Paying to: " + currentStoreName + " (" + currentStoreUpi + ")", SwingConstants.CENTER);
+            lblUpiPayee.setFont(AppTheme.font(Font.BOLD, 11));
+            lblUpiPayee.setForeground(AppTheme.TEXT_PRIMARY);
+            lblUpiPayee.setAlignmentX(Component.CENTER_ALIGNMENT);
+            card.add(lblUpiPayee);
+            card.add(Box.createVerticalStrut(2));
+
+            JLabel lblSupported = new JLabel("GPay • PhonePe • Paytm • BHIM • Cred • Any Bank UPI App", SwingConstants.CENTER);
+            lblSupported.setFont(AppTheme.font(Font.PLAIN, 10));
+            lblSupported.setForeground(new Color(100, 116, 139));
+            lblSupported.setAlignmentX(Component.CENTER_ALIGNMENT);
+            card.add(lblSupported);
+            card.add(Box.createVerticalStrut(8));
+
+            // Row 5: Primary Action inside QR section: "✓ Payment Received — Complete Sale"
+            PillButton btnDirectConfirm = PillButton.primary("Payment Received — Complete Sale", new SidebarIcon("check_circle", 14, Color.WHITE));
+            btnDirectConfirm.setFont(AppTheme.font(Font.BOLD, 12));
+            btnDirectConfirm.setPreferredSize(new Dimension(0, 35));
+            btnDirectConfirm.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+            btnDirectConfirm.setAlignmentX(Component.CENTER_ALIGNMENT);
+            btnDirectConfirm.addActionListener(e -> handleConfirmCheckout());
+            card.add(btnDirectConfirm);
+            card.add(Box.createVerticalStrut(5));
+
+            // Row 6: Secondary Actions (Fullscreen / Copy Link)
+            JPanel subRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
+            subRow.setOpaque(false);
+
+            PillButton btnFullscreen = PillButton.subtle("Customer Screen", new SidebarIcon("external_link", 11, AppTheme.TEXT_SECONDARY));
+            btnFullscreen.setFont(AppTheme.font(Font.BOLD, 10));
+            btnFullscreen.setPreferredSize(new Dimension(145, 26));
+            btnFullscreen.addActionListener(e -> openFullscreenUpiDialog());
+            subRow.add(btnFullscreen);
+
+            PillButton btnCopyLink = PillButton.subtle("Copy Link", null);
+            btnCopyLink.setFont(AppTheme.font(Font.BOLD, 10));
+            btnCopyLink.setPreferredSize(new Dimension(95, 26));
+            btnCopyLink.addActionListener(e -> {
+                if (currentUpiUri != null) {
+                    Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(currentUpiUri), null);
+                    JOptionPane.showMessageDialog(CheckoutDialog.this, "UPI URI copied to clipboard!", "Copied", JOptionPane.INFORMATION_MESSAGE);
+                }
+            });
+            subRow.add(btnCopyLink);
+
+            card.add(subRow);
+            return card;
+        }
+
+        private void promptChangeStoreUpi() {
+            JPanel panel = new JPanel(new GridLayout(4, 1, 4, 6));
+            panel.setPreferredSize(new Dimension(360, 150));
+            panel.add(new JLabel("Apna Store UPI ID daalein (PhonePe/GPay/Paytm):"));
+            JTextField txtUpi = new JTextField(currentStoreUpi);
+            panel.add(txtUpi);
+            panel.add(new JLabel("Store / Dukan ka Naam:"));
+            JTextField txtName = new JTextField(currentStoreName);
+            panel.add(txtName);
+
+            int result = JOptionPane.showConfirmDialog(
+                    this,
+                    panel,
+                    "🏬 Store UPI Configuration",
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.PLAIN_MESSAGE
+            );
+
+            if (result == JOptionPane.OK_OPTION) {
+                String newUpi = txtUpi.getText().trim();
+                String newName = txtName.getText().trim();
+                if (!newUpi.isEmpty()) {
+                    AppSettings.setString(AppSettings.KEY_STORE_UPI_ID, newUpi);
+                    if (!newName.isEmpty()) {
+                        AppSettings.setString(AppSettings.KEY_STORE_NAME, newName);
+                    }
+                    AppSettings.saveSettings();
+                    refreshUpiQr();
+                    if (modalBody != null) {
+                        modalBody.revalidate();
+                        modalBody.repaint();
+                    }
+                }
+            }
+        }
+
+        private void openFullscreenUpiDialog() {
+            Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+            UpiQrDialog dlg = new UpiQrDialog(owner, currentStoreUpi, currentStoreName, totalAmount, invoiceNo);
+            dlg.setVisible(true);
+            if (dlg.isPaymentConfirmed()) {
+                handleConfirmCheckout();
+            }
         }
 
         private void handleConfirmCheckout() {

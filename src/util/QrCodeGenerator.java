@@ -60,7 +60,7 @@ public class QrCodeGenerator {
      */
     public static BufferedImage generateQrImage(String text, int targetPixelSize) {
         try {
-            QrCode qr = QrCode.encodeText(text, QrCode.Ecc.MEDIUM);
+            QrCode qr = QrCode.encodeText(text, QrCode.Ecc.QUARTILE);
             int border = 4; // Quiet zone: standard 4 modules
             int modules = qr.size + border * 2;
             int scale = Math.max(1, targetPixelSize / modules);
