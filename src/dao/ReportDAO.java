@@ -302,16 +302,20 @@ public class ReportDAO {
         return map;
     }
 
-    public Map<String, Double> getTopSellingProducts(int limit) throws SQLException {
+    public Map<String, Double> getTopSellingProducts(int limit, int days, boolean exactDay) throws SQLException {
         Map<String, Double> map = new java.util.LinkedHashMap<>();
+        String condition = exactDay ? "= DATE_SUB(CURRENT_DATE(), INTERVAL ? DAY)" : ">= DATE_SUB(CURRENT_DATE(), INTERVAL ? DAY)";
         String sql = "SELECT p.name, COALESCE(SUM(si.quantity), 0) as total_qty " +
                      "FROM sale_items si " +
                      "JOIN products p ON si.product_id = p.id " +
+                     "JOIN sales s ON si.sale_id = s.id " +
+                     "WHERE s.sale_date " + condition + " " +
                      "GROUP BY p.id, p.name " +
                      "ORDER BY total_qty DESC LIMIT ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, limit);
+            ps.setInt(1, days);
+            ps.setInt(2, limit);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     map.put(rs.getString("name"), (double) rs.getInt("total_qty"));
@@ -319,6 +323,14 @@ public class ReportDAO {
             }
         }
         return map;
+    }
+
+    public Map<String, Double> getTopSellingProducts(int limit, int days) throws SQLException {
+        return getTopSellingProducts(limit, days, false);
+    }
+
+    public Map<String, Double> getTopSellingProducts(int limit) throws SQLException {
+        return getTopSellingProducts(limit, 30); // default to 30 days
     }
 
     public Map<String, Double> getStockDistributionByCategory(int limit) throws SQLException {
@@ -338,6 +350,75 @@ public class ReportDAO {
             }
         }
         return map;
+    }
+
+    public Map<String, Map<String, Double>> getStockDistributionTrend(int days) throws SQLException {
+        Map<String, Map<String, Double>> trend = new java.util.LinkedHashMap<>();
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+
+        if (days <= 31) {
+            // Daily distribution for short ranges
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd MMM");
+            for (int i = days - 1; i >= 0; i--) {
+                java.util.Calendar temp = (java.util.Calendar) cal.clone();
+                temp.add(java.util.Calendar.DAY_OF_YEAR, -i);
+                String dayLbl = sdf.format(temp.getTime());
+                trend.put(dayLbl, getStockAtTimestamp(new java.sql.Timestamp(getEndOfDay(temp).getTimeInMillis())));
+            }
+        } else {
+            // Monthly distribution for yearly range
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("MMM");
+            for (int i = 11; i >= 0; i--) {
+                java.util.Calendar temp = (java.util.Calendar) cal.clone();
+                temp.add(java.util.Calendar.MONTH, -i);
+                String monthLbl = sdf.format(temp.getTime());
+                trend.put(monthLbl, getStockAtTimestamp(new java.sql.Timestamp(getEndOfMonth(temp).getTimeInMillis())));
+            }
+        }
+        return trend;
+    }
+
+    private Map<String, Double> getStockAtTimestamp(java.sql.Timestamp ts) throws SQLException {
+        Map<String, Double> dayDist = new HashMap<>();
+        String sql = "SELECT COALESCE(c.name, 'General') as cat_name, " +
+                     "SUM(p.quantity) - COALESCE(SUM(CASE WHEN st.created_at > ? THEN " +
+                     "CASE WHEN st.type = 'IN' THEN st.quantity " +
+                     "WHEN st.type = 'OUT' THEN -st.quantity " +
+                     "WHEN st.type = 'ADJUSTMENT' THEN st.quantity " +
+                     "ELSE 0 END ELSE 0 END), 0) as historical_stock " +
+                     "FROM products p " +
+                     "LEFT JOIN categories c ON p.category_id = c.id " +
+                     "LEFT JOIN stock_transactions st ON p.id = st.product_id " +
+                     "GROUP BY c.name " +
+                     "ORDER BY historical_stock DESC LIMIT 12";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, ts);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    dayDist.put(rs.getString("cat_name"), Math.max(0.0, rs.getDouble("historical_stock")));
+                }
+            }
+        }
+        return dayDist;
+    }
+
+    private java.util.Calendar getEndOfDay(java.util.Calendar cal) {
+        java.util.Calendar res = (java.util.Calendar) cal.clone();
+        res.set(java.util.Calendar.HOUR_OF_DAY, 23);
+        res.set(java.util.Calendar.MINUTE, 59);
+        res.set(java.util.Calendar.SECOND, 59);
+        return res;
+    }
+
+    private java.util.Calendar getEndOfMonth(java.util.Calendar cal) {
+        java.util.Calendar res = (java.util.Calendar) cal.clone();
+        res.set(java.util.Calendar.DAY_OF_MONTH, res.getActualMaximum(java.util.Calendar.DAY_OF_MONTH));
+        res.set(java.util.Calendar.HOUR_OF_DAY, 23);
+        res.set(java.util.Calendar.MINUTE, 59);
+        res.set(java.util.Calendar.SECOND, 59);
+        return res;
     }
 
     public List<Map<String, Object>> getRecentSales(int limit) throws SQLException {

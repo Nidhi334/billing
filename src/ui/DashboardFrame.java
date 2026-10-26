@@ -1,11 +1,7 @@
 package ui;
 
-import dao.ReportDAO;
 import config.AppSettings;
-import model.User;
-
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
+import dao.ReportDAO;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -13,6 +9,9 @@ import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import model.User;
 
 public class DashboardFrame extends JFrame {
     public static final Color APP_BG = AppTheme.BG_CANVAS;
@@ -65,8 +64,11 @@ public class DashboardFrame extends JFrame {
     private DailySalesBarChartPanel revenueBarChart;
     private CategoryPieChartPanel revenuePieChart;
     private HorizontalBarChartPanel topProductsChart;
+    private StockDistributionChartPanel stockDistributionChart;
     private ModernDropdown cmbTimelineFilter;
     private ModernDropdown cmbBreakdownFilter;
+    private ModernDropdown cmbStockTrendFilter;
+    private ModernDropdown cmbTopProductsFilter;
 
     // Responsive Dashboard Components & State
     private JPanel sidebar;
@@ -76,9 +78,14 @@ public class DashboardFrame extends JFrame {
     private int currentStatsCols = -1;
     private JPanel chartToolbar;
     private JLabel lblChartHeader;
-    private JPanel filtersPanel;
     private JPanel chartsWrapper;
     private int currentChartsLayoutMode = -1;
+
+    // Chart Containers (with integrated filters)
+    private JPanel barChartContainer;
+    private JPanel pieChartContainer;
+    private JPanel topProductsContainer;
+    private JPanel stockDistributionContainer;
 
     private ReportDAO reportDAO = new ReportDAO();
 
@@ -755,7 +762,7 @@ public class DashboardFrame extends JFrame {
         homeStatsPanel.setBackground(APP_BG);
         homeStatsPanel.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        // Welcome Header (No background, no border, larger font, circular refresh button)
+        // Welcome Header
         JPanel headerPanel = new JPanel(new BorderLayout(16, 0));
         headerPanel.setOpaque(false);
         headerPanel.setBorder(new EmptyBorder(4, 4, 18, 4));
@@ -765,7 +772,7 @@ public class DashboardFrame extends JFrame {
         welcomeMsg.setForeground(AppTheme.TEXT_PRIMARY);
         headerPanel.add(welcomeMsg, BorderLayout.WEST);
 
-        // Circular Refresh Button with smooth 180deg single-rotation animation
+        // Refresh Button
         JButton btnRefreshStats = new JButton() {
             private boolean hovered = false;
             private double currentAngle = 0.0;
@@ -785,7 +792,7 @@ public class DashboardFrame extends JFrame {
             private void startRotateAnimation() {
                 if (animTimer != null && animTimer.isRunning()) return;
                 final long startTime = System.currentTimeMillis();
-                final long duration = 400; // 400ms smooth 180deg turn
+                final long duration = 400;
                 final double startA = currentAngle;
 
                 animTimer = new javax.swing.Timer(16, evt -> {
@@ -796,7 +803,6 @@ public class DashboardFrame extends JFrame {
                         repaint();
                     } else {
                         double t = (double) elapsed / duration;
-                        // Ease out cubic
                         double ease = 1.0 - Math.pow(1.0 - t, 3);
                         currentAngle = startA + ease * Math.PI;
                         repaint();
@@ -818,7 +824,6 @@ public class DashboardFrame extends JFrame {
                 g2.setStroke(new BasicStroke(hovered ? 1.5f : 1.1f));
                 g2.drawOval(x, y, sz, sz);
 
-                // Draw rotated icon at exact center
                 int cx = getWidth() / 2;
                 int cy = getHeight() / 2;
                 Graphics2D gIcon = (Graphics2D) g2.create();
@@ -827,7 +832,6 @@ public class DashboardFrame extends JFrame {
                 int iconH = refreshIcon.getIconHeight();
                 refreshIcon.paintIcon(this, gIcon, cx - iconW / 2, cy - iconH / 2);
                 gIcon.dispose();
-
                 g2.dispose();
             }
         };
@@ -845,7 +849,7 @@ public class DashboardFrame extends JFrame {
 
         homeStatsPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // 1. Revenue & Operations Metrics Grid (Gap decreased by half: 6px x 6px)
+        // Metrics Grid
         statsGrid = new JPanel(new GridLayout(0, 5, 6, 6));
         statsGrid.setBackground(APP_BG);
 
@@ -863,29 +867,34 @@ public class DashboardFrame extends JFrame {
         statsGrid.add(createMetricCard("Today's Revenue", lblTodaySales, AppTheme.FOREST_GREEN, "zap"));
         statsGrid.add(createMetricCard("Monthly Revenue", lblMonthlySales, AppTheme.FOREST_MID, "calendar"));
         statsGrid.add(createMetricCard("Yearly Revenue", lblYearlySales, AppTheme.STATUS_INFO, "calendar"));
-        statsGrid.add(createMetricCard("Total Revenue", lblTotalRevenue, AppTheme.STATUS_SUCCESS, "wallet"));
+        //statsGrid.add(createMetricCard("Total Revenue", lblTotalRevenue, AppTheme.STATUS_SUCCESS, "wallet"));
         statsGrid.add(createMetricCard("Low Stock Alerts", lblLowStock, AppTheme.STATUS_DANGER, "alert_triangle"));
 
         statsGrid.add(createMetricCard("Unique Products", lblTotalProducts, AppTheme.TEXT_SECONDARY, "products"));
         statsGrid.add(createMetricCard("Total Stock Units", lblTotalStock, AppTheme.FOREST_MID, "boxes"));
         statsGrid.add(createMetricCard("Total Customers", lblTotalCustomers, AppTheme.STATUS_WARNING, "customers"));
         statsGrid.add(createMetricCard("Total Suppliers", lblTotalSuppliers, AppTheme.TEXT_MUTED, "building"));
-        statsGrid.add(createMetricCard("POS Billing Status", lblProfitMargin, AppTheme.FOREST_GREEN, "check_circle"));
+        //statsGrid.add(createMetricCard("POS Billing Status", lblProfitMargin, AppTheme.FOREST_GREEN, "check_circle"));
 
-        // 2. Chart Controls Toolbar
+        // Charts & Filters
         chartToolbar = new JPanel(new BorderLayout(10, 0));
         chartToolbar.setOpaque(false);
         chartToolbar.setBorder(new EmptyBorder(10, 0, 6, 0));
 
-        lblChartHeader = new JLabel("Interactive Revenue Visual Analytics & Trends");
+        lblChartHeader = new JLabel("Interactive Business Analytics & Stock Trends");
         lblChartHeader.setIcon(new SidebarIcon("reports", 16, AppTheme.FOREST_GREEN));
         lblChartHeader.setIconTextGap(8);
         lblChartHeader.setFont(AppTheme.font(Font.BOLD, 14));
         lblChartHeader.setForeground(AppTheme.TEXT_PRIMARY);
+        chartToolbar.add(lblChartHeader, BorderLayout.WEST);
 
-        filtersPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        filtersPanel.setOpaque(false);
+        // Initialize Charts
+        revenueBarChart = new DailySalesBarChartPanel();
+        revenuePieChart = new CategoryPieChartPanel();
+        topProductsChart = new HorizontalBarChartPanel();
+        stockDistributionChart = new StockDistributionChartPanel();
 
+        // Initialize Filters
         cmbTimelineFilter = new ModernDropdown("Timeline", "calendar", new String[]{
                 "Daily Revenue (Last 7 Days)",
                 "Daily Revenue (Last 14 Days)",
@@ -895,27 +904,39 @@ public class DashboardFrame extends JFrame {
                 "Yearly Revenue (Last 5 Years)"
         });
         cmbTimelineFilter.addActionListener(e -> refreshBarChartData());
-        filtersPanel.add(cmbTimelineFilter);
 
         cmbBreakdownFilter = new ModernDropdown("Breakdown", "pie_chart", new String[]{
                 "By Product Category",
                 "By Payment Source (Cash/UPI/Card)"
         });
         cmbBreakdownFilter.addActionListener(e -> refreshPieChartData());
-        filtersPanel.add(cmbBreakdownFilter);
 
-        chartToolbar.add(lblChartHeader, BorderLayout.WEST);
-        chartToolbar.add(filtersPanel, BorderLayout.EAST);
+        cmbStockTrendFilter = new ModernDropdown("Range", "calendar", new String[]{
+                "Last 3 Days Distribution",
+                "Weekly (Last 7 Days)",
+                "Monthly (Last 30 Days)",
+                "Yearly (Last 12 Months)"
+        });
+        cmbStockTrendFilter.addActionListener(e -> refreshStockTrendData());
 
-        // 3. Visual Charts Container
-        revenueBarChart = new DailySalesBarChartPanel();
-        revenuePieChart = new CategoryPieChartPanel();
-        topProductsChart = new HorizontalBarChartPanel();
+        cmbTopProductsFilter = new ModernDropdown("Top Selling", "zap", new String[]{
+                "Today's Top Sellers",
+                "Yesterday's Top Sellers",
+                "Weekly (Last 7 Days)",
+                "Monthly (Last 30 Days)",
+                "All-Time Top Selling"
+        });
+        cmbTopProductsFilter.addActionListener(e -> refreshTopProductsChartData());
+
+        // Create Chart Containers
+        barChartContainer = createChartWithFilter(revenueBarChart, cmbTimelineFilter);
+        pieChartContainer = createChartWithFilter(revenuePieChart, cmbBreakdownFilter);
+        topProductsContainer = createChartWithFilter(topProductsChart, cmbTopProductsFilter);
+        stockDistributionContainer = createChartWithFilter(stockDistributionChart, cmbStockTrendFilter);
 
         chartsWrapper = new JPanel();
         chartsWrapper.setOpaque(false);
 
-        // 4. Combine into responsive vertically scrollable body
         ResponsiveScrollablePanel centerContainer = new ResponsiveScrollablePanel();
         centerContainer.setLayout(new BoxLayout(centerContainer, BoxLayout.Y_AXIS));
         centerContainer.setOpaque(false);
@@ -933,7 +954,6 @@ public class DashboardFrame extends JFrame {
         scrollPane.getViewport().setOpaque(false);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
 
-        // Responsive viewport listener
         scrollPane.getViewport().addChangeListener(e -> {
             int w = scrollPane.getViewport().getWidth();
             updateResponsiveHomeLayout(w);
@@ -949,24 +969,32 @@ public class DashboardFrame extends JFrame {
         });
 
         updateResponsiveHomeLayout(1150);
-
         homeStatsPanel.add(scrollPane, BorderLayout.CENTER);
     }
+
+    private JPanel createChartWithFilter(JPanel chart, ModernDropdown filter) {
+         JPanel container = new JPanel(new BorderLayout(0, 5));
+         container.setOpaque(false);
+         
+         if (filter != null) {
+             JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+             filterPanel.setOpaque(false);
+             filterPanel.add(filter);
+             container.add(filterPanel, BorderLayout.NORTH);
+         }
+         
+         container.add(chart, BorderLayout.CENTER);
+         return container;
+     }
 
     private void updateResponsiveHomeLayout(int availableWidth) {
         if (availableWidth < 100) return;
 
-        // 1. Metric Cards Grid: Dynamic column count
         int targetCols;
-        if (availableWidth >= 1050) {
-            targetCols = 5;
-        } else if (availableWidth >= 850) {
-            targetCols = 4;
-        } else if (availableWidth >= 650) {
-            targetCols = 3;
-        } else {
-            targetCols = 2;
-        }
+        if (availableWidth >= 1050) targetCols = 5;
+        else if (availableWidth >= 850) targetCols = 4;
+        else if (availableWidth >= 650) targetCols = 3;
+        else targetCols = 2;
 
         if (currentStatsCols != targetCols && statsGrid != null) {
             currentStatsCols = targetCols;
@@ -974,79 +1002,43 @@ public class DashboardFrame extends JFrame {
             statsGrid.revalidate();
         }
 
-        // 2. Chart Toolbar: Wrap filters if width is constrained
-        if (chartToolbar != null && lblChartHeader != null && filtersPanel != null) {
-            if (availableWidth >= 1050) {
-                chartToolbar.removeAll();
-                chartToolbar.setLayout(new BorderLayout(10, 0));
-                chartToolbar.add(lblChartHeader, BorderLayout.WEST);
-                chartToolbar.add(filtersPanel, BorderLayout.EAST);
-            } else {
-                chartToolbar.removeAll();
-                chartToolbar.setLayout(new BorderLayout(0, 8));
-                chartToolbar.add(lblChartHeader, BorderLayout.NORTH);
-                chartToolbar.add(filtersPanel, BorderLayout.WEST);
-            }
-            chartToolbar.revalidate();
-        }
-
-        // 3. Visual Charts: Responsive arrangement
         int targetChartsMode;
-        if (availableWidth >= 1080) {
-            targetChartsMode = 0; // 3 columns side by side
-        } else if (availableWidth >= 740) {
-            targetChartsMode = 1; // 2 tiers: Row 1 = 2 charts, Row 2 = 1 wide chart
-        } else {
-            targetChartsMode = 2; // 1 column stacked
-        }
+        if (availableWidth >= 1200) targetChartsMode = 0; // 2x2 grid
+        else if (availableWidth >= 800) targetChartsMode = 1; // 2 columns, 2 rows
+        else targetChartsMode = 2; // 1 column
 
         if (currentChartsLayoutMode != targetChartsMode && chartsWrapper != null) {
             currentChartsLayoutMode = targetChartsMode;
             chartsWrapper.removeAll();
 
             if (targetChartsMode == 0) {
-                // 3 columns side-by-side
-                chartsWrapper.setLayout(new GridLayout(1, 3, 7, 6));
-                chartsWrapper.setPreferredSize(new Dimension(0, 360));
-                chartsWrapper.setMinimumSize(new Dimension(0, 260));
-                chartsWrapper.setMaximumSize(null);
-                revenueBarChart.setPreferredSize(null);
-                revenuePieChart.setPreferredSize(null);
-                topProductsChart.setPreferredSize(null);
-                chartsWrapper.add(revenueBarChart);
-                chartsWrapper.add(revenuePieChart);
-                chartsWrapper.add(topProductsChart);
+                chartsWrapper.setLayout(new GridLayout(2, 2, 10, 10));
+                chartsWrapper.setPreferredSize(new Dimension(0, 720));
+                chartsWrapper.add(barChartContainer);
+                chartsWrapper.add(pieChartContainer);
+                chartsWrapper.add(stockDistributionContainer);
+                chartsWrapper.add(topProductsContainer);
             } else if (targetChartsMode == 1) {
-                // 2 tiers
-                chartsWrapper.setLayout(new GridLayout(2, 1, 7, 6));
-                chartsWrapper.setPreferredSize(new Dimension(0, 540));
-                chartsWrapper.setMinimumSize(new Dimension(0, 440));
-                chartsWrapper.setMaximumSize(null);
-
-                JPanel topTwo = new JPanel(new GridLayout(1, 2, 7, 6));
-                topTwo.setOpaque(false);
-                topTwo.add(revenueBarChart);
-                topTwo.add(revenuePieChart);
-
-                chartsWrapper.add(topTwo);
-                chartsWrapper.add(topProductsChart);
+                chartsWrapper.setLayout(new GridLayout(2, 2, 8, 8));
+                chartsWrapper.setPreferredSize(new Dimension(0, 680));
+                chartsWrapper.add(barChartContainer);
+                chartsWrapper.add(pieChartContainer);
+                chartsWrapper.add(stockDistributionContainer);
+                chartsWrapper.add(topProductsContainer);
             } else {
-                // 1 column vertically stacked
-                chartsWrapper.setLayout(new GridLayout(3, 1, 7, 6));
-                chartsWrapper.setPreferredSize(new Dimension(0, 780));
-                chartsWrapper.setMinimumSize(new Dimension(0, 660));
-                chartsWrapper.setMaximumSize(null);
-
-                chartsWrapper.add(revenueBarChart);
-                chartsWrapper.add(revenuePieChart);
-                chartsWrapper.add(topProductsChart);
+                chartsWrapper.setLayout(new BoxLayout(chartsWrapper, BoxLayout.Y_AXIS));
+                chartsWrapper.setPreferredSize(null);
+                chartsWrapper.add(barChartContainer);
+                chartsWrapper.add(Box.createVerticalStrut(15));
+                chartsWrapper.add(pieChartContainer);
+                chartsWrapper.add(Box.createVerticalStrut(15));
+                chartsWrapper.add(stockDistributionContainer);
+                chartsWrapper.add(Box.createVerticalStrut(15));
+                chartsWrapper.add(topProductsContainer);
             }
 
             chartsWrapper.revalidate();
             chartsWrapper.repaint();
-            if (chartsWrapper.getParent() != null) {
-                chartsWrapper.getParent().revalidate();
-            }
         }
     }
 
@@ -1154,6 +1146,30 @@ public class DashboardFrame extends JFrame {
             refreshBarChartData();
             refreshPieChartData();
             refreshTopProductsChartData();
+            refreshStockTrendData();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void refreshStockTrendData() {
+        if (stockDistributionChart == null || cmbStockTrendFilter == null) return;
+        try {
+            int sel = cmbStockTrendFilter.getSelectedIndex();
+            int days = 3;
+            String title = "Last 3 Days Distribution";
+            if (sel == 1) {
+                days = 7;
+                title = "Weekly Distribution (Last 7 Days)";
+            } else if (sel == 2) {
+                days = 30;
+                title = "Monthly Distribution (Last 30 Days)";
+            } else if (sel == 3) {
+                days = 365;
+                title = "Yearly Distribution (Last 12 Months)";
+            }
+            
+            stockDistributionChart.setData(reportDAO.getStockDistributionTrend(days), title);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1197,9 +1213,32 @@ public class DashboardFrame extends JFrame {
     }
 
     private void refreshTopProductsChartData() {
-        if (topProductsChart == null) return;
+        if (topProductsChart == null || cmbTopProductsFilter == null) return;
         try {
-            topProductsChart.setData(reportDAO.getTopSellingProducts(6), "Top Selling Products");
+            int sel = cmbTopProductsFilter.getSelectedIndex();
+            int days = 0;
+            boolean exact = true;
+            String title = "Today's Top Selling Products";
+            
+            if (sel == 1) {
+                days = 1;
+                exact = true;
+                title = "Yesterday's Top Selling Products";
+            } else if (sel == 2) {
+                days = 7;
+                exact = false;
+                title = "Weekly Top Selling Products";
+            } else if (sel == 3) {
+                days = 30;
+                exact = false;
+                title = "Monthly Top Selling Products";
+            } else if (sel == 4) {
+                days = 3650;
+                exact = false;
+                title = "All-Time Top Selling Products";
+            }
+            
+            topProductsChart.setData(reportDAO.getTopSellingProducts(6, days, exact), title);
         } catch (Exception e) {
             e.printStackTrace();
         }

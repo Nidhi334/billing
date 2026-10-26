@@ -1,11 +1,11 @@
 package ui;
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.util.Map;
+import javax.swing.*;
 
 public class HorizontalBarChartPanel extends JPanel {
     private Map<String, Double> chartData;
@@ -16,9 +16,9 @@ public class HorizontalBarChartPanel extends JPanel {
     public HorizontalBarChartPanel() {
         setBackground(Color.WHITE);
         setOpaque(false);
-        setPreferredSize(new Dimension(450, 260));
-        setMinimumSize(new Dimension(150, 180));
-        setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
+        setPreferredSize(new Dimension(500, 300));
+        setMinimumSize(new Dimension(200, 200));
+        setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
 
         addMouseMotionListener(new MouseAdapter() {
             @Override
