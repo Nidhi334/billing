@@ -2381,6 +2381,16 @@ public class BillingPanel extends JPanel {
                     lblPhoneStatus.setText("Validation Error: Only digits (0-9) allowed. Please remove letters/symbols.");
                     lblPhoneStatus.setForeground(new Color(220, 38, 38));
                     registrationPanel.setVisible(false);
+                } else if (phone.charAt(0) < '6' || phone.charAt(0) > '9') {
+                    phoneValidationState = 2;
+                    lblDigitCounter.setText("⚠️ Start 6, 7, 8, 9");
+                    lblDigitCounter.setForeground(new Color(220, 38, 38));
+                    isExistingCustomer = false;
+                    matchedCustomer = null;
+                    lblPhoneStatus.setIcon(new SidebarIcon("alert_triangle", 13, new Color(220, 38, 38)));
+                    lblPhoneStatus.setText("Validation Alert: Mobile number must start with 6, 7, 8, or 9 (Entered: '" + phone.charAt(0) + "')");
+                    lblPhoneStatus.setForeground(new Color(220, 38, 38));
+                    registrationPanel.setVisible(false);
                 } else if (phone.length() > 10) {
                     phoneValidationState = 2;
                     lblDigitCounter.setText("⚠️ " + phone.length() + "/10 (Too Long!)");
@@ -2894,6 +2904,18 @@ public class BillingPanel extends JPanel {
                         this,
                         "Invalid Mobile Number!\n\nMobile number must contain numeric digits (0-9) only.\nPlease remove any letters, spaces, or special symbols.",
                         "Validation Error - Numbers Only",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                txtPhone.requestFocusInWindow();
+                txtPhone.selectAll();
+                return;
+            }
+
+            if (phone.charAt(0) < '6' || phone.charAt(0) > '9') {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Invalid Starting Digit!\n\nMobile numbers in India must start with 6, 7, 8, or 9.\n(You entered a number starting with '" + phone.charAt(0) + "').\n\nPlease enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.",
+                        "Validation Error - Invalid Starting Digit",
                         JOptionPane.WARNING_MESSAGE
                 );
                 txtPhone.requestFocusInWindow();

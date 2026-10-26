@@ -177,6 +177,12 @@ public class QuickAddCustomerDialog extends JDialog {
                 return;
             }
 
+            if (phone.charAt(0) < '6' || phone.charAt(0) > '9') {
+                JOptionPane.showMessageDialog(this, "Mobile number must start with 6, 7, 8, or 9.\n(You entered a number starting with '" + phone.charAt(0) + "').", "Validation Error - Invalid Starting Digit", JOptionPane.WARNING_MESSAGE);
+                txtPhone.requestFocus();
+                return;
+            }
+
             if (phone.length() > 10) {
                 JOptionPane.showMessageDialog(this, "Mobile number cannot exceed 10 digits!\n(You entered " + phone.length() + " digits). Please enter only 10 digits.", "Validation Error - Number Too Long", JOptionPane.WARNING_MESSAGE);
                 txtPhone.requestFocus();
