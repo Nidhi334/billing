@@ -2001,6 +2001,8 @@ public class BillingPanel extends JPanel {
         private JTextField txtEmail;
         private JTextField txtAddress;
         private JLabel lblPhoneStatus;
+        private JLabel lblDigitCounter;
+        private int phoneValidationState = 0; // 0 = NORMAL, 1 = VALID (10 digits), 2 = ERROR (>10 digits or non-digits)
         private JPanel registrationPanel;
 
         private boolean isExistingCustomer = false;
@@ -2030,6 +2032,50 @@ public class BillingPanel extends JPanel {
 
             buildModalUI();
             setModalPaymentMode(this.modalPaymentMode);
+        }
+
+        private JTextField createPhoneInputField(String placeholder, int height, int fontSize) {
+            JTextField tf = new JTextField() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                    int w = getWidth(), h = getHeight();
+                    boolean focused = hasFocus();
+
+                    Color bg = (phoneValidationState == 2) ? new Color(254, 242, 242) :
+                               (phoneValidationState == 1) ? new Color(240, 253, 244) :
+                               (focused ? Color.WHITE : new Color(246, 249, 247));
+
+                    Color border = (phoneValidationState == 2) ? new Color(239, 68, 68) :
+                                   (phoneValidationState == 1) ? new Color(34, 197, 94) :
+                                   (focused ? AppTheme.FOREST_MID : new Color(226, 235, 230));
+
+                    g2.setColor(bg);
+                    g2.fillRoundRect(0, 0, w - 1, h - 1, h, h);
+                    g2.setColor(border);
+                    g2.drawRoundRect(0, 0, w - 1, h - 1, h, h);
+                    super.paintComponent(g);
+
+                    if (getText() == null || getText().isEmpty()) {
+                        g2.setFont(AppTheme.font(Font.PLAIN, fontSize));
+                        g2.setColor(new Color(156, 175, 168));
+                        FontMetrics fm = g2.getFontMetrics();
+                        Insets insets = getInsets();
+                        int x = insets != null && insets.left > 0 ? insets.left : 16;
+                        int y = ((h - fm.getHeight()) / 2) + fm.getAscent();
+                        g2.drawString(placeholder, x, y);
+                    }
+                    g2.dispose();
+                }
+            };
+            tf.setOpaque(false);
+            tf.setBorder(new EmptyBorder(4, 16, 4, 16));
+            tf.setFont(AppTheme.font(Font.PLAIN, fontSize));
+            tf.setPreferredSize(new Dimension(0, height));
+            tf.setMaximumSize(new Dimension(Integer.MAX_VALUE, height));
+            return tf;
         }
 
         private JTextField createStyledInputField(String placeholder, int height, int fontSize) {
@@ -2258,37 +2304,143 @@ public class BillingPanel extends JPanel {
             body.setBackground(Color.WHITE);
             body.setBorder(new EmptyBorder(16, 24, 16, 24));
 
-            // Customer Phone Row
+            // Customer Phone Header Row with Live 10-Digit Counter
+            JPanel phoneHeaderRow = new JPanel(new BorderLayout());
+            phoneHeaderRow.setOpaque(false);
+            phoneHeaderRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+            phoneHeaderRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+
             JLabel lblPhoneHeader = new JLabel("Customer Mobile Number", new SidebarIcon("user", 13, AppTheme.FOREST_MID), SwingConstants.LEFT);
             lblPhoneHeader.setIconTextGap(6);
             lblPhoneHeader.setFont(AppTheme.font(Font.BOLD, 12));
             lblPhoneHeader.setForeground(AppTheme.TEXT_PRIMARY);
-            lblPhoneHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
-            body.add(lblPhoneHeader);
-            body.add(Box.createVerticalStrut(6));
+            phoneHeaderRow.add(lblPhoneHeader, BorderLayout.WEST);
 
-            txtPhone = createStyledInputField("Enter 10-digit mobile number...", 38, 14);
+            lblDigitCounter = new JLabel("0/10 digits") {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    Color bg = (phoneValidationState == 2) ? new Color(254, 226, 226) :
+                               (phoneValidationState == 1) ? new Color(220, 252, 231) :
+                               new Color(241, 245, 249);
+                    Color border = (phoneValidationState == 2) ? new Color(248, 113, 113) :
+                                   (phoneValidationState == 1) ? new Color(134, 239, 172) :
+                                   new Color(226, 232, 240);
+                    g2.setColor(bg);
+                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
+                    g2.setColor(border);
+                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, getHeight(), getHeight());
+                    g2.dispose();
+                    super.paintComponent(g);
+                }
+            };
+            lblDigitCounter.setFont(AppTheme.font(Font.BOLD, 10));
+            lblDigitCounter.setForeground(AppTheme.TEXT_MUTED);
+            lblDigitCounter.setBorder(new EmptyBorder(2, 8, 2, 8));
+            lblDigitCounter.setOpaque(false);
+            phoneHeaderRow.add(lblDigitCounter, BorderLayout.EAST);
+            body.add(phoneHeaderRow);
+            body.add(Box.createVerticalStrut(5));
+
+            txtPhone = createPhoneInputField("Enter 10-digit mobile number...", 38, 14);
             txtPhone.setFont(AppTheme.font(Font.BOLD, 14));
             txtPhone.setAlignmentX(Component.LEFT_ALIGNMENT);
             body.add(txtPhone);
-            body.add(Box.createVerticalStrut(6));
+            body.add(Box.createVerticalStrut(5));
 
-            lblPhoneStatus = new JLabel("Enter mobile number to search or register customer (or Skip below)");
+            lblPhoneStatus = new JLabel("Enter 10-digit mobile number to search or register customer (or Skip below)");
             lblPhoneStatus.setFont(AppTheme.font(Font.PLAIN, 11));
             lblPhoneStatus.setForeground(AppTheme.TEXT_MUTED);
             lblPhoneStatus.setAlignmentX(Component.LEFT_ALIGNMENT);
             body.add(lblPhoneStatus);
-            body.add(Box.createVerticalStrut(14));
+            body.add(Box.createVerticalStrut(12));
 
-            // Real-time Phone Lookup Logic
+            // Real-time Phone Lookup & 10-Digit Strict Validation Logic
             Runnable lookupAction = () -> {
-                String phone = txtPhone.getText().trim();
-                if (phone.length() >= 4) {
+                String rawPhone = txtPhone.getText();
+                String phone = rawPhone != null ? rawPhone.trim() : "";
+
+                if (phone.isEmpty()) {
+                    phoneValidationState = 0;
+                    lblDigitCounter.setText("0/10 digits");
+                    lblDigitCounter.setForeground(AppTheme.TEXT_MUTED);
+                    isExistingCustomer = false;
+                    matchedCustomer = null;
+                    lblPhoneStatus.setIcon(null);
+                    lblPhoneStatus.setText("Enter 10-digit mobile number to search or register customer (or Skip below)");
+                    lblPhoneStatus.setForeground(AppTheme.TEXT_MUTED);
+                    registrationPanel.setVisible(false);
+                } else if (!phone.matches("\\d+")) {
+                    phoneValidationState = 2;
+                    lblDigitCounter.setText("⚠️ Digits only (0-9)");
+                    lblDigitCounter.setForeground(new Color(220, 38, 38));
+                    isExistingCustomer = false;
+                    matchedCustomer = null;
+                    lblPhoneStatus.setIcon(new SidebarIcon("alert_triangle", 13, new Color(220, 38, 38)));
+                    lblPhoneStatus.setText("Validation Error: Only digits (0-9) allowed. Please remove letters/symbols.");
+                    lblPhoneStatus.setForeground(new Color(220, 38, 38));
+                    registrationPanel.setVisible(false);
+                } else if (phone.length() > 10) {
+                    phoneValidationState = 2;
+                    lblDigitCounter.setText("⚠️ " + phone.length() + "/10 (Too Long!)");
+                    lblDigitCounter.setForeground(new Color(220, 38, 38));
+                    isExistingCustomer = false;
+                    matchedCustomer = null;
+                    lblPhoneStatus.setIcon(new SidebarIcon("alert_triangle", 13, new Color(220, 38, 38)));
+                    lblPhoneStatus.setText("Validation Alert: Mobile number cannot exceed 10 digits! (" + phone.length() + " digits entered)");
+                    lblPhoneStatus.setForeground(new Color(220, 38, 38));
+                    registrationPanel.setVisible(false);
+                } else if (phone.length() < 10) {
+                    phoneValidationState = 0;
+                    lblDigitCounter.setText(phone.length() + "/10 digits");
+                    lblDigitCounter.setForeground(AppTheme.TEXT_SECONDARY);
+                    isExistingCustomer = false;
+                    matchedCustomer = null;
+
                     try {
                         Customer found = customerDAO.getCustomerByPhone(phone);
                         if (found == null) {
                             List<Customer> search = customerDAO.searchCustomers(phone);
                             if (!search.isEmpty()) found = search.get(0);
+                        }
+                        if (found != null && found.getPhone() != null && found.getPhone().equals(phone)) {
+                            isExistingCustomer = true;
+                            matchedCustomer = found;
+                            lblPhoneStatus.setIcon(new SidebarIcon("check_circle", 13, new Color(22, 163, 74)));
+                            lblPhoneStatus.setText("Existing Customer: " + found.getName() + " (Auto-linked)");
+                            lblPhoneStatus.setForeground(new Color(22, 163, 74));
+                            txtName.setText(found.getName());
+                            txtEmail.setText(found.getEmail() != null ? found.getEmail() : "");
+                            txtAddress.setText(found.getAddress() != null ? found.getAddress() : "");
+                            registrationPanel.setVisible(false);
+                        } else {
+                            lblPhoneStatus.setIcon(null);
+                            lblPhoneStatus.setText("Please enter complete 10-digit mobile number (" + phone.length() + "/10 digits entered)");
+                            lblPhoneStatus.setForeground(AppTheme.TEXT_MUTED);
+                            registrationPanel.setVisible(false);
+                        }
+                    } catch (Exception ex) {
+                        lblPhoneStatus.setIcon(null);
+                        lblPhoneStatus.setText("Please enter complete 10-digit mobile number (" + phone.length() + "/10 digits entered)");
+                        lblPhoneStatus.setForeground(AppTheme.TEXT_MUTED);
+                        registrationPanel.setVisible(false);
+                    }
+                } else { // Exactly 10 digits!
+                    phoneValidationState = 1;
+                    lblDigitCounter.setText("✓ 10/10 Digits");
+                    lblDigitCounter.setForeground(new Color(22, 163, 74));
+
+                    try {
+                        Customer found = customerDAO.getCustomerByPhone(phone);
+                        if (found == null) {
+                            List<Customer> search = customerDAO.searchCustomers(phone);
+                            for (Customer c : search) {
+                                if (phone.equals(c.getPhone())) {
+                                    found = c;
+                                    break;
+                                }
+                            }
                         }
 
                         if (found != null) {
@@ -2305,22 +2457,18 @@ public class BillingPanel extends JPanel {
                             isExistingCustomer = false;
                             matchedCustomer = null;
                             lblPhoneStatus.setIcon(new SidebarIcon("user", 13, AppTheme.FOREST_MID));
-                            lblPhoneStatus.setText("New Customer — Enter details below to register & save");
+                            lblPhoneStatus.setText("New Customer (10 digits verified) — Enter details below to register & save");
                             lblPhoneStatus.setForeground(AppTheme.FOREST_MID);
                             registrationPanel.setVisible(true);
                         }
                     } catch (Exception ex) {
                         lblPhoneStatus.setIcon(null);
                         lblPhoneStatus.setText("Status: " + ex.getMessage());
+                        registrationPanel.setVisible(false);
                     }
-                } else if (phone.isEmpty()) {
-                    isExistingCustomer = false;
-                    matchedCustomer = null;
-                    lblPhoneStatus.setIcon(null);
-                    lblPhoneStatus.setText("Enter mobile number to search or register customer (or Skip below)");
-                    lblPhoneStatus.setForeground(AppTheme.TEXT_MUTED);
-                    registrationPanel.setVisible(false);
                 }
+                txtPhone.repaint();
+                lblDigitCounter.repaint();
                 body.revalidate();
                 body.repaint();
             };
@@ -2329,6 +2477,19 @@ public class BillingPanel extends JPanel {
                 public void insertUpdate(DocumentEvent e) { lookupAction.run(); }
                 public void removeUpdate(DocumentEvent e) { lookupAction.run(); }
                 public void changedUpdate(DocumentEvent e) { lookupAction.run(); }
+            });
+
+            txtPhone.addActionListener(e -> {
+                String p = txtPhone.getText().trim();
+                if (p.length() > 10 || (!p.isEmpty() && !p.matches("\\d+"))) {
+                    handleConfirmCheckout();
+                } else if (p.length() == 10) {
+                    if (registrationPanel.isVisible()) {
+                        txtName.requestFocusInWindow();
+                    } else {
+                        handleConfirmCheckout();
+                    }
+                }
             });
 
             // New Customer Registration Panel (hidden initially)
@@ -2724,6 +2885,42 @@ public class BillingPanel extends JPanel {
 
             if (phone.isEmpty()) {
                 executeFinalSale(null, "Walk-in Customer", "");
+                return;
+            }
+
+            // ── Mobile Number 10-Digit Validation ─────────────────────────────
+            if (!phone.matches("\\d+")) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Invalid Mobile Number!\n\nMobile number must contain numeric digits (0-9) only.\nPlease remove any letters, spaces, or special symbols.",
+                        "Validation Error - Numbers Only",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                txtPhone.requestFocusInWindow();
+                txtPhone.selectAll();
+                return;
+            }
+
+            if (phone.length() > 10) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Mobile number cannot exceed 10 digits!\n\nYou entered " + phone.length() + " digits:\n\"" + phone + "\"\n\nPlease enter a valid 10-digit mobile number.",
+                        "Validation Error - Number Too Long",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                txtPhone.requestFocusInWindow();
+                txtPhone.selectAll();
+                return;
+            }
+
+            if (phone.length() < 10) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Mobile number must be exactly 10 digits!\n\nYou entered only " + phone.length() + " digits:\n\"" + phone + "\"\n\nPlease complete the 10-digit number, or leave blank for Walk-in.",
+                        "Validation Error - Incomplete Number",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                txtPhone.requestFocusInWindow();
                 return;
             }
 

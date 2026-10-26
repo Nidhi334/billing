@@ -170,6 +170,26 @@ public class QuickAddCustomerDialog extends JDialog {
             return;
         }
 
+        if (!phone.isEmpty()) {
+            if (!phone.matches("\\d+")) {
+                JOptionPane.showMessageDialog(this, "Phone number must contain numeric digits (0-9) only.\nPlease remove any letters or symbols.", "Invalid Phone Number", JOptionPane.WARNING_MESSAGE);
+                txtPhone.requestFocus();
+                return;
+            }
+
+            if (phone.length() > 10) {
+                JOptionPane.showMessageDialog(this, "Mobile number cannot exceed 10 digits!\n(You entered " + phone.length() + " digits). Please enter only 10 digits.", "Validation Error - Number Too Long", JOptionPane.WARNING_MESSAGE);
+                txtPhone.requestFocus();
+                return;
+            }
+
+            if (phone.length() < 10) {
+                JOptionPane.showMessageDialog(this, "Mobile number must be exactly 10 digits!\n(You entered " + phone.length() + " digits).", "Validation Error - Incomplete Number", JOptionPane.WARNING_MESSAGE);
+                txtPhone.requestFocus();
+                return;
+            }
+        }
+
         Customer c = new Customer();
         c.setName(name);
         c.setPhone(phone);

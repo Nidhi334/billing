@@ -186,6 +186,30 @@ public class CustomerDialog extends JDialog {
             return;
         }
 
+        if (phone.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Customer phone number is required.", "Validation Required", JOptionPane.WARNING_MESSAGE);
+            txtPhone.requestFocusInWindow();
+            return;
+        }
+
+        if (!phone.matches("\\d+")) {
+            JOptionPane.showMessageDialog(this, "Phone number must contain numeric digits (0-9) only.\nPlease remove any letters or symbols.", "Invalid Phone Number", JOptionPane.WARNING_MESSAGE);
+            txtPhone.requestFocusInWindow();
+            return;
+        }
+
+        if (phone.length() > 10) {
+            JOptionPane.showMessageDialog(this, "Mobile number cannot exceed 10 digits!\n(You entered " + phone.length() + " digits). Please enter a valid 10-digit number.", "Validation Error - Number Too Long", JOptionPane.WARNING_MESSAGE);
+            txtPhone.requestFocusInWindow();
+            return;
+        }
+
+        if (phone.length() < 10) {
+            JOptionPane.showMessageDialog(this, "Mobile number must be exactly 10 digits!\n(You entered " + phone.length() + " digits). Please enter a valid 10-digit number.", "Validation Error - Incomplete Number", JOptionPane.WARNING_MESSAGE);
+            txtPhone.requestFocusInWindow();
+            return;
+        }
+
         try {
             boolean success;
             if (existingCustomer == null) {
