@@ -166,7 +166,7 @@ public class DashboardFrame extends JFrame {
         navItems.clear();
         btnNavHome = new SidebarNavItem("Dashboard", "dashboard");
         btnNavBilling = new SidebarNavItem("New Sale / Billing", "billing");
-        // btnNavSelfCheckout = new SidebarNavItem("Self Checkout", "self_checkout");
+        btnNavSelfCheckout = new SidebarNavItem("Self Checkout", "self_checkout");
         btnNavBillHistory = new SidebarNavItem("Bill History / Orders", "bill_history");
         btnNavCustomers = new SidebarNavItem("Customers", "customers");
         // Merged Products & Stock nav item
@@ -177,7 +177,7 @@ public class DashboardFrame extends JFrame {
 
         navItems.add(btnNavHome);
         navItems.add(btnNavBilling);
-        // navItems.add(btnNavSelfCheckout);
+        navItems.add(btnNavSelfCheckout);
         navItems.add(btnNavBillHistory);
         navItems.add(btnNavCustomers);
         navItems.add(btnNavInventory);
@@ -263,7 +263,6 @@ public class DashboardFrame extends JFrame {
             cardLayout.show(contentPanel, "BILLING");
             billingPanel.focusBarcodeField();
         });
-        /*
         btnNavSelfCheckout.addActionListener(e -> {
             setActiveNavButton(btnNavSelfCheckout);
             showAdminChrome(false);
@@ -271,7 +270,6 @@ public class DashboardFrame extends JFrame {
             selfCheckoutPanel.focusScanInput();
             cardLayout.show(contentPanel, "SELF_CHECKOUT");
         });
-        */
         btnNavBillHistory.addActionListener(e -> {
             setActiveNavButton(btnNavBillHistory);
             showAdminChrome(true);
@@ -656,6 +654,7 @@ public class DashboardFrame extends JFrame {
 
         if (btnNavHome != null) btnNavHome.setVisible(isAdmin);
         if (btnNavBilling != null) btnNavBilling.setVisible(true);
+        if (btnNavSelfCheckout != null) btnNavSelfCheckout.setVisible(true);
         if (btnNavBillHistory != null) btnNavBillHistory.setVisible(true);
         if (btnNavCustomers != null) btnNavCustomers.setVisible(true);
         if (btnNavInventory != null) btnNavInventory.setVisible(isAdmin);
