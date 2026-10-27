@@ -7,6 +7,7 @@ import model.User;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.plaf.basic.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
@@ -26,7 +27,8 @@ import java.util.Properties;
  *
  * Design tokens:
  *   - All vector icons drawn via Graphics2D paths (no emoji rendering issues)
- *   - Input fields: filled bg, fully rounded, no visible border line
+ *   - Input fields: filled bg, fully rounded, subtle sage border
+ *   - Role selection: instant combo box for Admin and Staff with custom pill styling
  *   - Buttons: pill-shaped (cornerRadius = height/2)
  *   - Login button: dark green pill
  *   - Font: Helvetica Neue on macOS (avoids Lucida Grande Bold glyph-cache bug)
@@ -48,29 +50,18 @@ public class LoginPanel extends JPanel {
 
     // ── Fields ────────────────────────────────────────────────────────────────
     private final Frame parentFrame;
-    private JTextField     txtUsername;
+    private JComboBox<String> cmbRole;
+    private JLabel lblRoleBadge;
     private JPasswordField txtPassword;
     private JButton btnLogin, btnDbConfig, btnForgotPassword;
-    private JButton btnRoleDropdown;
-    private RoleDropdownCard roleDropdownCard;
     private boolean isAdmin = true;
     private JCheckBox chkRemember;
     private JButton btnTogglePassword;
     private boolean showPassword = false;
     private LeftPanel leftPanel;
+    private SlidingAreaContainer rightSlider;
+    private ForgotPasswordPanel forgotPasswordPanel;
     private final UserDAO userDAO = new UserDAO();
-
-    private final AWTEventListener clickOutsideHandler = event -> {
-        if (event instanceof MouseEvent && ((MouseEvent) event).getID() == MouseEvent.MOUSE_PRESSED) {
-            MouseEvent me = (MouseEvent) event;
-            Component src = me.getComponent();
-            if (roleDropdownCard != null && roleDropdownCard.isOpen()) {
-                if (src != null && !SwingUtilities.isDescendingFrom(src, roleDropdownCard) && src != btnRoleDropdown) {
-                    roleDropdownCard.close();
-                }
-            }
-        }
-    };
 
     // ─────────────────────────────────────────────────────────────────────────
     public LoginPanel(Frame parent) {
@@ -94,7 +85,7 @@ public class LoginPanel extends JPanel {
     @Override public void removeNotify() {
         super.removeNotify();
         if (leftPanel != null) leftPanel.stop();
-        if (roleDropdownCard != null) roleDropdownCard.close();
+        if (rightSlider != null) rightSlider.stopTimer();
     }
     public void stopVideo() { if (leftPanel != null) leftPanel.stop(); }
 
@@ -107,16 +98,20 @@ public class LoginPanel extends JPanel {
         leftPanel.setOpaque(true);
         add(leftPanel);
 
-        JPanel right = buildRight();
-        right.setBackground(WIN_BG);
-        right.setOpaque(true);
-        add(right);
+        JPanel loginView = buildRight();
+        forgotPasswordPanel = new ForgotPasswordPanel(
+            () -> showForgotPassword(false),
+            () -> showForgotPassword(false)
+        );
+
+        rightSlider = new SlidingAreaContainer(loginView, forgotPasswordPanel);
+        add(rightSlider);
 
         btnLogin.addActionListener          (e -> login());
         txtPassword.addActionListener       (e -> login());
-        txtUsername.addActionListener       (e -> txtPassword.requestFocusInWindow());
         btnForgotPassword.addActionListener (e -> forgotPwd());
         btnDbConfig.addActionListener       (e -> dbConfig());
+        SwingUtilities.invokeLater(() -> txtPassword.requestFocusInWindow());
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -126,37 +121,23 @@ public class LoginPanel extends JPanel {
         JPanel basePanel = new JPanel(new BorderLayout());
         basePanel.setOpaque(false);
 
-        // ── Top-right role switcher (borderless dropdown) ─────────────────────
+        // ── Top-right terminal status badge ──────────────────────────────────
         JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 32, 16));
         topBar.setOpaque(false);
 
-        btnRoleDropdown = new JButton("Administrator", new ChevronIcon());
-        btnRoleDropdown.setHorizontalTextPosition(SwingConstants.LEFT);
-        btnRoleDropdown.setIconTextGap(8);
-        btnRoleDropdown.setFont(appFont(Font.BOLD, 13));
-        btnRoleDropdown.setForeground(TEXT_MED);
-        btnRoleDropdown.setOpaque(false);
-        btnRoleDropdown.setContentAreaFilled(false);
-        btnRoleDropdown.setBorderPainted(false);
-        btnRoleDropdown.setFocusPainted(false);
-        btnRoleDropdown.setBorder(new EmptyBorder(6, 10, 6, 6));
-        btnRoleDropdown.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnRoleDropdown.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { btnRoleDropdown.setForeground(DARK_GREEN); }
-            @Override public void mouseExited (MouseEvent e) { btnRoleDropdown.setForeground(TEXT_MED); }
-        });
-
-        btnRoleDropdown.addActionListener(e -> {
-            if (roleDropdownCard.isOpen()) {
-                roleDropdownCard.close();
-            } else {
-                roleDropdownCard.open();
+        JPanel badgeTerminal = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 4)) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(255, 255, 255, 190));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
+                g2.setColor(AppTheme.BORDER_SAGE);
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, getHeight() - 1, getHeight() - 1);
+                g2.dispose();
+                super.paintComponent(g);
             }
-        });
-
-        topBar.add(btnRoleDropdown);
-        basePanel.add(topBar, BorderLayout.NORTH);
-
+        };
+        
         /*
          * Form has a fixed preferred width of 380 px centered in the middle
          */
@@ -184,7 +165,7 @@ public class LoginPanel extends JPanel {
         brand.add(Box.createHorizontalStrut(10));
         brand.add(brandName);
         form.add(brand);
-        form.add(Box.createVerticalStrut(28));
+        form.add(Box.createVerticalStrut(22));
 
         // ── Title ─────────────────────────────────────────────────────────────
         JLabel title = new JLabel("Login to your account");
@@ -192,21 +173,49 @@ public class LoginPanel extends JPanel {
         title.setForeground(TEXT_DARK);
         title.setAlignmentX(0f);
         form.add(title);
-        form.add(Box.createVerticalStrut(26));
+        form.add(Box.createVerticalStrut(20));
 
-        // ── Username ──────────────────────────────────────────────────────────
-        form.add(fLabel("Username or Staff ID"));
-        form.add(Box.createVerticalStrut(5));
-        txtUsername = new JTextField("admin");
-        txtUsername.setFont(appFont(Font.PLAIN, 14));
-        form.add(fWrap(txtUsername, null));
+        // ── Role ComboBox (Admin & Staff - Instant Visibility) ────────────────
+        form.add(fLabel("Select Role"));
+        form.add(Box.createVerticalStrut(6));
+
+        cmbRole = new JComboBox<>(new String[] { "Admin", "Staff" });
+        cmbRole.setSelectedIndex(0);
+
+        lblRoleBadge = new JLabel("● Administrator Account Selected");
+        lblRoleBadge.setFont(appFont(Font.BOLD, 11));
+        lblRoleBadge.setForeground(DARK_GREEN);
+        lblRoleBadge.setBorder(new EmptyBorder(4, 4, 0, 0));
+        lblRoleBadge.setAlignmentX(0f);
+
+        cmbRole.addActionListener(e -> {
+            String role = (String) cmbRole.getSelectedItem();
+            boolean admin = "Admin".equalsIgnoreCase(role);
+            isAdmin = admin;
+            txtPassword.setText("");
+            if (admin) {
+                lblRoleBadge.setText("● Administrator Account Selected");
+                lblRoleBadge.setForeground(DARK_GREEN);
+            } else {
+                lblRoleBadge.setText("● Staff / Cashier Account Selected");
+                lblRoleBadge.setForeground(MID_GREEN);
+            }
+            cmbRole.repaint();
+            lblRoleBadge.repaint();
+            txtPassword.requestFocusInWindow();
+        });
+
+        form.add(fWrapCombo(cmbRole));
+        form.add(Box.createVerticalStrut(4));
+        form.add(lblRoleBadge);
         form.add(Box.createVerticalStrut(16));
 
         // ── Password ──────────────────────────────────────────────────────────
         form.add(fLabel("Password"));
-        form.add(Box.createVerticalStrut(5));
-        txtPassword = new JPasswordField("admin123");
+        form.add(Box.createVerticalStrut(6));
+        txtPassword = new JPasswordField();
         txtPassword.setFont(appFont(Font.PLAIN, 14));
+        txtPassword.setEchoChar('•');
         btnTogglePassword = new JButton("Show");
         btnTogglePassword.setFont(appFont(Font.PLAIN, 12));
         btnTogglePassword.setForeground(TEXT_SOFT);
@@ -221,7 +230,7 @@ public class LoginPanel extends JPanel {
             btnTogglePassword.setText(showPassword ? "Hide" : "Show");
         });
         form.add(fWrap(txtPassword, btnTogglePassword));
-        form.add(Box.createVerticalStrut(12));
+        form.add(Box.createVerticalStrut(14));
 
         // ── Remember / Forgot row ─────────────────────────────────────────────
         JPanel optRow = new JPanel(new BorderLayout());
@@ -259,11 +268,11 @@ public class LoginPanel extends JPanel {
         secRow.setOpaque(false);
         secRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
         secRow.setAlignmentX(0f);
-        JButton btnDemo  = ghostPill("Quick Demo",    new VecIcon("bolt", 14, TEXT_MED));
+        //JButton btnDemo  = ghostPill("Quick Demo",    new VecIcon("bolt", 14, TEXT_MED));
         JButton btnKiosk = ghostPill("Self-Checkout", new VecIcon("cart", 14, TEXT_MED));
-        btnDemo.addActionListener (e -> launchDemo());
+        //btnDemo.addActionListener (e -> launchDemo());
         btnKiosk.addActionListener(e -> { stopVideo(); new SelfCheckoutFrame(null).setVisible(true); });
-        secRow.add(btnDemo);
+       // secRow.add(btnDemo);
         secRow.add(btnKiosk);
         form.add(secRow);
         form.add(Box.createVerticalStrut(28));
@@ -296,28 +305,7 @@ public class LoginPanel extends JPanel {
         centerPanel.add(form, gbc);
         basePanel.add(centerPanel, BorderLayout.CENTER);
 
-        roleDropdownCard = new RoleDropdownCard();
-
-        JPanel outer = new JPanel() {
-            @Override
-            public void doLayout() {
-                int w = getWidth(), h = getHeight();
-                basePanel.setBounds(0, 0, w, h);
-                if (roleDropdownCard != null && btnRoleDropdown != null) {
-                    Point pt = SwingUtilities.convertPoint(btnRoleDropdown, 0, btnRoleDropdown.getHeight() + 4, this);
-                    int cardW = 196;
-                    int cardH = 98;
-                    int cardX = pt.x + btnRoleDropdown.getWidth() - cardW;
-                    roleDropdownCard.setBounds(cardX, pt.y, cardW, cardH + 16);
-                }
-            }
-        };
-        outer.setLayout(null);
-        outer.setOpaque(true);
-        outer.setBackground(WIN_BG);
-        outer.add(roleDropdownCard, 0);
-        outer.add(basePanel, 1);
-        return outer;
+        return basePanel;
     }
 
     // ── Component helpers ─────────────────────────────────────────────────────
@@ -330,7 +318,138 @@ public class LoginPanel extends JPanel {
         return l;
     }
 
-    /** Filled pill-shaped input wrapper – fully rounded (cornerRadius = height) */
+    /** Filled pill-shaped JComboBox wrapper with instant custom rendering */
+    private JPanel fWrapCombo(JComboBox<String> cmb) {
+        JPanel w = new JPanel(new BorderLayout()) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                boolean foc = cmb.hasFocus();
+                g2.setColor(foc ? FIELD_FOC : FIELD_BG);
+                int r = getHeight();
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), r, r);
+                g2.setColor(foc ? MID_GREEN : AppTheme.BORDER_SAGE);
+                g2.setStroke(new BasicStroke(foc ? 1.4f : 1.1f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, r - 1, r - 1);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        w.setOpaque(false);
+
+        cmb.setOpaque(false);
+        cmb.setFont(appFont(Font.BOLD, 14));
+        cmb.setForeground(TEXT_DARK);
+        cmb.setBackground(Color.WHITE);
+        cmb.setFocusable(true);
+        cmb.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        cmb.addFocusListener(new FocusAdapter() {
+            @Override public void focusGained(FocusEvent e) { w.repaint(); }
+            @Override public void focusLost  (FocusEvent e) { w.repaint(); }
+        });
+
+        cmb.setUI(new BasicComboBoxUI() {
+            @Override
+            protected JButton createArrowButton() {
+                JButton btn = new JButton() {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                        g2.setColor(DARK_GREEN);
+                        int cx = getWidth() / 2 - 4;
+                        int cy = getHeight() / 2 - 1;
+                        Path2D p = new Path2D.Float();
+                        p.moveTo(cx - 4, cy - 2);
+                        p.lineTo(cx, cy + 3);
+                        p.lineTo(cx + 4, cy - 2);
+                        g2.draw(p);
+                        g2.dispose();
+                    }
+                };
+                btn.setBorder(new EmptyBorder(0, 0, 0, 18));
+                btn.setContentAreaFilled(false);
+                btn.setFocusPainted(false);
+                btn.setOpaque(false);
+                btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                return btn;
+            }
+
+            @Override
+            public void paintCurrentValueBackground(Graphics g, Rectangle bounds, boolean hasFocus) {
+                // Background drawn by parent wrapper w
+            }
+
+            @Override
+            public void paintCurrentValue(Graphics g, Rectangle bounds, boolean hasFocus) {
+                // Instantly paints the selected role value directly
+                String selected = (String) comboBox.getSelectedItem();
+                if (selected == null) selected = "Admin";
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                g2.setFont(appFont(Font.BOLD, 14));
+                g2.setColor(TEXT_DARK);
+                FontMetrics fm = g2.getFontMetrics();
+                int x = bounds.x + 20;
+                int y = bounds.y + (bounds.height + fm.getAscent() - fm.getDescent()) / 2;
+                String display = "Admin".equalsIgnoreCase(selected) ? "Admin  (Administrator)" : "Staff  (Cashier Desk)";
+                g2.drawString(display, x, y);
+                g2.dispose();
+            }
+
+            @Override
+            protected ComboPopup createPopup() {
+                BasicComboPopup popup = new BasicComboPopup(comboBox) {
+                    @Override
+                    protected void configurePopup() {
+                        super.configurePopup();
+                        setOpaque(true);
+                        setBackground(Color.WHITE);
+                        setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(AppTheme.BORDER_SAGE, 1, true),
+                            new EmptyBorder(4, 4, 4, 4)
+                        ));
+                    }
+                };
+                return popup;
+            }
+        });
+
+        // Dropdown list items renderer
+        cmb.setRenderer(new ListCellRenderer<String>() {
+            private final JLabel lbl = new JLabel();
+            {
+                lbl.setOpaque(true);
+            }
+            @Override
+            public Component getListCellRendererComponent(JList<? extends String> list, String value, int index, boolean isSelected, boolean cellHasFocus) {
+                String roleVal = value != null ? value : "";
+                lbl.setFont(appFont(isSelected ? Font.BOLD : Font.PLAIN, 13));
+                lbl.setBorder(new EmptyBorder(10, 16, 10, 16));
+                lbl.setText("Admin".equalsIgnoreCase(roleVal) ? "Admin  —  Full System & Config Access" : "Staff  —  Billing & POS Terminal");
+                if (isSelected) {
+                    lbl.setBackground(AppTheme.BG_CANVAS);
+                    lbl.setForeground(DARK_GREEN);
+                } else {
+                    lbl.setBackground(Color.WHITE);
+                    lbl.setForeground(TEXT_DARK);
+                }
+                return lbl;
+            }
+        });
+
+        w.add(cmb, BorderLayout.CENTER);
+        w.setPreferredSize(new Dimension(380, 50));
+        w.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        w.setMinimumSize(new Dimension(120, 50));
+        w.setAlignmentX(0f);
+        return w;
+    }
+
+    /** Filled pill-shaped input wrapper – fully rounded with subtle sage border */
     private JPanel fWrap(JTextField tf, JButton extra) {
         JPanel w = new JPanel(new BorderLayout()) {
             @Override protected void paintComponent(Graphics g) {
@@ -340,6 +459,9 @@ public class LoginPanel extends JPanel {
                 g2.setColor(foc ? FIELD_FOC : FIELD_BG);
                 int r = getHeight();
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), r, r);
+                g2.setColor(foc ? MID_GREEN : AppTheme.BORDER_SAGE);
+                g2.setStroke(new BasicStroke(foc ? 1.4f : 1.1f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, r - 1, r - 1);
                 g2.dispose();
                 super.paintComponent(g);
             }
@@ -360,163 +482,21 @@ public class LoginPanel extends JPanel {
         return w;
     }
 
-    class RoleDropdownCard extends JPanel {
-        private float anim = 0f;
-        private boolean open = false;
-        private Timer animTimer;
-        private int hoveredIdx = -1;
-
-        RoleDropdownCard() {
-            setOpaque(false);
-            setVisible(false);
-
-            animTimer = new Timer(16, e -> {
-                if (open) {
-                    anim += 0.12f;
-                    if (anim >= 1f) { anim = 1f; animTimer.stop(); }
-                } else {
-                    anim -= 0.16f;
-                    if (anim <= 0f) { anim = 0f; setVisible(false); animTimer.stop(); }
-                }
-                repaint();
-            });
-
-            addMouseMotionListener(new MouseMotionAdapter() {
-                @Override
-                public void mouseMoved(MouseEvent e) {
-                    int idx = getItemAt(e.getY());
-                    if (idx != hoveredIdx) {
-                        hoveredIdx = idx;
-                        repaint();
-                    }
-                }
-            });
-
-            addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    hoveredIdx = -1;
-                    repaint();
-                }
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    int idx = getItemAt(e.getY());
-                    if (idx == 0) {
-                        pickRole("admin", "admin123", true);
-                        close();
-                    } else if (idx == 1) {
-                        pickRole("staff", "staff123", false);
-                        close();
-                    }
-                }
-            });
-        }
-
-        private int getItemAt(int y) {
-            int top = 8;
-            int h = 38;
-            if (y >= top && y < top + h) return 0;
-            if (y >= top + h && y < top + h * 2) return 1;
-            return -1;
-        }
-
-        boolean isOpen() { return open; }
-
-        void open() {
-            open = true;
-            setVisible(true);
-            try {
-                Toolkit.getDefaultToolkit().addAWTEventListener(clickOutsideHandler, AWTEvent.MOUSE_EVENT_MASK);
-            } catch (Exception ignored) {}
-            animTimer.start();
-            if (btnRoleDropdown != null) btnRoleDropdown.repaint();
-        }
-
-        void close() {
-            open = false;
-            try {
-                Toolkit.getDefaultToolkit().removeAWTEventListener(clickOutsideHandler);
-            } catch (Exception ignored) {}
-            animTimer.start();
-            if (btnRoleDropdown != null) btnRoleDropdown.repaint();
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            if (anim <= 0.001f) return;
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,      RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-            float p = 1.0f - (float) Math.pow(1.0 - anim, 3.0);
-            int slideY = (int) (8 * (1.0f - p));
-            int w = getWidth() - 8;
-            int h = getHeight() - 14;
-            int x = 4;
-            int y = 4 + slideY;
-            int radius = 16;
-
-            Composite orig = g2.getComposite();
-            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, anim));
-
-            // Soft multi-layer drop shadow
-            g2.setColor(new Color(0, 0, 0, (int)(18 * anim)));
-            g2.fillRoundRect(x + 1, y + 4, w - 2, h - 2, radius, radius);
-            g2.setColor(new Color(0, 0, 0, (int)(10 * anim)));
-            g2.fillRoundRect(x, y + 2, w, h, radius, radius);
-
-            // Card background
-            g2.setColor(Color.WHITE);
-            g2.fillRoundRect(x, y, w, h, radius, radius);
-
-            // Card border
-            g2.setColor(new Color(AppTheme.BORDER_SAGE.getRed(), AppTheme.BORDER_SAGE.getGreen(), AppTheme.BORDER_SAGE.getBlue(), (int)(255 * anim)));
-            g2.setStroke(new BasicStroke(1.2f));
-            g2.drawRoundRect(x, y, w - 1, h - 1, radius, radius);
-
-            // Render items
-            drawItem(g2, x + 6, y + 6,  w - 12, 38, "Administrator", isAdmin,  hoveredIdx == 0);
-            drawItem(g2, x + 6, y + 46, w - 12, 38, "Cashier Desk",  !isAdmin, hoveredIdx == 1);
-
-            g2.setComposite(orig);
-            g2.dispose();
-        }
-
-        private void drawItem(Graphics2D g2, int ix, int iy, int iw, int ih, String text, boolean active, boolean hover) {
-            if (hover) {
-                g2.setColor(AppTheme.BG_CANVAS);
-                g2.fillRoundRect(ix, iy, iw, ih, 10, 10);
-            }
-            g2.setFont(appFont(active ? Font.BOLD : Font.PLAIN, 13));
-            g2.setColor(active ? DARK_GREEN : (hover ? TEXT_DARK : TEXT_MED));
-            FontMetrics fm = g2.getFontMetrics();
-            g2.drawString(text, ix + 12, iy + (ih + fm.getAscent() - fm.getDescent()) / 2);
-
-            if (active) {
-                int cx = ix + iw - 18;
-                int cy = iy + ih / 2 - 4;
-                Path2D check = new Path2D.Float();
-                check.moveTo(cx, cy + 4);
-                check.lineTo(cx + 3, cy + 7);
-                check.lineTo(cx + 9, cy + 1);
-                g2.setColor(DARK_GREEN);
-                g2.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g2.draw(check);
-            }
-        }
-    }
-
     private void pickRole(String user, String pass, boolean isAdmin) {
         this.isAdmin = isAdmin;
-        txtUsername.setText(user);
-        txtPassword.setText(pass);
-        if (btnRoleDropdown != null) {
-            btnRoleDropdown.setText(isAdmin ? "Administrator" : "Cashier Desk");
-            btnRoleDropdown.repaint();
+        if (cmbRole != null) {
+            cmbRole.setSelectedItem(isAdmin ? "Admin" : "Staff");
+            cmbRole.repaint();
         }
-        if (roleDropdownCard != null) {
-            roleDropdownCard.repaint();
+        if (lblRoleBadge != null) {
+            lblRoleBadge.setText(isAdmin 
+                ? "● Administrator Account Selected" 
+                : "● Staff / Cashier Account Selected");
+            lblRoleBadge.setForeground(isAdmin ? DARK_GREEN : MID_GREEN);
+            lblRoleBadge.repaint();
         }
+        txtPassword.setText("");
+        txtPassword.requestFocusInWindow();
     }
 
     /** Fully-rounded (pill) filled button with generous vertical padding */
@@ -608,17 +588,10 @@ public class LoginPanel extends JPanel {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setStroke(new BasicStroke(1.8f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
             g2.setColor(TEXT_MED);
-            boolean isOpen = (roleDropdownCard != null && roleDropdownCard.isOpen());
             Path2D p = new Path2D.Float();
-            if (isOpen) {
-                p.moveTo(x + 1, y + 5);
-                p.lineTo(x + 5, y + 1);
-                p.lineTo(x + 9, y + 5);
-            } else {
-                p.moveTo(x + 1, y + 1);
-                p.lineTo(x + 5, y + 5);
-                p.lineTo(x + 9, y + 1);
-            }
+            p.moveTo(x + 1, y + 1);
+            p.lineTo(x + 5, y + 5);
+            p.lineTo(x + 9, y + 1);
             g2.draw(p);
             g2.dispose();
         }
@@ -870,7 +843,7 @@ public class LoginPanel extends JPanel {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // AUTH & BUSINESS LOGIC  (functionality unchanged)
+    // AUTH & BUSINESS LOGIC
     // ─────────────────────────────────────────────────────────────────────────
     private void launchDemo() {
         launchDashboard(new User(1, "admin", "admin123", "System Administrator (Demo/Offline)", "ADMIN"));
@@ -882,18 +855,22 @@ public class LoginPanel extends JPanel {
             new DashboardFrame(user).setVisible(true);
             Window w = SwingUtilities.getWindowAncestor(this);
             if (w != null) w.dispose();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Dashboard error:\n" + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (Throwable ex) {
+            JOptionPane.showMessageDialog(this, "Dashboard error:\n" + ex, "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void login() {
-        String user = txtUsername.getText().trim();
+        String role = cmbRole != null ? (String) cmbRole.getSelectedItem() : (isAdmin ? "Admin" : "Staff");
+        String user = "Admin".equalsIgnoreCase(role) ? "admin" : "staff";
         String pass = new String(txtPassword.getPassword()).trim();
-        if (user.isEmpty() || pass.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter username and password.", "Input Required", JOptionPane.WARNING_MESSAGE);
+
+        if (pass.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please enter your password.", "Password Required", JOptionPane.WARNING_MESSAGE);
+            txtPassword.requestFocusInWindow();
             return;
         }
+
         User u = null;
         try {
             u = userDAO.authenticate(user, pass);
@@ -906,26 +883,52 @@ public class LoginPanel extends JPanel {
             boolean defS = "staff".equalsIgnoreCase(user) && "staff123".equals(pass);
             if (defA || defS) {
                 if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(this,
-                        "MySQL is not running.\nLaunch in OFFLINE / DEMO MODE?",
-                        "MySQL Offline", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE))
-                    launchDashboard(defA
+                        "MySQL is not running.\nLaunch in OFFLINE / DEMO MODE as " + role + "?",
+                        "MySQL Offline", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE)) {
+                    launchDashboard(isAdmin
                         ? new User(1, "admin", "admin123", "System Administrator (Demo)", "ADMIN")
                         : new User(2, "staff", "staff123", "Cashier Desk (Demo)", "STAFF"));
+                }
             } else {
                 JOptionPane.showMessageDialog(this,
-                    conn ? "MySQL is offline.\n\nsudo systemctl start mysql\n\nOr use: admin / admin123"
+                    conn ? "MySQL is offline.\n\nPlease start the MySQL database service to log in."
                          : "Database error:\n" + msg,
                     "Error", JOptionPane.ERROR_MESSAGE);
             }
             return;
         }
-        if (u == null) { JOptionPane.showMessageDialog(this, "Invalid credentials.", "Login Failed", JOptionPane.ERROR_MESSAGE); return; }
+
+        if (u == null) {
+            JOptionPane.showMessageDialog(this, "Invalid password for " + role + " account.", "Login Failed", JOptionPane.ERROR_MESSAGE);
+            txtPassword.selectAll();
+            txtPassword.requestFocusInWindow();
+            return;
+        }
+
+        // Validate role matches user permissions
+        if ("Admin".equalsIgnoreCase(role) && !u.isAdmin()) {
+            JOptionPane.showMessageDialog(this,
+                "Access Denied: The account does not have Administrator privileges.\nPlease select 'Staff' in the Role combo box to proceed.",
+                "Role Mismatch", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         launchDashboard(u);
     }
 
     private void forgotPwd() {
-        Window anc = SwingUtilities.getWindowAncestor(this);
-        new ForgotPasswordDialog(anc instanceof Frame ? (Frame) anc : parentFrame).setVisible(true);
+        showForgotPassword(true);
+    }
+
+    public void showForgotPassword(boolean show) {
+        if (show) {
+            forgotPasswordPanel.resetState();
+            rightSlider.slideTo(1, null);
+        } else {
+            rightSlider.slideTo(0, () -> {
+                txtPassword.requestFocusInWindow();
+            });
+        }
     }
 
     private void dbConfig() {
@@ -954,6 +957,67 @@ public class LoginPanel extends JPanel {
             DBConnection.saveConfig(host.getText().trim(), port.getText().trim(),
                 db.getText().trim(), usr.getText().trim(), new String(pw.getPassword()));
             JOptionPane.showMessageDialog(this, "Settings saved!", "Saved", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SLIDING CONTAINER FOR RIGHT LOGIN / FORGOT PASSWORD AREA
+    // ─────────────────────────────────────────────────────────────────────────
+    class SlidingAreaContainer extends JPanel {
+        private final JComponent view0;
+        private final JComponent view1;
+        private float slideProgress = 0f;
+        private Timer animTimer;
+
+        public SlidingAreaContainer(JComponent view0, JComponent view1) {
+            this.view0 = view0;
+            this.view1 = view1;
+            setLayout(null);
+            setOpaque(true);
+            setBackground(WIN_BG);
+            add(view0);
+            add(view1);
+        }
+
+        public void slideTo(int targetView, Runnable onComplete) {
+            if (animTimer != null && animTimer.isRunning()) {
+                animTimer.stop();
+            }
+            float target = (targetView == 1) ? 1.0f : 0.0f;
+            float start = slideProgress;
+            final long startTime = System.currentTimeMillis();
+            final int duration = 280; // snappy 280 ms ease-out slide
+
+            animTimer = new Timer(15, e -> {
+                long elapsed = System.currentTimeMillis() - startTime;
+                float t = Math.min(1.0f, (float) elapsed / duration);
+                float ease = 1.0f - (float) Math.pow(1.0 - t, 3.0);
+                slideProgress = start + (target - start) * ease;
+                revalidate();
+                repaint();
+
+                if (t >= 1.0f) {
+                    slideProgress = target;
+                    animTimer.stop();
+                    revalidate();
+                    repaint();
+                    if (onComplete != null) onComplete.run();
+                }
+            });
+            animTimer.start();
+        }
+
+        public void stopTimer() {
+            if (animTimer != null) animTimer.stop();
+        }
+
+        @Override
+        public void doLayout() {
+            int w = getWidth();
+            int h = getHeight();
+            int offset = (int) (w * slideProgress);
+            view0.setBounds(-offset, 0, w, h);
+            view1.setBounds(w - offset, 0, w, h);
         }
     }
 }

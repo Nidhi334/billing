@@ -1,7 +1,11 @@
 package ui;
 
-import config.AppSettings;
 import dao.ReportDAO;
+import config.AppSettings;
+import model.User;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -9,9 +13,6 @@ import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import model.User;
 
 public class DashboardFrame extends JFrame {
     public static final Color APP_BG = AppTheme.BG_CANVAS;
@@ -53,9 +54,6 @@ public class DashboardFrame extends JFrame {
     private JPanel navBox;
     private boolean isSidebarCollapsed = false;
 
-    // Header badge for Touch vs Desktop
-    private JLabel lblModeBadge;
-
     // Stat card labels
     private JLabel lblTotalProducts, lblTotalStock, lblTotalCustomers, lblTotalSuppliers;
     private JLabel lblLowStock, lblTodaySales, lblMonthlySales, lblYearlySales, lblTotalRevenue;
@@ -64,11 +62,8 @@ public class DashboardFrame extends JFrame {
     private DailySalesBarChartPanel revenueBarChart;
     private CategoryPieChartPanel revenuePieChart;
     private HorizontalBarChartPanel topProductsChart;
-    private StockDistributionChartPanel stockDistributionChart;
     private ModernDropdown cmbTimelineFilter;
     private ModernDropdown cmbBreakdownFilter;
-    private ModernDropdown cmbStockTrendFilter;
-    private ModernDropdown cmbTopProductsFilter;
 
     // Responsive Dashboard Components & State
     private JPanel sidebar;
@@ -78,14 +73,9 @@ public class DashboardFrame extends JFrame {
     private int currentStatsCols = -1;
     private JPanel chartToolbar;
     private JLabel lblChartHeader;
+    private JPanel filtersPanel;
     private JPanel chartsWrapper;
     private int currentChartsLayoutMode = -1;
-
-    // Chart Containers (with integrated filters)
-    private JPanel barChartContainer;
-    private JPanel pieChartContainer;
-    private JPanel topProductsContainer;
-    private JPanel stockDistributionContainer;
 
     private ReportDAO reportDAO = new ReportDAO();
 
@@ -179,8 +169,8 @@ public class DashboardFrame extends JFrame {
         btnNavSelfCheckout = new SidebarNavItem("Self Checkout", "self_checkout");
         btnNavBillHistory = new SidebarNavItem("Bill History / Orders", "bill_history");
         btnNavCustomers = new SidebarNavItem("Customers", "customers");
-        btnNavProducts = new SidebarNavItem("Products", "products");
-        btnNavInventory = new SidebarNavItem("Inventory / Stock", "inventory");
+        // Merged Products & Stock nav item
+        btnNavInventory = new SidebarNavItem("Products & Stock", "products");
         btnNavSuppliers = new SidebarNavItem("Suppliers", "suppliers");
         btnNavReports = new SidebarNavItem("Reports & P/L", "reports");
         btnNavSettings = new SidebarNavItem("Settings", "settings");
@@ -190,7 +180,6 @@ public class DashboardFrame extends JFrame {
         navItems.add(btnNavSelfCheckout);
         navItems.add(btnNavBillHistory);
         navItems.add(btnNavCustomers);
-        navItems.add(btnNavProducts);
         navItems.add(btnNavInventory);
         navItems.add(btnNavSuppliers);
         navItems.add(btnNavReports);
@@ -215,8 +204,6 @@ public class DashboardFrame extends JFrame {
         sidebarFooter = new JPanel(new BorderLayout());
         sidebarFooter.setOpaque(false);
         sidebarFooter.setBorder(new EmptyBorder(6, 10, 14, 10));
-
-        lblModeBadge = createModeBadge();
 
         sidebar.add(sidebarFooter, BorderLayout.SOUTH);
 
@@ -289,13 +276,15 @@ public class DashboardFrame extends JFrame {
             billHistoryPanel.loadBillHistory();
             cardLayout.show(contentPanel, "BILL_HISTORY");
         });
-        btnNavProducts.addActionListener(e -> {
-            setActiveNavButton(btnNavProducts);
-            showAdminChrome(true);
-            productPanel.loadProductTable();
-            productPanel.loadCategories();
-            cardLayout.show(contentPanel, "PRODUCTS");
-        });
+        if (btnNavProducts != null) {
+            btnNavProducts.addActionListener(e -> {
+                setActiveNavButton(btnNavInventory);
+                showAdminChrome(true);
+                inventoryPanel.loadDropdownData();
+                inventoryPanel.refreshData();
+                cardLayout.show(contentPanel, "INVENTORY");
+            });
+        }
         btnNavInventory.addActionListener(e -> {
             setActiveNavButton(btnNavInventory);
             showAdminChrome(true);
@@ -499,13 +488,7 @@ public class DashboardFrame extends JFrame {
             roleLbl.setFont(AppTheme.font(Font.PLAIN, 10));
             roleLbl.setForeground(AppTheme.TEXT_MUTED);
 
-            JLabel dot = new JLabel("•");
-            dot.setFont(new Font("SansSerif", Font.PLAIN, 9));
-            dot.setForeground(new Color(180, 205, 192));
-
             subRow.add(roleLbl);
-            subRow.add(dot);
-            subRow.add(lblModeBadge);
 
             details.add(nameLbl);
             details.add(Box.createVerticalStrut(2));
@@ -546,30 +529,7 @@ public class DashboardFrame extends JFrame {
         sidebarFooter.repaint();
     }
 
-    private JLabel createModeBadge() {
-        JLabel badge = new JLabel("TOUCH") {
-            {
-                setFont(AppTheme.font(Font.BOLD, 9));
-                setOpaque(false);
-                setBorder(new EmptyBorder(2, 6, 2, 6));
-                setHorizontalAlignment(SwingConstants.CENTER);
-            }
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                g2.setColor(getBackground());
-                int h = getHeight();
-                g2.fillRoundRect(0, 0, getWidth(), h, h, h);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        badge.setBackground(AppTheme.ELECTRIC_LIME);
-        badge.setForeground(AppTheme.FOREST_DEEP);
-        return badge;
-    }
+
 
     private JComponent createUserAvatar(int size) {
         String name = currentUser.getFullName();
@@ -690,41 +650,17 @@ public class DashboardFrame extends JFrame {
     }
 
     public void updateUIVisibilityFromSettings() {
-        boolean isTouch = AppSettings.isTouchMode();
-        if (lblModeBadge != null) {
-            if (isTouch) {
-                lblModeBadge.setText("TOUCH");
-                lblModeBadge.setBackground(AppTheme.ELECTRIC_LIME);
-                lblModeBadge.setForeground(AppTheme.FOREST_DEEP);
-            } else {
-                lblModeBadge.setText("DESKTOP");
-                lblModeBadge.setBackground(new Color(230, 244, 236));
-                lblModeBadge.setForeground(AppTheme.FOREST_GREEN);
-            }
-            lblModeBadge.repaint();
-        }
-
-        boolean showPos = AppSettings.getBoolean(AppSettings.KEY_SHOW_POS_NAV, true);
-        boolean showPrd = AppSettings.getBoolean(AppSettings.KEY_NAV_PRODUCTS, true);
-        boolean showInv = AppSettings.getBoolean(AppSettings.KEY_NAV_INVENTORY, true);
-        boolean showCust = AppSettings.getBoolean(AppSettings.KEY_NAV_CUSTOMERS, true);
-        boolean showSupp = AppSettings.getBoolean(AppSettings.KEY_NAV_SUPPLIERS, true);
-        boolean showRep = AppSettings.getBoolean(AppSettings.KEY_NAV_REPORTS, true);
         boolean isAdmin = currentUser.isAdmin();
 
         if (btnNavHome != null) btnNavHome.setVisible(isAdmin);
-        if (btnNavBilling != null) btnNavBilling.setVisible(showPos || !isAdmin);
-        if (btnNavSelfCheckout != null) btnNavSelfCheckout.setVisible(showPos || !isAdmin);
-        if (btnNavProducts != null) btnNavProducts.setVisible(isAdmin && showPrd);
-        if (btnNavInventory != null) btnNavInventory.setVisible(isAdmin && showInv);
-        if (btnNavCustomers != null) btnNavCustomers.setVisible(showCust);
-        if (btnNavSuppliers != null) btnNavSuppliers.setVisible(isAdmin && showSupp);
-        if (btnNavReports != null) btnNavReports.setVisible(showRep && isAdmin);
+        if (btnNavBilling != null) btnNavBilling.setVisible(true);
+        if (btnNavSelfCheckout != null) btnNavSelfCheckout.setVisible(true);
+        if (btnNavBillHistory != null) btnNavBillHistory.setVisible(true);
+        if (btnNavCustomers != null) btnNavCustomers.setVisible(true);
+        if (btnNavInventory != null) btnNavInventory.setVisible(isAdmin);
+        if (btnNavSuppliers != null) btnNavSuppliers.setVisible(isAdmin);
+        if (btnNavReports != null) btnNavReports.setVisible(isAdmin);
         if (btnNavSettings != null) btnNavSettings.setVisible(isAdmin);
-
-        if (billingPanel != null) {
-            billingPanel.applySettingsVisibility();
-        }
 
         revalidate();
         repaint();
@@ -762,7 +698,7 @@ public class DashboardFrame extends JFrame {
         homeStatsPanel.setBackground(APP_BG);
         homeStatsPanel.setBorder(new EmptyBorder(16, 16, 16, 16));
 
-        // Welcome Header
+        // Welcome Header (No background, no border, larger font, circular refresh button)
         JPanel headerPanel = new JPanel(new BorderLayout(16, 0));
         headerPanel.setOpaque(false);
         headerPanel.setBorder(new EmptyBorder(4, 4, 18, 4));
@@ -772,7 +708,7 @@ public class DashboardFrame extends JFrame {
         welcomeMsg.setForeground(AppTheme.TEXT_PRIMARY);
         headerPanel.add(welcomeMsg, BorderLayout.WEST);
 
-        // Refresh Button
+        // Circular Refresh Button with smooth 180deg single-rotation animation
         JButton btnRefreshStats = new JButton() {
             private boolean hovered = false;
             private double currentAngle = 0.0;
@@ -792,7 +728,7 @@ public class DashboardFrame extends JFrame {
             private void startRotateAnimation() {
                 if (animTimer != null && animTimer.isRunning()) return;
                 final long startTime = System.currentTimeMillis();
-                final long duration = 400;
+                final long duration = 400; // 400ms smooth 180deg turn
                 final double startA = currentAngle;
 
                 animTimer = new javax.swing.Timer(16, evt -> {
@@ -803,6 +739,7 @@ public class DashboardFrame extends JFrame {
                         repaint();
                     } else {
                         double t = (double) elapsed / duration;
+                        // Ease out cubic
                         double ease = 1.0 - Math.pow(1.0 - t, 3);
                         currentAngle = startA + ease * Math.PI;
                         repaint();
@@ -824,6 +761,7 @@ public class DashboardFrame extends JFrame {
                 g2.setStroke(new BasicStroke(hovered ? 1.5f : 1.1f));
                 g2.drawOval(x, y, sz, sz);
 
+                // Draw rotated icon at exact center
                 int cx = getWidth() / 2;
                 int cy = getHeight() / 2;
                 Graphics2D gIcon = (Graphics2D) g2.create();
@@ -832,6 +770,7 @@ public class DashboardFrame extends JFrame {
                 int iconH = refreshIcon.getIconHeight();
                 refreshIcon.paintIcon(this, gIcon, cx - iconW / 2, cy - iconH / 2);
                 gIcon.dispose();
+
                 g2.dispose();
             }
         };
@@ -849,7 +788,7 @@ public class DashboardFrame extends JFrame {
 
         homeStatsPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // Metrics Grid
+        // 1. Revenue & Operations Metrics Grid (Gap decreased by half: 6px x 6px)
         statsGrid = new JPanel(new GridLayout(0, 5, 6, 6));
         statsGrid.setBackground(APP_BG);
 
@@ -867,34 +806,29 @@ public class DashboardFrame extends JFrame {
         statsGrid.add(createMetricCard("Today's Revenue", lblTodaySales, AppTheme.FOREST_GREEN, "zap"));
         statsGrid.add(createMetricCard("Monthly Revenue", lblMonthlySales, AppTheme.FOREST_MID, "calendar"));
         statsGrid.add(createMetricCard("Yearly Revenue", lblYearlySales, AppTheme.STATUS_INFO, "calendar"));
-        //statsGrid.add(createMetricCard("Total Revenue", lblTotalRevenue, AppTheme.STATUS_SUCCESS, "wallet"));
+        statsGrid.add(createMetricCard("Total Revenue", lblTotalRevenue, AppTheme.STATUS_SUCCESS, "wallet"));
         statsGrid.add(createMetricCard("Low Stock Alerts", lblLowStock, AppTheme.STATUS_DANGER, "alert_triangle"));
 
         statsGrid.add(createMetricCard("Unique Products", lblTotalProducts, AppTheme.TEXT_SECONDARY, "products"));
         statsGrid.add(createMetricCard("Total Stock Units", lblTotalStock, AppTheme.FOREST_MID, "boxes"));
         statsGrid.add(createMetricCard("Total Customers", lblTotalCustomers, AppTheme.STATUS_WARNING, "customers"));
         statsGrid.add(createMetricCard("Total Suppliers", lblTotalSuppliers, AppTheme.TEXT_MUTED, "building"));
-        //statsGrid.add(createMetricCard("POS Billing Status", lblProfitMargin, AppTheme.FOREST_GREEN, "check_circle"));
+        statsGrid.add(createMetricCard("POS Billing Status", lblProfitMargin, AppTheme.FOREST_GREEN, "check_circle"));
 
-        // Charts & Filters
+        // 2. Chart Controls Toolbar
         chartToolbar = new JPanel(new BorderLayout(10, 0));
         chartToolbar.setOpaque(false);
         chartToolbar.setBorder(new EmptyBorder(10, 0, 6, 0));
 
-        lblChartHeader = new JLabel("Interactive Business Analytics & Stock Trends");
+        lblChartHeader = new JLabel("Interactive Revenue Visual Analytics & Trends");
         lblChartHeader.setIcon(new SidebarIcon("reports", 16, AppTheme.FOREST_GREEN));
         lblChartHeader.setIconTextGap(8);
         lblChartHeader.setFont(AppTheme.font(Font.BOLD, 14));
         lblChartHeader.setForeground(AppTheme.TEXT_PRIMARY);
-        chartToolbar.add(lblChartHeader, BorderLayout.WEST);
 
-        // Initialize Charts
-        revenueBarChart = new DailySalesBarChartPanel();
-        revenuePieChart = new CategoryPieChartPanel();
-        topProductsChart = new HorizontalBarChartPanel();
-        stockDistributionChart = new StockDistributionChartPanel();
+        filtersPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        filtersPanel.setOpaque(false);
 
-        // Initialize Filters
         cmbTimelineFilter = new ModernDropdown("Timeline", "calendar", new String[]{
                 "Daily Revenue (Last 7 Days)",
                 "Daily Revenue (Last 14 Days)",
@@ -904,39 +838,27 @@ public class DashboardFrame extends JFrame {
                 "Yearly Revenue (Last 5 Years)"
         });
         cmbTimelineFilter.addActionListener(e -> refreshBarChartData());
+        filtersPanel.add(cmbTimelineFilter);
 
         cmbBreakdownFilter = new ModernDropdown("Breakdown", "pie_chart", new String[]{
                 "By Product Category",
                 "By Payment Source (Cash/UPI/Card)"
         });
         cmbBreakdownFilter.addActionListener(e -> refreshPieChartData());
+        filtersPanel.add(cmbBreakdownFilter);
 
-        cmbStockTrendFilter = new ModernDropdown("Range", "calendar", new String[]{
-                "Last 3 Days Distribution",
-                "Weekly (Last 7 Days)",
-                "Monthly (Last 30 Days)",
-                "Yearly (Last 12 Months)"
-        });
-        cmbStockTrendFilter.addActionListener(e -> refreshStockTrendData());
+        chartToolbar.add(lblChartHeader, BorderLayout.WEST);
+        chartToolbar.add(filtersPanel, BorderLayout.EAST);
 
-        cmbTopProductsFilter = new ModernDropdown("Top Selling", "zap", new String[]{
-                "Today's Top Sellers",
-                "Yesterday's Top Sellers",
-                "Weekly (Last 7 Days)",
-                "Monthly (Last 30 Days)",
-                "All-Time Top Selling"
-        });
-        cmbTopProductsFilter.addActionListener(e -> refreshTopProductsChartData());
-
-        // Create Chart Containers
-        barChartContainer = createChartWithFilter(revenueBarChart, cmbTimelineFilter);
-        pieChartContainer = createChartWithFilter(revenuePieChart, cmbBreakdownFilter);
-        topProductsContainer = createChartWithFilter(topProductsChart, cmbTopProductsFilter);
-        stockDistributionContainer = createChartWithFilter(stockDistributionChart, cmbStockTrendFilter);
+        // 3. Visual Charts Container
+        revenueBarChart = new DailySalesBarChartPanel();
+        revenuePieChart = new CategoryPieChartPanel();
+        topProductsChart = new HorizontalBarChartPanel();
 
         chartsWrapper = new JPanel();
         chartsWrapper.setOpaque(false);
 
+        // 4. Combine into responsive vertically scrollable body
         ResponsiveScrollablePanel centerContainer = new ResponsiveScrollablePanel();
         centerContainer.setLayout(new BoxLayout(centerContainer, BoxLayout.Y_AXIS));
         centerContainer.setOpaque(false);
@@ -954,6 +876,7 @@ public class DashboardFrame extends JFrame {
         scrollPane.getViewport().setOpaque(false);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
 
+        // Responsive viewport listener
         scrollPane.getViewport().addChangeListener(e -> {
             int w = scrollPane.getViewport().getWidth();
             updateResponsiveHomeLayout(w);
@@ -969,32 +892,24 @@ public class DashboardFrame extends JFrame {
         });
 
         updateResponsiveHomeLayout(1150);
+
         homeStatsPanel.add(scrollPane, BorderLayout.CENTER);
     }
-
-    private JPanel createChartWithFilter(JPanel chart, ModernDropdown filter) {
-         JPanel container = new JPanel(new BorderLayout(0, 5));
-         container.setOpaque(false);
-         
-         if (filter != null) {
-             JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-             filterPanel.setOpaque(false);
-             filterPanel.add(filter);
-             container.add(filterPanel, BorderLayout.NORTH);
-         }
-         
-         container.add(chart, BorderLayout.CENTER);
-         return container;
-     }
 
     private void updateResponsiveHomeLayout(int availableWidth) {
         if (availableWidth < 100) return;
 
+        // 1. Metric Cards Grid: Dynamic column count
         int targetCols;
-        if (availableWidth >= 1050) targetCols = 5;
-        else if (availableWidth >= 850) targetCols = 4;
-        else if (availableWidth >= 650) targetCols = 3;
-        else targetCols = 2;
+        if (availableWidth >= 1050) {
+            targetCols = 5;
+        } else if (availableWidth >= 850) {
+            targetCols = 4;
+        } else if (availableWidth >= 650) {
+            targetCols = 3;
+        } else {
+            targetCols = 2;
+        }
 
         if (currentStatsCols != targetCols && statsGrid != null) {
             currentStatsCols = targetCols;
@@ -1002,43 +917,79 @@ public class DashboardFrame extends JFrame {
             statsGrid.revalidate();
         }
 
+        // 2. Chart Toolbar: Wrap filters if width is constrained
+        if (chartToolbar != null && lblChartHeader != null && filtersPanel != null) {
+            if (availableWidth >= 1050) {
+                chartToolbar.removeAll();
+                chartToolbar.setLayout(new BorderLayout(10, 0));
+                chartToolbar.add(lblChartHeader, BorderLayout.WEST);
+                chartToolbar.add(filtersPanel, BorderLayout.EAST);
+            } else {
+                chartToolbar.removeAll();
+                chartToolbar.setLayout(new BorderLayout(0, 8));
+                chartToolbar.add(lblChartHeader, BorderLayout.NORTH);
+                chartToolbar.add(filtersPanel, BorderLayout.WEST);
+            }
+            chartToolbar.revalidate();
+        }
+
+        // 3. Visual Charts: Responsive arrangement
         int targetChartsMode;
-        if (availableWidth >= 1200) targetChartsMode = 0; // 2x2 grid
-        else if (availableWidth >= 800) targetChartsMode = 1; // 2 columns, 2 rows
-        else targetChartsMode = 2; // 1 column
+        if (availableWidth >= 1080) {
+            targetChartsMode = 0; // 3 columns side by side
+        } else if (availableWidth >= 740) {
+            targetChartsMode = 1; // 2 tiers: Row 1 = 2 charts, Row 2 = 1 wide chart
+        } else {
+            targetChartsMode = 2; // 1 column stacked
+        }
 
         if (currentChartsLayoutMode != targetChartsMode && chartsWrapper != null) {
             currentChartsLayoutMode = targetChartsMode;
             chartsWrapper.removeAll();
 
             if (targetChartsMode == 0) {
-                chartsWrapper.setLayout(new GridLayout(2, 2, 10, 10));
-                chartsWrapper.setPreferredSize(new Dimension(0, 720));
-                chartsWrapper.add(barChartContainer);
-                chartsWrapper.add(pieChartContainer);
-                chartsWrapper.add(stockDistributionContainer);
-                chartsWrapper.add(topProductsContainer);
+                // 3 columns side-by-side
+                chartsWrapper.setLayout(new GridLayout(1, 3, 7, 6));
+                chartsWrapper.setPreferredSize(new Dimension(0, 360));
+                chartsWrapper.setMinimumSize(new Dimension(0, 260));
+                chartsWrapper.setMaximumSize(null);
+                revenueBarChart.setPreferredSize(null);
+                revenuePieChart.setPreferredSize(null);
+                topProductsChart.setPreferredSize(null);
+                chartsWrapper.add(revenueBarChart);
+                chartsWrapper.add(revenuePieChart);
+                chartsWrapper.add(topProductsChart);
             } else if (targetChartsMode == 1) {
-                chartsWrapper.setLayout(new GridLayout(2, 2, 8, 8));
-                chartsWrapper.setPreferredSize(new Dimension(0, 680));
-                chartsWrapper.add(barChartContainer);
-                chartsWrapper.add(pieChartContainer);
-                chartsWrapper.add(stockDistributionContainer);
-                chartsWrapper.add(topProductsContainer);
+                // 2 tiers
+                chartsWrapper.setLayout(new GridLayout(2, 1, 7, 6));
+                chartsWrapper.setPreferredSize(new Dimension(0, 540));
+                chartsWrapper.setMinimumSize(new Dimension(0, 440));
+                chartsWrapper.setMaximumSize(null);
+
+                JPanel topTwo = new JPanel(new GridLayout(1, 2, 7, 6));
+                topTwo.setOpaque(false);
+                topTwo.add(revenueBarChart);
+                topTwo.add(revenuePieChart);
+
+                chartsWrapper.add(topTwo);
+                chartsWrapper.add(topProductsChart);
             } else {
-                chartsWrapper.setLayout(new BoxLayout(chartsWrapper, BoxLayout.Y_AXIS));
-                chartsWrapper.setPreferredSize(null);
-                chartsWrapper.add(barChartContainer);
-                chartsWrapper.add(Box.createVerticalStrut(15));
-                chartsWrapper.add(pieChartContainer);
-                chartsWrapper.add(Box.createVerticalStrut(15));
-                chartsWrapper.add(stockDistributionContainer);
-                chartsWrapper.add(Box.createVerticalStrut(15));
-                chartsWrapper.add(topProductsContainer);
+                // 1 column vertically stacked
+                chartsWrapper.setLayout(new GridLayout(3, 1, 7, 6));
+                chartsWrapper.setPreferredSize(new Dimension(0, 780));
+                chartsWrapper.setMinimumSize(new Dimension(0, 660));
+                chartsWrapper.setMaximumSize(null);
+
+                chartsWrapper.add(revenueBarChart);
+                chartsWrapper.add(revenuePieChart);
+                chartsWrapper.add(topProductsChart);
             }
 
             chartsWrapper.revalidate();
             chartsWrapper.repaint();
+            if (chartsWrapper.getParent() != null) {
+                chartsWrapper.getParent().revalidate();
+            }
         }
     }
 
@@ -1146,30 +1097,6 @@ public class DashboardFrame extends JFrame {
             refreshBarChartData();
             refreshPieChartData();
             refreshTopProductsChartData();
-            refreshStockTrendData();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void refreshStockTrendData() {
-        if (stockDistributionChart == null || cmbStockTrendFilter == null) return;
-        try {
-            int sel = cmbStockTrendFilter.getSelectedIndex();
-            int days = 3;
-            String title = "Last 3 Days Distribution";
-            if (sel == 1) {
-                days = 7;
-                title = "Weekly Distribution (Last 7 Days)";
-            } else if (sel == 2) {
-                days = 30;
-                title = "Monthly Distribution (Last 30 Days)";
-            } else if (sel == 3) {
-                days = 365;
-                title = "Yearly Distribution (Last 12 Months)";
-            }
-            
-            stockDistributionChart.setData(reportDAO.getStockDistributionTrend(days), title);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1213,32 +1140,9 @@ public class DashboardFrame extends JFrame {
     }
 
     private void refreshTopProductsChartData() {
-        if (topProductsChart == null || cmbTopProductsFilter == null) return;
+        if (topProductsChart == null) return;
         try {
-            int sel = cmbTopProductsFilter.getSelectedIndex();
-            int days = 0;
-            boolean exact = true;
-            String title = "Today's Top Selling Products";
-            
-            if (sel == 1) {
-                days = 1;
-                exact = true;
-                title = "Yesterday's Top Selling Products";
-            } else if (sel == 2) {
-                days = 7;
-                exact = false;
-                title = "Weekly Top Selling Products";
-            } else if (sel == 3) {
-                days = 30;
-                exact = false;
-                title = "Monthly Top Selling Products";
-            } else if (sel == 4) {
-                days = 3650;
-                exact = false;
-                title = "All-Time Top Selling Products";
-            }
-            
-            topProductsChart.setData(reportDAO.getTopSellingProducts(6, days, exact), title);
+            topProductsChart.setData(reportDAO.getTopSellingProducts(6), "Top Selling Products");
         } catch (Exception e) {
             e.printStackTrace();
         }

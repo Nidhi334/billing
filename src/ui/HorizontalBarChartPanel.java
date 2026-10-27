@@ -16,8 +16,8 @@ public class HorizontalBarChartPanel extends JPanel {
     public HorizontalBarChartPanel() {
         setBackground(Color.WHITE);
         setOpaque(false);
-        setPreferredSize(new Dimension(500, 300));
-        setMinimumSize(new Dimension(200, 200));
+        setPreferredSize(new Dimension(700, 400));
+        setMinimumSize(new Dimension(200, 260));
         setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
 
         addMouseMotionListener(new MouseAdapter() {
