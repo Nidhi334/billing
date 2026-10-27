@@ -1,7 +1,7 @@
 package ui;
 
-import javax.swing.*;
 import java.awt.*;
+import javax.swing.*;
 
 /**
  * Full-screen Application Frame for SmartBilling Pro Login.
