@@ -12,6 +12,20 @@ import java.util.List;
 
 public class BillingDAO {
 
+    private static volatile boolean schemaUpgraded = false;
+
+    private static void ensureSchemaUpgraded(Connection conn) {
+        if (schemaUpgraded) return;
+        synchronized (BillingDAO.class) {
+            if (schemaUpgraded) return;
+            try (Statement st = conn.createStatement()) {
+                st.executeUpdate("ALTER TABLE sales MODIFY COLUMN payment_mode VARCHAR(50) DEFAULT 'CASH'");
+            } catch (Exception ignored) {
+            }
+            schemaUpgraded = true;
+        }
+    }
+
     public synchronized String generateNextInvoiceNo() throws SQLException {
         String prefix = "INV-" + new SimpleDateFormat("yyyyMMdd").format(new Date()) + "-";
         String sql = "SELECT invoice_no FROM sales WHERE invoice_no LIKE ? ORDER BY id DESC LIMIT 1";
@@ -45,6 +59,7 @@ public class BillingDAO {
         try {
             conn = DBConnection.getConnection();
             conn.setAutoCommit(false);
+            ensureSchemaUpgraded(conn);
 
             int saleId;
             try (PreparedStatement psSale = conn.prepareStatement(insertSaleSql, Statement.RETURN_GENERATED_KEYS)) {
@@ -65,7 +80,19 @@ public class BillingDAO {
                     psSale.setNull(8, Types.INTEGER);
                 }
 
-                psSale.executeUpdate();
+                try {
+                    psSale.executeUpdate();
+                } catch (SQLException sqle) {
+                    if (sqle.getMessage() != null && sqle.getMessage().toLowerCase().contains("payment_mode")) {
+                        // Legacy schema fallback: if ENUM lacks 'UPI', use 'ONLINE'
+                        String fallback = "UPI".equalsIgnoreCase(sale.getPaymentMode()) ? "ONLINE" : "CASH";
+                        psSale.setString(7, fallback);
+                        psSale.executeUpdate();
+                        sale.setPaymentMode(fallback);
+                    } else {
+                        throw sqle;
+                    }
+                }
                 try (ResultSet rs = psSale.getGeneratedKeys()) {
                     if (rs.next()) {
                         saleId = rs.getInt(1);
