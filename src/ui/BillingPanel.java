@@ -10,6 +10,7 @@ import model.Sale;
 import model.SaleItem;
 import config.AppSettings;
 import model.User;
+import util.ProductImageUtil;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -40,6 +41,15 @@ public class BillingPanel extends JPanel {
     private JTextField txtInvoiceNo;
     private JComboBox<String> cmbPaymentMode;
     private boolean isUpdatingCustomerCombo = false;
+    private boolean isUpdatingPaymentMode = false;
+
+    // Live Auto-Suggestion Popup for Barcode / Product Search
+    private JPopupMenu suggestionsPopup;
+    private JList<Product> lstSuggestions;
+    private DefaultListModel<Product> suggestionsModel;
+    private JLabel lblSuggestionsHeader;
+    private JLabel lblSuggestionsFooter;
+    private boolean isProgrammaticSearchUpdate = false;
 
     // Cart table
     private DefaultTableModel cartModel;
@@ -173,22 +183,24 @@ public class BillingPanel extends JPanel {
         JPanel headerLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         headerLeft.setOpaque(false);
         JLabel lblTerminal = new JLabel("⚡ POS TERMINAL - DESK #1");
+        lblTerminal.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblTerminal.setForeground(Color.WHITE);
+        headerLeft.add(lblTerminal);
+
         lblTouchBadge = new JLabel(" 📱 TOUCH MODE ");
         lblTouchBadge.setFont(new Font("Segoe UI", Font.BOLD, 10));
         lblTouchBadge.setOpaque(true);
         lblTouchBadge.setBackground(AppTheme.ELECTRIC_LIME);
         lblTouchBadge.setForeground(AppTheme.FOREST_DEEP);
         lblTouchBadge.setBorder(new EmptyBorder(2, 6, 2, 6));
-        lblTerminal.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        lblTerminal.setForeground(Color.WHITE);
-        headerLeft.add(lblTerminal);
         headerLeft.add(lblTouchBadge);
-
-        JLabel lblShortcuts = new JLabel("[F1: Barcode | F7: Scan Dialog | F2: Hold | F3: Cust | F4: Cash | F6: UPI | Ctrl+D: Disc | Ctrl+Enter: Pay]");
-        lblShortcuts.setFont(new Font("Monospaced", Font.PLAIN, 11));
-        lblShortcuts.setForeground(new Color(148, 163, 184));
-        headerLeft.add(lblShortcuts);
         headerStrip.add(headerLeft, BorderLayout.WEST);
+
+        JLabel lblShortcuts = new JLabel("[ F1: Search/Barcode | F7: Camera Scan | F2: Hold | F3: Customer | F4: Cash | F6: UPI | Ctrl+Enter: Pay ]");
+        lblShortcuts.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblShortcuts.setForeground(new Color(148, 163, 184));
+        lblShortcuts.setHorizontalAlignment(SwingConstants.CENTER);
+        headerStrip.add(lblShortcuts, BorderLayout.CENTER);
 
         // Held Bills Toolbar
         heldBillsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
@@ -331,26 +343,95 @@ public class BillingPanel extends JPanel {
                 new EmptyBorder(8, 12, 8, 12)
         ));
 
-        JLabel lblScanIcon = new JLabel("🏷️ BARCODE / SCAN (F1): ");
+        JLabel lblScanIcon = new JLabel("🏷️ BARCODE / SEARCH (F1): ");
         lblScanIcon.setFont(new Font("Segoe UI", Font.BOLD, 13));
         lblScanIcon.setForeground(new Color(30, 41, 59));
         scanBar.add(lblScanIcon, BorderLayout.WEST);
 
         txtBarcode = new JTextField();
         txtBarcode.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        txtBarcode.setToolTipText("Scan barcode or type code/name and press Enter");
+        txtBarcode.setToolTipText("Type product name, code or scan barcode (Live suggestions popup enabled)");
+
+        initSuggestionsPopup();
+
         barcodeScanTimer = new Timer(250, e -> {
             String typed = txtBarcode.getText() == null ? "" : txtBarcode.getText().trim();
-            if (!typed.isEmpty() && looksLikeBarcodeScan(typed)) {
+            if (!typed.isEmpty() && typed.matches("^\\d{8,14}$")) {
                 handleBarcodeScan(false);
             }
         });
         barcodeScanTimer.setRepeats(false);
+
         txtBarcode.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { scheduleBarcodeAutoScan(); }
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { scheduleBarcodeAutoScan(); }
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { scheduleBarcodeAutoScan(); }
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                scheduleBarcodeAutoScan();
+                onBarcodeSearchInputChanged();
+            }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                scheduleBarcodeAutoScan();
+                onBarcodeSearchInputChanged();
+            }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                scheduleBarcodeAutoScan();
+                onBarcodeSearchInputChanged();
+            }
         });
+
+        txtBarcode.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (suggestionsPopup != null && suggestionsPopup.isVisible() && lstSuggestions.isVisible()) {
+                    if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                        int cur = lstSuggestions.getSelectedIndex();
+                        int next = Math.min(suggestionsModel.size() - 1, cur + 1);
+                        lstSuggestions.setSelectedIndex(next);
+                        lstSuggestions.ensureIndexIsVisible(next);
+                        e.consume();
+                        return;
+                    } else if (e.getKeyCode() == KeyEvent.VK_UP) {
+                        int cur = lstSuggestions.getSelectedIndex();
+                        int prev = Math.max(0, cur - 1);
+                        lstSuggestions.setSelectedIndex(prev);
+                        lstSuggestions.ensureIndexIsVisible(prev);
+                        e.consume();
+                        return;
+                    } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                        hideSuggestionsPopup();
+                        e.consume();
+                        return;
+                    } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                        if (lstSuggestions.getSelectedIndex() >= 0) {
+                            selectAndAddHighlightedProduct();
+                            e.consume();
+                            return;
+                        }
+                    }
+                }
+
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    hideSuggestionsPopup();
+                    handleBarcodeScan(true);
+                    e.consume();
+                }
+            }
+        });
+
+        txtBarcode.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                Timer t = new Timer(220, evt -> {
+                    if (suggestionsPopup != null && suggestionsPopup.isVisible()) {
+                        Window active = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
+                        if (active != null && !active.isAncestorOf(txtBarcode)) {
+                            hideSuggestionsPopup();
+                        }
+                    }
+                });
+                t.setRepeats(false);
+                t.start();
+            }
+        });
+
         scanBar.add(txtBarcode, BorderLayout.CENTER);
 
         JPanel scanEastActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
@@ -615,10 +696,20 @@ public class BillingPanel extends JPanel {
 
         // LISTENERS
         btnOpenScanner.addActionListener(e -> openBarcodeScannerDialog());
-        btnScanAdd.addActionListener(e -> handleBarcodeScan(true));
+        btnScanAdd.addActionListener(e -> {
+            if (suggestionsPopup != null && suggestionsPopup.isVisible() && lstSuggestions.isVisible() && lstSuggestions.getSelectedIndex() >= 0) {
+                selectAndAddHighlightedProduct();
+            } else {
+                handleBarcodeScan(true);
+            }
+        });
         btnQuickCheckout.addActionListener(e -> completeSale());
 
         txtBarcode.addActionListener(e -> {
+            if (suggestionsPopup != null && suggestionsPopup.isVisible() && lstSuggestions.isVisible() && lstSuggestions.getSelectedIndex() >= 0) {
+                selectAndAddHighlightedProduct();
+                return;
+            }
             String val = txtBarcode.getText() == null ? "" : txtBarcode.getText().trim();
             if (val.isEmpty()) {
                 if (!cartItems.isEmpty()) {
@@ -630,6 +721,7 @@ public class BillingPanel extends JPanel {
                     }
                 }
             } else {
+                hideSuggestionsPopup();
                 handleBarcodeScan(true);
             }
         });
@@ -695,6 +787,7 @@ public class BillingPanel extends JPanel {
 
         // Payment mode selection change: reset cash to 0.00 for online / non-cash modes
         cmbPaymentMode.addActionListener(e -> {
+            if (isUpdatingPaymentMode) return;
             String mode = (String) cmbPaymentMode.getSelectedItem();
             boolean isCash = "CASH".equalsIgnoreCase(mode);
             if (isCash) {
@@ -707,6 +800,10 @@ public class BillingPanel extends JPanel {
                 txtCashPaid.setText("0.00");
             }
             updateCashCalculations();
+
+            if ("UPI".equalsIgnoreCase(mode) && !cartItems.isEmpty()) {
+                openUpiDialog();
+            }
         });
     }
 
@@ -795,6 +892,292 @@ public class BillingPanel extends JPanel {
         }
     }
 
+    // =========================================================================
+    // LIVE AUTO-SUGGESTION POPUP FOR BARCODE / PRODUCT SEARCH
+    // =========================================================================
+    private void initSuggestionsPopup() {
+        suggestionsPopup = new JPopupMenu();
+        suggestionsPopup.setLayout(new BorderLayout());
+        suggestionsPopup.setFocusable(false);
+        suggestionsPopup.setBackground(Color.WHITE);
+        suggestionsPopup.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(203, 213, 225), 1, true),
+                new EmptyBorder(4, 4, 4, 4)
+        ));
+
+        JPanel popupContent = new JPanel(new BorderLayout(0, 4));
+        popupContent.setOpaque(false);
+
+        // Header
+        lblSuggestionsHeader = new JLabel("  🔍 MATCHING PRODUCTS");
+        lblSuggestionsHeader.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblSuggestionsHeader.setForeground(new Color(71, 85, 105));
+        lblSuggestionsHeader.setPreferredSize(new Dimension(0, 22));
+        popupContent.add(lblSuggestionsHeader, BorderLayout.NORTH);
+
+        // JList with custom renderer
+        suggestionsModel = new DefaultListModel<>();
+        lstSuggestions = new JList<>(suggestionsModel);
+        lstSuggestions.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        lstSuggestions.setFocusable(false);
+        lstSuggestions.setFixedCellHeight(52);
+        lstSuggestions.setCellRenderer(new ProductSuggestionCellRenderer());
+
+        // Mouse hover selection
+        lstSuggestions.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                int idx = lstSuggestions.locationToIndex(e.getPoint());
+                if (idx >= 0 && idx != lstSuggestions.getSelectedIndex()) {
+                    lstSuggestions.setSelectedIndex(idx);
+                }
+            }
+        });
+
+        // Mouse click to add
+        lstSuggestions.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                selectAndAddHighlightedProduct();
+            }
+        });
+
+        JScrollPane scroll = new JScrollPane(lstSuggestions);
+        scroll.setBorder(BorderFactory.createLineBorder(new Color(241, 245, 249), 1));
+        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.getVerticalScrollBar().setUnitIncrement(14);
+        popupContent.add(scroll, BorderLayout.CENTER);
+
+        // Footer
+        lblSuggestionsFooter = new JLabel("  💡 Use ↑ / ↓ arrow keys to select, press Enter to Add, Esc to close");
+        lblSuggestionsFooter.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        lblSuggestionsFooter.setForeground(new Color(100, 116, 139));
+        lblSuggestionsFooter.setPreferredSize(new Dimension(0, 22));
+        popupContent.add(lblSuggestionsFooter, BorderLayout.SOUTH);
+
+        suggestionsPopup.add(popupContent, BorderLayout.CENTER);
+    }
+
+    private void onBarcodeSearchInputChanged() {
+        if (isProgrammaticSearchUpdate) return;
+
+        String raw = txtBarcode.getText();
+        if (raw == null || raw.trim().isEmpty()) {
+            hideSuggestionsPopup();
+            return;
+        }
+
+        String query = raw.trim();
+        if (query.isEmpty()) {
+            hideSuggestionsPopup();
+            return;
+        }
+
+        if (cachedProducts.isEmpty()) {
+            loadProductCache();
+        }
+
+        List<Product> matches = findMatchingProducts(query);
+        if (matches.isEmpty()) {
+            try {
+                List<Product> dbMatches = productDAO.searchProducts(query);
+                if (!dbMatches.isEmpty()) {
+                    matches = dbMatches;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        showSuggestionsPopup(query, matches);
+    }
+
+    public List<Product> findMatchingProducts(String query) {
+        List<Product> result = new ArrayList<>();
+        if (query == null || query.trim().isEmpty()) return result;
+
+        String qLower = query.trim().toLowerCase();
+        String[] tokens = qLower.split("\\s+");
+
+        for (Product p : cachedProducts) {
+            String nameLower = p.getName() != null ? p.getName().toLowerCase() : "";
+            String codeLower = p.getCode() != null ? p.getCode().toLowerCase() : "";
+            String barLower = p.getBarcode() != null ? p.getBarcode().toLowerCase() : "";
+            String catLower = p.getCategoryName() != null ? p.getCategoryName().toLowerCase() : "";
+
+            boolean exactOrPrefix = codeLower.startsWith(qLower) || barLower.startsWith(qLower) || nameLower.startsWith(qLower);
+
+            boolean tokensMatch = true;
+            for (String tok : tokens) {
+                if (!nameLower.contains(tok) && !codeLower.contains(tok) && !barLower.contains(tok) && !catLower.contains(tok)) {
+                    tokensMatch = false;
+                    break;
+                }
+            }
+
+            if (exactOrPrefix || tokensMatch) {
+                result.add(p);
+                if (result.size() >= 12) break;
+            }
+        }
+        return result;
+    }
+
+    private void showSuggestionsPopup(String query, List<Product> matches) {
+        if (suggestionsPopup == null) {
+            initSuggestionsPopup();
+        }
+
+        suggestionsModel.clear();
+        for (Product p : matches) {
+            suggestionsModel.addElement(p);
+        }
+
+        if (matches.isEmpty()) {
+            lblSuggestionsHeader.setText("  🔍 NO PRODUCTS FOUND FOR: \"" + query + "\"");
+            lblSuggestionsHeader.setForeground(new Color(220, 38, 38));
+            lblSuggestionsFooter.setText("  ⚠️ Check spelling or press Enter to scan barcode code directly");
+            lstSuggestions.setVisible(false);
+            suggestionsPopup.setPreferredSize(new Dimension(Math.max(txtBarcode.getWidth(), 520), 75));
+        } else {
+            lblSuggestionsHeader.setText("  🔍 MATCHING PRODUCTS (" + matches.size() + " FOUND)");
+            lblSuggestionsHeader.setForeground(new Color(30, 41, 59));
+            lblSuggestionsFooter.setText("  💡 Use ↑ / ↓ arrow keys to select, press Enter to Add, Esc to close");
+            lstSuggestions.setVisible(true);
+            lstSuggestions.setSelectedIndex(0);
+
+            int visibleRows = Math.min(matches.size(), 5);
+            int height = 52 + (visibleRows * 54);
+            int width = Math.max(txtBarcode.getWidth(), 560);
+            suggestionsPopup.setPreferredSize(new Dimension(width, height));
+        }
+
+        if (txtBarcode.isShowing()) {
+            suggestionsPopup.pack();
+            suggestionsPopup.show(txtBarcode, 0, txtBarcode.getHeight() + 3);
+            txtBarcode.requestFocusInWindow();
+        }
+    }
+
+    private void hideSuggestionsPopup() {
+        if (suggestionsPopup != null && suggestionsPopup.isVisible()) {
+            suggestionsPopup.setVisible(false);
+        }
+    }
+
+    private void selectAndAddHighlightedProduct() {
+        if (lstSuggestions != null && lstSuggestions.getSelectedIndex() >= 0 && lstSuggestions.isVisible()) {
+            Product selected = lstSuggestions.getSelectedValue();
+            if (selected != null) {
+                hideSuggestionsPopup();
+                addProductToCart(selected, 1);
+                isProgrammaticSearchUpdate = true;
+                txtBarcode.setText("");
+                isProgrammaticSearchUpdate = false;
+                focusBarcodeField();
+            }
+        }
+    }
+
+    private class ProductSuggestionCellRenderer extends JPanel implements ListCellRenderer<Product> {
+        private JLabel lblIcon = new JLabel();
+        private JLabel lblName = new JLabel();
+        private JLabel lblMeta = new JLabel();
+        private JLabel lblPrice = new JLabel();
+        private JLabel lblStock = new JLabel();
+        private JLabel lblActionPill = new JLabel();
+
+        public ProductSuggestionCellRenderer() {
+            setLayout(new BorderLayout(10, 0));
+            setBorder(new EmptyBorder(6, 10, 6, 10));
+            setOpaque(true);
+
+            lblIcon.setPreferredSize(new Dimension(36, 36));
+            add(lblIcon, BorderLayout.WEST);
+
+            JPanel pnlCenter = new JPanel();
+            pnlCenter.setLayout(new BoxLayout(pnlCenter, BoxLayout.Y_AXIS));
+            pnlCenter.setOpaque(false);
+
+            lblName.setFont(new Font("Segoe UI", Font.BOLD, 13));
+            lblMeta.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            pnlCenter.add(lblName);
+            pnlCenter.add(Box.createVerticalStrut(2));
+            pnlCenter.add(lblMeta);
+            add(pnlCenter, BorderLayout.CENTER);
+
+            JPanel pnlRight = new JPanel(new GridLayout(2, 1, 2, 2));
+            pnlRight.setOpaque(false);
+
+            JPanel rowTop = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+            rowTop.setOpaque(false);
+            lblPrice.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            lblPrice.setForeground(new Color(22, 101, 52));
+            lblActionPill.setFont(new Font("Segoe UI", Font.BOLD, 10));
+            lblActionPill.setOpaque(true);
+            lblActionPill.setBorder(new EmptyBorder(2, 8, 2, 8));
+            rowTop.add(lblPrice);
+            rowTop.add(lblActionPill);
+            pnlRight.add(rowTop);
+
+            JPanel rowBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+            rowBottom.setOpaque(false);
+            lblStock.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            rowBottom.add(lblStock);
+            pnlRight.add(rowBottom);
+
+            add(pnlRight, BorderLayout.EAST);
+        }
+
+        @Override
+        public Component getListCellRendererComponent(JList<? extends Product> list, Product p, int index,
+                                                      boolean isSelected, boolean cellHasFocus) {
+            if (p == null) return this;
+
+            lblIcon.setIcon(ProductImageUtil.getProductIcon(p, 34, 34));
+
+            lblName.setText(p.getName());
+            String cat = p.getCategoryName() != null && !p.getCategoryName().isEmpty() ? p.getCategoryName() : "General";
+            String bCode = p.getBarcode() != null && !p.getBarcode().isEmpty() ? p.getBarcode() : p.getCode();
+            lblMeta.setText(p.getCode() + " • Barcode: " + bCode + " • " + cat);
+
+            lblPrice.setText(String.format("₹%.2f", p.getSellingPrice()));
+
+            int qty = p.getQuantity();
+            if (qty <= 0) {
+                lblStock.setText("⚠️ Out of Stock (0)");
+                lblStock.setForeground(new Color(220, 38, 38));
+            } else if (qty <= p.getMinStockLevel()) {
+                lblStock.setText("⚠️ Low Stock: " + qty + " left");
+                lblStock.setForeground(new Color(217, 119, 6));
+            } else {
+                lblStock.setText("✓ " + qty + " in stock");
+                lblStock.setForeground(new Color(22, 101, 52));
+            }
+
+            if (isSelected) {
+                setBackground(new Color(239, 246, 255));
+                lblName.setForeground(new Color(30, 58, 138));
+                lblMeta.setForeground(new Color(59, 130, 246));
+                lblActionPill.setText("↵ Enter to Add");
+                lblActionPill.setBackground(new Color(37, 99, 235));
+                lblActionPill.setForeground(Color.WHITE);
+                setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(0, 4, 0, 0, new Color(37, 99, 235)),
+                        new EmptyBorder(6, 6, 6, 10)
+                ));
+            } else {
+                setBackground(index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252));
+                lblName.setForeground(new Color(15, 23, 42));
+                lblMeta.setForeground(new Color(100, 116, 139));
+                lblActionPill.setText("+ Add");
+                lblActionPill.setBackground(new Color(241, 245, 249));
+                lblActionPill.setForeground(new Color(71, 85, 105));
+                setBorder(new EmptyBorder(6, 10, 6, 10));
+            }
+
+            return this;
+        }
+    }
+
     private void scheduleBarcodeAutoScan() {
         String typed = txtBarcode.getText() == null ? "" : txtBarcode.getText().trim();
         if (typed.isEmpty()) {
@@ -840,6 +1223,48 @@ public class BillingPanel extends JPanel {
     private void quickSearchCustomer(String query) {
         if (query == null || query.trim().isEmpty()) return;
         String q = query.trim();
+
+        // Phone number validation if input is digits
+        String digits = q.replaceAll("[^0-9]", "");
+        if (!digits.isEmpty() && q.matches("^[0-9+ -]+$")) {
+            if (!q.matches("\\d+")) {
+                JOptionPane.showMessageDialog(this,
+                        "Phone number must contain numeric digits (0-9) only.\nPlease remove any letters, symbols or spaces.",
+                        "Validation Error - Numbers Only",
+                        JOptionPane.WARNING_MESSAGE);
+                txtCustPhone.requestFocus();
+                txtCustPhone.selectAll();
+                return;
+            }
+            if (digits.charAt(0) < '6' || digits.charAt(0) > '9') {
+                JOptionPane.showMessageDialog(this,
+                        "Mobile number must start with 6, 7, 8, or 9.\n(You entered a number starting with '" + digits.charAt(0) + "').",
+                        "Validation Error - Invalid Starting Digit",
+                        JOptionPane.WARNING_MESSAGE);
+                txtCustPhone.requestFocus();
+                txtCustPhone.selectAll();
+                return;
+            }
+            if (digits.length() > 10) {
+                JOptionPane.showMessageDialog(this,
+                        "Mobile number cannot exceed 10 digits!\n(You entered " + digits.length() + " digits). Please enter only 10 digits.",
+                        "Validation Error - Number Too Long",
+                        JOptionPane.WARNING_MESSAGE);
+                txtCustPhone.requestFocus();
+                txtCustPhone.selectAll();
+                return;
+            }
+            if (digits.length() < 10) {
+                JOptionPane.showMessageDialog(this,
+                        "Mobile number must be exactly 10 digits!\n(You entered " + digits.length() + " digits).",
+                        "Validation Error - Incomplete Number",
+                        JOptionPane.WARNING_MESSAGE);
+                txtCustPhone.requestFocus();
+                txtCustPhone.selectAll();
+                return;
+            }
+        }
+
         try {
             List<Customer> list = customerDAO.searchCustomers(q);
             if (!list.isEmpty()) {
@@ -877,136 +1302,25 @@ public class BillingPanel extends JPanel {
 
     public Customer openQuickAddCustomerDialog(String phonePrefill) {
         Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
-        JDialog dlg = new JDialog(owner, "Quick Add Customer", true);
-        dlg.setLayout(new BorderLayout(10, 10));
-        dlg.setSize(400, 270);
-        dlg.setLocationRelativeTo(owner);
-
-        JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(new Color(241, 245, 249));
-        header.setBorder(new EmptyBorder(10, 16, 10, 16));
-        JLabel lblHeader = new JLabel("Register New Customer");
-        lblHeader.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        lblHeader.setForeground(new Color(30, 41, 59));
-        header.add(lblHeader, BorderLayout.CENTER);
-        dlg.add(header, BorderLayout.NORTH);
-
-        JPanel form = new JPanel(new GridBagLayout());
-        form.setBorder(new EmptyBorder(14, 16, 10, 16));
-        form.setBackground(Color.WHITE);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        JLabel lblPhone = new JLabel("Mobile No:*");
-        lblPhone.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        JTextField txtPhone = new JTextField(phonePrefill != null ? phonePrefill : "", 15);
-        txtPhone.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-
-        JLabel lblName = new JLabel("Full Name:*");
-        lblName.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        JTextField txtName = new JTextField(15);
-        txtName.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-
-        JLabel lblAddress = new JLabel("City / Address:");
-        lblAddress.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        JTextField txtAddress = new JTextField(15);
-        txtAddress.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.32;
-        form.add(lblPhone, gbc);
-        gbc.gridx = 1; gbc.weightx = 0.68;
-        form.add(txtPhone, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.32;
-        form.add(lblName, gbc);
-        gbc.gridx = 1; gbc.weightx = 0.68;
-        form.add(txtName, gbc);
-
-        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0.32;
-        form.add(lblAddress, gbc);
-        gbc.gridx = 1; gbc.weightx = 0.68;
-        form.add(txtAddress, gbc);
-
-        final Customer[] result = new Customer[1];
-
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        footer.setBackground(new Color(248, 250, 252));
-        JButton btnCancel = new JButton("Cancel");
-        JButton btnSave = new JButton("Save & Select Customer");
-        btnSave.setBackground(new Color(37, 99, 235));
-        btnSave.setForeground(Color.WHITE);
-        btnSave.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnSave.setFocusPainted(false);
-
-        btnCancel.addActionListener(e -> dlg.dispose());
-
-        ActionListener saveAction = e -> {
-            String p = txtPhone.getText().trim();
-            String n = txtName.getText().trim();
-            String addr = txtAddress.getText().trim();
-
-            if (n.isEmpty()) {
-                JOptionPane.showMessageDialog(dlg, "Please enter customer name.", "Required Field", JOptionPane.WARNING_MESSAGE);
-                txtName.requestFocus();
-                return;
-            }
-
-            Customer c = new Customer();
-            c.setName(n);
-            c.setPhone(p);
-            c.setAddress(addr);
-            c.setEmail("");
-
-            try {
-                boolean ok = customerDAO.addCustomer(c);
-                if (ok) {
-                    result[0] = c;
-                    loadCustomers();
-                    for (int i = 0; i < cmbCustomer.getItemCount(); i++) {
-                        Customer item = cmbCustomer.getItemAt(i);
-                        if (item.getId() == c.getId()) {
-                            isUpdatingCustomerCombo = true;
-                            cmbCustomer.setSelectedIndex(i);
-                            isUpdatingCustomerCombo = false;
-                            break;
-                        }
-                    }
-                    txtCustPhone.setText(c.getPhone() != null && !c.getPhone().isEmpty() ? c.getPhone() : c.getName());
-                    dlg.dispose();
-                    focusBarcodeField();
-                } else {
-                    JOptionPane.showMessageDialog(dlg, "Failed to register customer.", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dlg, "Error saving customer: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        };
-
-        btnSave.addActionListener(saveAction);
-        txtName.addActionListener(saveAction);
-        txtPhone.addActionListener(e -> {
-            if (!txtPhone.getText().trim().isEmpty()) {
-                txtName.requestFocus();
-            }
-        });
-
-        footer.add(btnCancel);
-        footer.add(btnSave);
-
-        dlg.add(form, BorderLayout.CENTER);
-        dlg.add(footer, BorderLayout.SOUTH);
-
-        SwingUtilities.invokeLater(() -> {
-            if (phonePrefill != null && !phonePrefill.isEmpty()) {
-                txtName.requestFocusInWindow();
-            } else {
-                txtPhone.requestFocusInWindow();
-            }
-        });
-
+        QuickAddCustomerDialog dlg = new QuickAddCustomerDialog(owner, phonePrefill);
         dlg.setVisible(true);
-        return result[0];
+
+        Customer c = dlg.getCreatedCustomer();
+        if (c != null) {
+            loadCustomers();
+            for (int i = 0; i < cmbCustomer.getItemCount(); i++) {
+                Customer item = cmbCustomer.getItemAt(i);
+                if (item.getId() == c.getId()) {
+                    isUpdatingCustomerCombo = true;
+                    cmbCustomer.setSelectedIndex(i);
+                    isUpdatingCustomerCombo = false;
+                    break;
+                }
+            }
+            txtCustPhone.setText(c.getPhone() != null && !c.getPhone().isEmpty() ? c.getPhone() : c.getName());
+            focusBarcodeField();
+        }
+        return c;
     }
 
     public void handleBarcodeScan() {
@@ -1268,13 +1582,24 @@ public class BillingPanel extends JPanel {
     }
 
     private void openUpiDialog() {
+        if (cartItems.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Cart is empty! Add products before generating UPI QR.", "Empty Cart", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        isUpdatingPaymentMode = true;
         cmbPaymentMode.setSelectedItem("UPI");
+        isUpdatingPaymentMode = false;
+
         cashTendered = 0.0;
         txtCashPaid.setText("0.00");
         updateCashCalculations();
 
+        String storeUpi = AppSettings.getString(AppSettings.KEY_STORE_UPI_ID, "bazaarpoint@upi").trim();
+        String storeName = AppSettings.getString(AppSettings.KEY_STORE_NAME, "SmartBilling Pro").trim();
+
         Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
-        UpiQrDialog upiDialog = new UpiQrDialog(owner, "bazaarpoint@upi", "SmartBilling Pro", grandTotal, txtInvoiceNo.getText().trim());
+        UpiQrDialog upiDialog = new UpiQrDialog(owner, storeUpi, storeName, grandTotal, txtInvoiceNo.getText().trim());
         upiDialog.setVisible(true);
     }
 
@@ -1473,26 +1798,52 @@ public class BillingPanel extends JPanel {
 
         Runnable checkPhone = () -> {
             String p = txtPhone.getText().trim();
-            if (p.length() >= 10 || (p.length() >= 4 && !p.isEmpty())) {
-                try {
-                    Customer exist = customerDAO.getCustomerByPhone(p);
-                    if (exist == null) {
-                        List<Customer> list = customerDAO.searchCustomers(p);
-                        if (!list.isEmpty()) exist = list.get(0);
-                    }
-                    if (exist != null) {
-                        txtName.setText(exist.getName());
-                        lblStatus.setText("✓ Existing: " + exist.getName());
-                        lblStatus.setForeground(new Color(22, 163, 74));
-                    } else {
-                        lblStatus.setText("New customer (will be registered)");
-                        lblStatus.setForeground(new Color(37, 99, 235));
-                    }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
+            if (p.isEmpty()) {
+                lblStatus.setText("Type 10-digit mobile number to search or add");
+                lblStatus.setForeground(new Color(100, 116, 139));
+                return;
+            }
+            if (!p.matches("\\d+")) {
+                lblStatus.setText("⚠️ Only digits (0-9) allowed");
+                lblStatus.setForeground(new Color(220, 38, 38));
+                return;
+            }
+            if (p.charAt(0) < '6' || p.charAt(0) > '9') {
+                lblStatus.setText("⚠️ Mobile number must start with 6, 7, 8, or 9");
+                lblStatus.setForeground(new Color(220, 38, 38));
+                return;
+            }
+            if (p.length() > 10) {
+                lblStatus.setText("⚠️ Mobile number exceeds 10 digits (" + p.length() + "/10)");
+                lblStatus.setForeground(new Color(220, 38, 38));
+                return;
+            }
+            if (p.length() < 10) {
+                lblStatus.setText("Entering mobile number: " + p.length() + "/10 digits");
+                lblStatus.setForeground(new Color(100, 116, 139));
+                return;
+            }
+
+            try {
+                Customer exist = customerDAO.getCustomerByPhone(p);
+                if (exist != null) {
+                    txtName.setText(exist.getName());
+                    lblStatus.setText("✓ Existing Customer: " + exist.getName());
+                    lblStatus.setForeground(new Color(22, 163, 74));
+                } else {
+                    lblStatus.setText("✓ Valid 10-digit mobile (New Customer)");
+                    lblStatus.setForeground(new Color(37, 99, 235));
                 }
+            } catch (Exception ex) {
+                ex.printStackTrace();
             }
         };
+
+        txtPhone.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { checkPhone.run(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { checkPhone.run(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { checkPhone.run(); }
+        });
 
         txtPhone.addFocusListener(new FocusAdapter() {
             @Override
@@ -1547,6 +1898,41 @@ public class BillingPanel extends JPanel {
                 res.customer = null;
                 dlg.dispose();
                 return;
+            }
+
+            if (!p.isEmpty()) {
+                if (!p.matches("\\d+")) {
+                    JOptionPane.showMessageDialog(dlg,
+                            "Mobile number must contain numeric digits (0-9) only.\nPlease remove any letters, symbols or spaces.",
+                            "Validation Error - Numbers Only",
+                            JOptionPane.WARNING_MESSAGE);
+                    txtPhone.requestFocus();
+                    return;
+                }
+                if (p.charAt(0) < '6' || p.charAt(0) > '9') {
+                    JOptionPane.showMessageDialog(dlg,
+                            "Mobile number must start with 6, 7, 8, or 9.\n(You entered a number starting with '" + p.charAt(0) + "').",
+                            "Validation Error - Invalid Starting Digit",
+                            JOptionPane.WARNING_MESSAGE);
+                    txtPhone.requestFocus();
+                    return;
+                }
+                if (p.length() > 10) {
+                    JOptionPane.showMessageDialog(dlg,
+                            "Mobile number cannot exceed 10 digits!\n(You entered " + p.length() + " digits). Please enter only 10 digits.",
+                            "Validation Error - Number Too Long",
+                            JOptionPane.WARNING_MESSAGE);
+                    txtPhone.requestFocus();
+                    return;
+                }
+                if (p.length() < 10) {
+                    JOptionPane.showMessageDialog(dlg,
+                            "Mobile number must be exactly 10 digits!\n(You entered " + p.length() + " digits).",
+                            "Validation Error - Incomplete Number",
+                            JOptionPane.WARNING_MESSAGE);
+                    txtPhone.requestFocus();
+                    return;
+                }
             }
 
             try {
