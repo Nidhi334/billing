@@ -409,16 +409,20 @@ public class ReportDAO {
         return map;
     }
 
-    public Map<String, Double> getTopSellingProducts(int limit) throws SQLException {
+    public Map<String, Double> getTopSellingProducts(int limit, int days, boolean exactDay) throws SQLException {
         Map<String, Double> map = new java.util.LinkedHashMap<>();
+        String condition = exactDay ? "= DATE_SUB(CURRENT_DATE(), INTERVAL ? DAY)" : ">= DATE_SUB(CURRENT_DATE(), INTERVAL ? DAY)";
         String sql = "SELECT p.name, COALESCE(SUM(si.quantity), 0) as total_qty " +
                      "FROM sale_items si " +
                      "JOIN products p ON si.product_id = p.id " +
+                     "JOIN sales s ON si.sale_id = s.id " +
+                     "WHERE s.sale_date " + condition + " " +
                      "GROUP BY p.id, p.name " +
                      "ORDER BY total_qty DESC LIMIT ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, limit);
+            ps.setInt(1, days);
+            ps.setInt(2, limit);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     map.put(rs.getString("name"), (double) rs.getInt("total_qty"));
@@ -428,23 +432,12 @@ public class ReportDAO {
         return map;
     }
 
-    public Map<String, Double> getStockDistributionByCategory(int limit) throws SQLException {
-        Map<String, Double> map = new java.util.LinkedHashMap<>();
-        String sql = "SELECT COALESCE(c.name, 'General / Uncategorized') as cat_name, COALESCE(SUM(p.quantity), 0) as stock_qty " +
-                     "FROM products p " +
-                     "LEFT JOIN categories c ON p.category_id = c.id " +
-                     "GROUP BY c.name " +
-                     "ORDER BY stock_qty DESC LIMIT ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, limit);
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    map.put(rs.getString("cat_name"), (double) rs.getInt("stock_qty"));
-                }
-            }
-        }
-        return map;
+    public Map<String, Double> getTopSellingProducts(int limit, int days) throws SQLException {
+        return getTopSellingProducts(limit, days, false);
+    }
+
+    public Map<String, Double> getTopSellingProducts(int limit) throws SQLException {
+        return getTopSellingProducts(limit, 30); // default to 30 days
     }
 
     public List<Map<String, Object>> getRecentSales(int limit) throws SQLException {
