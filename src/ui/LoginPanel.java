@@ -55,13 +55,7 @@ public class LoginPanel extends JPanel {
     private JLabel lblRoleBadge;
     private JPasswordField txtPassword;
     private JButton btnLogin, btnDbConfig, btnForgotPassword;
-<<<<<<< HEAD
-    private JButton btnRoleDropdown;
-    private RoleDropdownCard roleDropdownCard;
-    private boolean isAdmin = true; // will be synced after remembered-user loads
-=======
     private boolean isAdmin = true;
->>>>>>> feature4
     private JCheckBox chkRemember;
     private JButton btnTogglePassword;
     private boolean showPassword = false;
@@ -118,20 +112,7 @@ public class LoginPanel extends JPanel {
         txtPassword.addActionListener       (e -> login());
         btnForgotPassword.addActionListener (e -> forgotPwd());
         btnDbConfig.addActionListener       (e -> dbConfig());
-<<<<<<< HEAD
-
-        SwingUtilities.invokeLater(() -> {
-            boolean remember = AppSettings.getBoolean(AppSettings.KEY_REMEMBER_TERMINAL, true);
-            String saved = AppSettings.getString(AppSettings.KEY_REMEMBERED_USERNAME, "");
-            if (remember && !saved.trim().isEmpty()) {
-                txtPassword.requestFocusInWindow();
-            } else {
-                txtUsername.requestFocusInWindow();
-            }
-        });
-=======
         SwingUtilities.invokeLater(() -> txtPassword.requestFocusInWindow());
->>>>>>> feature4
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -141,48 +122,6 @@ public class LoginPanel extends JPanel {
         JPanel basePanel = new JPanel(new BorderLayout());
         basePanel.setOpaque(false);
 
-        // ── Top-right terminal status badge ──────────────────────────────────
-        JPanel topBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 32, 16));
-        topBar.setOpaque(false);
-
-<<<<<<< HEAD
-        // Initial label will be synced with remembered user in buildRightFormPanel
-        btnRoleDropdown = new JButton(isAdmin ? "Administrator" : "Cashier Desk", new ChevronIcon());
-        btnRoleDropdown.setHorizontalTextPosition(SwingConstants.LEFT);
-        btnRoleDropdown.setIconTextGap(8);
-        btnRoleDropdown.setFont(appFont(Font.BOLD, 13));
-        btnRoleDropdown.setForeground(TEXT_MED);
-        btnRoleDropdown.setOpaque(false);
-        btnRoleDropdown.setContentAreaFilled(false);
-        btnRoleDropdown.setBorderPainted(false);
-        btnRoleDropdown.setFocusPainted(false);
-        btnRoleDropdown.setBorder(new EmptyBorder(6, 10, 6, 6));
-        btnRoleDropdown.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnRoleDropdown.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { btnRoleDropdown.setForeground(DARK_GREEN); }
-            @Override public void mouseExited (MouseEvent e) { btnRoleDropdown.setForeground(TEXT_MED); }
-        });
-
-        btnRoleDropdown.addActionListener(e -> {
-            if (roleDropdownCard.isOpen()) {
-                roleDropdownCard.close();
-            } else {
-                roleDropdownCard.open();
-=======
-        JPanel badgeTerminal = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 4)) {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(255, 255, 255, 190));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
-                g2.setColor(AppTheme.BORDER_SAGE);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, getHeight() - 1, getHeight() - 1);
-                g2.dispose();
-                super.paintComponent(g);
->>>>>>> feature4
-            }
-        };
-        
         /*
          * Form has a fixed preferred width of 380 px centered in the middle
          */
@@ -220,36 +159,24 @@ public class LoginPanel extends JPanel {
         form.add(title);
         form.add(Box.createVerticalStrut(20));
 
-<<<<<<< HEAD
-        // ── Username ──────────────────────────────────────────────────────────
+        // ── Role ComboBox (Admin & Staff - Instant Visibility) ────────────────
         boolean rememberMe = AppSettings.getBoolean(AppSettings.KEY_REMEMBER_TERMINAL, true);
         String savedUser = AppSettings.getString(AppSettings.KEY_REMEMBERED_USERNAME, "admin");
+        boolean savedIsAdmin = !rememberMe || savedUser == null || savedUser.trim().isEmpty()
+            || "admin".equalsIgnoreCase(savedUser.trim());
+        isAdmin = savedIsAdmin;
 
-        // Sync role dropdown and isAdmin flag to match the remembered user
-        if (rememberMe && savedUser != null && !savedUser.trim().isEmpty()) {
-            boolean savedIsAdmin = "admin".equalsIgnoreCase(savedUser.trim());
-            this.isAdmin = savedIsAdmin;
-            if (btnRoleDropdown != null) {
-                btnRoleDropdown.setText(savedIsAdmin ? "Administrator" : "Cashier Desk");
-            }
-        }
-
-        form.add(fLabel("Username or Staff ID"));
-        form.add(Box.createVerticalStrut(5));
-        txtUsername = new JTextField(rememberMe ? savedUser : "");
-        txtUsername.setFont(appFont(Font.PLAIN, 14));
-        form.add(fWrap(txtUsername, null));
-=======
-        // ── Role ComboBox (Admin & Staff - Instant Visibility) ────────────────
         form.add(fLabel("Select Role"));
         form.add(Box.createVerticalStrut(6));
 
         cmbRole = new JComboBox<>(new String[] { "Admin", "Staff" });
-        cmbRole.setSelectedIndex(0);
+        cmbRole.setSelectedItem(savedIsAdmin ? "Admin" : "Staff");
 
-        lblRoleBadge = new JLabel("● Administrator Account Selected");
+        lblRoleBadge = new JLabel(savedIsAdmin
+            ? "● Administrator Account Selected"
+            : "● Staff / Cashier Account Selected");
         lblRoleBadge.setFont(appFont(Font.BOLD, 11));
-        lblRoleBadge.setForeground(DARK_GREEN);
+        lblRoleBadge.setForeground(savedIsAdmin ? DARK_GREEN : MID_GREEN);
         lblRoleBadge.setBorder(new EmptyBorder(4, 4, 0, 0));
         lblRoleBadge.setAlignmentX(0f);
 
@@ -273,7 +200,6 @@ public class LoginPanel extends JPanel {
         form.add(fWrapCombo(cmbRole));
         form.add(Box.createVerticalStrut(4));
         form.add(lblRoleBadge);
->>>>>>> feature4
         form.add(Box.createVerticalStrut(16));
 
         // ── Password ──────────────────────────────────────────────────────────
@@ -337,7 +263,6 @@ public class LoginPanel extends JPanel {
         form.add(orDivider());
         form.add(Box.createVerticalStrut(14));
 
-<<<<<<< HEAD
         // ── Secondary ghost pill button (Customer Self-Checkout) ──────────────
         JButton btnKiosk = ghostPill("Customer Self-Checkout", new VecIcon("cart", 14, TEXT_MED));
         btnKiosk.setPreferredSize(new Dimension(380, 44));
@@ -349,20 +274,6 @@ public class LoginPanel extends JPanel {
             new SelfCheckoutFrame(null).setVisible(true);
         });
         form.add(btnKiosk);
-=======
-        // ── Secondary ghost pill buttons ──────────────────────────────────────
-        JPanel secRow = new JPanel(new GridLayout(1, 2, 10, 0));
-        secRow.setOpaque(false);
-        secRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
-        secRow.setAlignmentX(0f);
-        //JButton btnDemo  = ghostPill("Quick Demo",    new VecIcon("bolt", 14, TEXT_MED));
-        JButton btnKiosk = ghostPill("Self-Checkout", new VecIcon("cart", 14, TEXT_MED));
-        //btnDemo.addActionListener (e -> launchDemo());
-        btnKiosk.addActionListener(e -> { stopVideo(); new SelfCheckoutFrame(null).setVisible(true); });
-       // secRow.add(btnDemo);
-        secRow.add(btnKiosk);
-        form.add(secRow);
->>>>>>> feature4
         form.add(Box.createVerticalStrut(28));
 
         // ── Footer ────────────────────────────────────────────────────────────
@@ -971,16 +882,10 @@ public class LoginPanel extends JPanel {
             boolean defS = "staff".equalsIgnoreCase(user) && "staff123".equals(pass);
             if (defA || defS) {
                 if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(this,
-<<<<<<< HEAD
-                        "MySQL is not running.\nLaunch in OFFLINE / DEMO MODE?",
-                        "MySQL Offline", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE)) {
-                    persistRememberTerminal(user);
-                    launchDashboard(defA
-=======
                         "MySQL is not running.\nLaunch in OFFLINE / DEMO MODE as " + role + "?",
                         "MySQL Offline", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE)) {
+                    persistRememberTerminal(user);
                     launchDashboard(isAdmin
->>>>>>> feature4
                         ? new User(1, "admin", "admin123", "System Administrator (Demo)", "ADMIN")
                         : new User(2, "staff", "staff123", "Cashier Desk (Demo)", "STAFF"));
                 }
@@ -992,35 +897,23 @@ public class LoginPanel extends JPanel {
             }
             return;
         }
-<<<<<<< HEAD
         if (u == null) {
-            String hint = isAdmin
-                ? "Default Admin: admin / admin123"
-                : "Default Staff: staff / staff123";
             JOptionPane.showMessageDialog(this,
-                "Invalid credentials.\n\n" + hint,
+                "Invalid password for " + role + " account.",
                 "Login Failed", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        persistRememberTerminal(user);
-=======
-
-        if (u == null) {
-            JOptionPane.showMessageDialog(this, "Invalid password for " + role + " account.", "Login Failed", JOptionPane.ERROR_MESSAGE);
             txtPassword.selectAll();
             txtPassword.requestFocusInWindow();
             return;
         }
 
-        // Validate role matches user permissions
-        if ("Admin".equalsIgnoreCase(role) && !u.isAdmin()) {
+        if (u.isAdmin() != "Admin".equalsIgnoreCase(role)) {
             JOptionPane.showMessageDialog(this,
-                "Access Denied: The account does not have Administrator privileges.\nPlease select 'Staff' in the Role combo box to proceed.",
+                "Access Denied: The account role does not match the selected role.",
                 "Role Mismatch", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
->>>>>>> feature4
+        persistRememberTerminal(user);
         launchDashboard(u);
     }
 
