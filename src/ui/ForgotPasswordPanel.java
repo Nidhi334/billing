@@ -1,14 +1,13 @@
 package ui;
 
 import dao.UserDAO;
-import model.User;
-
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
 import java.util.Random;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import model.User;
 
 /**
  * Modern Keyra-Themed Inline Account Recovery Panel.

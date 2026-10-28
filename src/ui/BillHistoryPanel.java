@@ -1,15 +1,6 @@
 package ui;
 
 import dao.BillingDAO;
-import model.Sale;
-import model.User;
-
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
-import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
@@ -18,6 +9,14 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
+import model.Sale;
+import model.User;
 
 /**
  * BillHistoryPanel - Redesigned Orders & Billing History view.
@@ -35,6 +34,7 @@ public class BillHistoryPanel extends JPanel {
     private DefaultTableModel model;
     private List<Sale> currentSalesList = new ArrayList<>();
     private int hoveredRow = -1;
+    private int hoveredColumn = -1;
 
     // Filters
     private ModernSearchField txtSearch;
@@ -94,6 +94,15 @@ public class BillHistoryPanel extends JPanel {
 
         JPanel topActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         topActions.setOpaque(false);
+
+        JButton btnProductReturn = createPrimaryActionButton("Product Return", "plus");
+        btnProductReturn.setToolTipText("Find a bill and process a product return");
+        btnProductReturn.addActionListener(e -> {
+            Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+            new ProductReturnDialog(owner).setVisible(true);
+            loadBillHistory();
+        });
+        topActions.add(btnProductReturn);
 
         // Circular Refresh Button matching Dashboard style
         JButton btnRefresh = new JButton() {
@@ -361,17 +370,7 @@ public class BillHistoryPanel extends JPanel {
             @Override
             public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
                 Component c = super.prepareRenderer(renderer, row, column);
-                if (!isRowSelected(row)) {
-                    if (row == hoveredRow) {
-                        c.setBackground(new Color(242, 252, 246)); // Soft mint hover
-                    } else if (row % 2 == 1) {
-                        c.setBackground(new Color(251, 254, 252)); // Very faint alternating mint
-                    } else {
-                        c.setBackground(Color.WHITE);
-                    }
-                } else {
-                    c.setBackground(new Color(230, 248, 238)); // Selected mint
-                }
+                c.setBackground(getTableCellBackground(this, row, isRowSelected(row)));
                 return c;
             }
         };
@@ -497,11 +496,12 @@ public class BillHistoryPanel extends JPanel {
             @Override
             public void mouseMoved(MouseEvent e) {
                 int r = table.rowAtPoint(e.getPoint());
-                if (r != hoveredRow) {
+                int c = table.columnAtPoint(e.getPoint());
+                if (r != hoveredRow || c != hoveredColumn) {
                     hoveredRow = r;
+                    hoveredColumn = c;
                     table.repaint();
                 }
-                int c = table.columnAtPoint(e.getPoint());
                 if (c == 7) {
                     table.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 } else {
@@ -514,6 +514,7 @@ public class BillHistoryPanel extends JPanel {
             @Override
             public void mouseExited(MouseEvent e) {
                 hoveredRow = -1;
+                hoveredColumn = -1;
                 table.repaint();
             }
 
@@ -615,11 +616,51 @@ public class BillHistoryPanel extends JPanel {
         add(tableCard, BorderLayout.CENTER);
     }
 
+    private JButton createPrimaryActionButton(String text, String iconName) {
+        JButton btn = new JButton(text) {
+            private boolean hovered = false;
+            {
+                if (iconName != null) {
+                    setIcon(new SidebarIcon(iconName, 14, Color.WHITE));
+                }
+                addMouseListener(new MouseAdapter() {
+                    @Override public void mouseEntered(MouseEvent e) { hovered = true; repaint(); }
+                    @Override public void mouseExited(MouseEvent e) { hovered = false; repaint(); }
+                });
+            }
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int w = getWidth(), h = getHeight();
+                g2.setColor(hovered ? AppTheme.FOREST_MID : AppTheme.FOREST_GREEN);
+                g2.fillRoundRect(0, 0, w, h, h, h);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btn.setFont(AppTheme.font(Font.BOLD, 12));
+        btn.setForeground(Color.WHITE);
+        btn.setPreferredSize(new Dimension(145, 36));
+        btn.setIconTextGap(8);
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return btn;
+    }
+
     private void setActiveDatePill(DateFilterPillButton activeBtn) {
         if (btnToday != null) btnToday.setActive(btnToday == activeBtn);
         if (btnYesterday != null) btnYesterday.setActive(btnYesterday == activeBtn);
         if (btnThisMonth != null) btnThisMonth.setActive(btnThisMonth == activeBtn);
         if (btnAllTime != null) btnAllTime.setActive(btnAllTime == activeBtn);
+    }
+
+    private Color getTableCellBackground(JTable table, int row, boolean selected) {
+        if (selected) return new Color(230, 248, 238);
+        if (row == hoveredRow) return new Color(242, 252, 246);
+        return row % 2 == 1 ? new Color(251, 254, 252) : table.getBackground();
     }
 
     // =========================================================================
@@ -1069,19 +1110,27 @@ public class BillHistoryPanel extends JPanel {
     // =========================================================================
     // PAYMENT MODE PILL BADGE RENDERER
     // =========================================================================
-    private static class PaymentBadgeRenderer extends DefaultTableCellRenderer {
+    private class PaymentBadgeRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
             String mode = value != null ? value.toString().toUpperCase() : "CASH";
-            return new PaymentPillComponent(mode);
+            return new PaymentPillComponent(
+                    mode,
+                    row == hoveredRow && column == hoveredColumn,
+                    getTableCellBackground(table, row, table.isRowSelected(row))
+            );
         }
     }
 
     private static class PaymentPillComponent extends JComponent {
         private final String mode;
+        private final boolean hovered;
+        private final Color cellBackground;
 
-        public PaymentPillComponent(String mode) {
+        public PaymentPillComponent(String mode, boolean hovered, Color cellBackground) {
             this.mode = mode;
+            this.hovered = hovered;
+            this.cellBackground = cellBackground;
             setOpaque(false);
         }
 
@@ -1091,6 +1140,8 @@ public class BillHistoryPanel extends JPanel {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
             int w = getWidth(), h = getHeight();
+            g2.setColor(cellBackground);
+            g2.fillRect(0, 0, w, h);
             int pillH = 24;
             int pillW = Math.min(w - 16, 78);
             int px = (w - pillW) / 2;
@@ -1115,6 +1166,15 @@ public class BillHistoryPanel extends JPanel {
                 text = new Color(2, 122, 72);
             }
 
+            if (hovered) {
+                bg = new Color(
+                        (bg.getRed() * 3 + 255) / 4,
+                        (bg.getGreen() * 3 + 255) / 4,
+                        (bg.getBlue() * 3 + 255) / 4
+                );
+                border = border.darker();
+            }
+
             g2.setColor(bg);
             g2.fillRoundRect(px, py, pillW, pillH, pillH, pillH);
             g2.setColor(border);
@@ -1134,8 +1194,10 @@ public class BillHistoryPanel extends JPanel {
     // =========================================================================
     // ACTION BUTTON RENDERER & EDITOR FOR JTABLE
     // =========================================================================
-    private static class ActionButtonRenderer extends JButton implements TableCellRenderer {
+    private class ActionButtonRenderer extends JButton implements TableCellRenderer {
         private final SidebarIcon eyeIcon = new SidebarIcon("eye", 12, AppTheme.FOREST_GREEN);
+        private boolean hovered;
+        private Color cellBackground = Color.WHITE;
 
         public ActionButtonRenderer() {
             super("Details");
@@ -1150,6 +1212,8 @@ public class BillHistoryPanel extends JPanel {
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            hovered = row == hoveredRow && column == hoveredColumn;
+            cellBackground = getTableCellBackground(table, row, table.isRowSelected(row));
             return this;
         }
 
@@ -1160,17 +1224,19 @@ public class BillHistoryPanel extends JPanel {
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
             int w = getWidth(), h = getHeight();
+            g2.setColor(cellBackground);
+            g2.fillRect(0, 0, w, h);
             int btnW = Math.min(w - 16, 92);
             int btnH = 26;
             int btnX = (w - btnW) / 2;
             int btnY = (h - btnH) / 2;
             int arc = btnH;
 
-            // Soft mint pill button
-            g2.setColor(new Color(240, 250, 244));
+            // Soft mint pill button, highlighted while its table cell is hovered
+            g2.setColor(hovered ? new Color(232, 246, 238) : new Color(240, 250, 244));
             g2.fillRoundRect(btnX, btnY, btnW, btnH, arc, arc);
 
-            g2.setColor(AppTheme.BORDER_SAGE);
+            g2.setColor(hovered ? AppTheme.FOREST_MID : AppTheme.BORDER_SAGE);
             g2.drawRoundRect(btnX, btnY, btnW - 1, btnH - 1, arc, arc);
 
             g2.setFont(getFont());
@@ -1181,7 +1247,7 @@ public class BillHistoryPanel extends JPanel {
 
             eyeIcon.paintIcon(this, g2, sx, btnY + (btnH - eyeIcon.getIconHeight()) / 2);
 
-            g2.setColor(AppTheme.FOREST_GREEN);
+            g2.setColor(hovered ? AppTheme.FOREST_DEEP : AppTheme.FOREST_GREEN);
             int ty = btnY + ((btnH - fm.getHeight()) / 2) + fm.getAscent();
             g2.drawString(text, sx + eyeIcon.getIconWidth() + 6, ty);
 
@@ -1192,6 +1258,7 @@ public class BillHistoryPanel extends JPanel {
     private class ActionButtonEditor extends DefaultCellEditor {
         private final JButton btn;
         private int clickedRow;
+        private Color cellBackground = Color.WHITE;
         private final SidebarIcon eyeIcon = new SidebarIcon("eye", 12, Color.WHITE);
 
         public ActionButtonEditor() {
@@ -1203,6 +1270,8 @@ public class BillHistoryPanel extends JPanel {
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                     g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
                     int w = getWidth(), h = getHeight();
+                    g2.setColor(cellBackground);
+                    g2.fillRect(0, 0, w, h);
                     int btnW = Math.min(w - 16, 92);
                     int btnH = 26;
                     int btnX = (w - btnW) / 2;
@@ -1244,6 +1313,7 @@ public class BillHistoryPanel extends JPanel {
         @Override
         public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
             this.clickedRow = row;
+            cellBackground = getTableCellBackground(table, row, true);
             return btn;
         }
 

@@ -206,10 +206,10 @@ public class LoginPanel extends JPanel {
         form.add(fLabel("Password"));
         form.add(Box.createVerticalStrut(6));
         txtPassword = new JPasswordField();
-        txtPassword.setFont(appFont(Font.PLAIN, 14));
+        txtPassword.setFont(appFont(Font.BOLD, 14));
         txtPassword.setEchoChar('•');
         btnTogglePassword = new JButton("Show");
-        btnTogglePassword.setFont(appFont(Font.PLAIN, 12));
+        btnTogglePassword.setFont(appFont(Font.BOLD, 12));
         btnTogglePassword.setForeground(TEXT_SOFT);
         btnTogglePassword.setContentAreaFilled(false);
         btnTogglePassword.setBorderPainted(false);

@@ -1,8 +1,15 @@
 package ui;
 
 import dao.CustomerDAO;
-import model.Customer;
-
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
@@ -10,16 +17,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
-import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
-import java.awt.geom.RoundRectangle2D;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import model.Customer;
 
 /**
  * Modern, Minimalist Customer Directory & CRM Management Workspace.
@@ -234,39 +232,21 @@ public class CustomerPanel extends JPanel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 int row = table.rowAtPoint(e.getPoint());
-                int col = table.columnAtPoint(e.getPoint());
-                if (row < 0 || col != 6) return;
+                int action = getActionAt(e.getPoint());
+                if (row < 0 || action == 0) return;
 
                 Object val = table.getValueAt(row, 1);
                 if (!(val instanceof Customer)) return;
                 Customer target = (Customer) val;
 
-                Rectangle cellRect = table.getCellRect(row, col, false);
-                int relX = e.getX() - cellRect.x;
-                int relY = e.getY() - cellRect.y;
-                int cellW = cellRect.width;
+                if (action == 1) openCustomerDialog(target);
+                else handleDeleteCustomer(target);
+            }
 
-                int editW = 58;
-                int delW = 68;
-                int gap = 8;
-                int totalW = editW + gap + delW;
-                int startX = (cellW - totalW) / 2;
-
-                int editX1 = startX;
-                int editX2 = startX + editW;
-                int delX1 = startX + editW + gap;
-                int delX2 = startX + totalW;
-
-                int pillH = 26;
-                int btnY = (table.getRowHeight() - pillH) / 2;
-
-                if (relY >= btnY - 2 && relY <= btnY + pillH + 2) {
-                    if (relX >= editX1 && relX <= editX2) {
-                        openCustomerDialog(target);
-                    } else if (relX >= delX1 && relX <= delX2) {
-                        handleDeleteCustomer(target);
-                    }
-                }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                updateActionHover(-1, 0);
+                table.setCursor(Cursor.getDefaultCursor());
             }
         });
 
@@ -274,36 +254,48 @@ public class CustomerPanel extends JPanel {
             @Override
             public void mouseMoved(MouseEvent e) {
                 int row = table.rowAtPoint(e.getPoint());
-                int col = table.columnAtPoint(e.getPoint());
-                if (row >= 0 && col == 6) {
-                    Rectangle cellRect = table.getCellRect(row, col, false);
-                    int relX = e.getX() - cellRect.x;
-                    int relY = e.getY() - cellRect.y;
-                    int cellW = cellRect.width;
-
-                    int editW = 58;
-                    int delW = 68;
-                    int gap = 8;
-                    int totalW = editW + gap + delW;
-                    int startX = (cellW - totalW) / 2;
-
-                    int editX1 = startX;
-                    int editX2 = startX + editW;
-                    int delX1 = startX + editW + gap;
-                    int delX2 = startX + totalW;
-
-                    int pillH = 26;
-                    int btnY = (table.getRowHeight() - pillH) / 2;
-
-                    if (relY >= btnY - 2 && relY <= btnY + pillH + 2 &&
-                            ((relX >= editX1 && relX <= editX2) || (relX >= delX1 && relX <= delX2))) {
-                        table.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                        return;
-                    }
-                }
-                table.setCursor(Cursor.getDefaultCursor());
+                int action = getActionAt(e.getPoint());
+                updateActionHover(row, action);
+                table.setCursor(action != 0
+                        ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                        : Cursor.getDefaultCursor());
             }
         });
+    }
+
+    private int getActionAt(Point point) {
+        int row = table.rowAtPoint(point);
+        int col = table.columnAtPoint(point);
+        if (row < 0 || col != 6) return 0;
+
+        Rectangle cellRect = table.getCellRect(row, col, false);
+        int relX = point.x - cellRect.x;
+        int relY = point.y - cellRect.y;
+        int editW = 58;
+        int delW = 68;
+        int gap = 8;
+        int startX = (cellRect.width - editW - gap - delW) / 2;
+        int pillY = (table.getRowHeight() - 26) / 2;
+        if (relY < pillY || relY >= pillY + 26) return 0;
+        if (relX >= startX && relX < startX + editW) return 1;
+        if (relX >= startX + editW + gap && relX < startX + editW + gap + delW) return 2;
+        return 0;
+    }
+
+    private int hoveredActionRow = -1;
+    private int hoveredAction;
+
+    private void updateActionHover(int row, int action) {
+        if (action == 0) row = -1;
+        if (hoveredActionRow == row && hoveredAction == action) return;
+        if (hoveredActionRow >= 0) {
+            table.repaint(table.getCellRect(hoveredActionRow, 6, false));
+        }
+        hoveredActionRow = action == 0 ? -1 : row;
+        hoveredAction = action;
+        if (hoveredActionRow >= 0) {
+            table.repaint(table.getCellRect(hoveredActionRow, 6, false));
+        }
     }
 
     private void setupTableStyle(JTable t) {
@@ -815,7 +807,7 @@ public class CustomerPanel extends JPanel {
     /**
      * Dual Action Cell Renderer: Displays [Edit] and [Delete] inline pill buttons.
      */
-    private static class DualActionCellRenderer extends DefaultTableCellRenderer {
+    private class DualActionCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable t, Object val, boolean sel, boolean focus, int r, int c) {
             return new JComponent() {
@@ -842,6 +834,10 @@ public class CustomerPanel extends JPanel {
 
                     // 1. "Edit" Button Pill
                     int editX = startX;
+                    if (hoveredActionRow == r && hoveredAction == 1) {
+                        g2.setColor(new Color(15, 23, 42, 48));
+                        g2.fillRoundRect(editX, py + 3, editW, pillH, pillH, pillH);
+                    }
                     g2.setColor(new Color(248, 250, 252));
                     g2.fillRoundRect(editX, py, editW, pillH, pillH, pillH);
                     g2.setColor(new Color(226, 232, 240));
@@ -863,6 +859,10 @@ public class CustomerPanel extends JPanel {
 
                     // 2. "Delete" Button Pill
                     int delX = startX + editW + gap;
+                    if (hoveredActionRow == r && hoveredAction == 2) {
+                        g2.setColor(new Color(15, 23, 42, 60));
+                        g2.fillRoundRect(delX, py + 3, delW, pillH, pillH, pillH);
+                    }
                     g2.setColor(new Color(254, 242, 242));
                     g2.fillRoundRect(delX, py, delW, pillH, pillH, pillH);
                     g2.setColor(new Color(254, 202, 202));

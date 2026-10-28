@@ -55,6 +55,9 @@ public class InventoryPanel extends JPanel {
     private String alertsFilter = "ALL";  // "ALL", "OUT_OF_STOCK", "LOW_STOCK"
     private String historyFilter = "ALL"; // "ALL", "IN", "OUT"
     private String searchQuery = "";
+    private JTable hoveredActionTable;
+    private int hoveredActionRow = -1;
+    private int hoveredAction;
 
     // Segmented Tab Buttons (Vector SVG icons)
     private JButton btnTabLedger;
@@ -404,6 +407,12 @@ public class InventoryPanel extends JPanel {
     private void setupTableActionMouseListener(JTable table, int actionColIndex, int productColIndex, int barcodeColIndex) {
         table.addMouseListener(new MouseAdapter() {
             @Override
+            public void mouseExited(MouseEvent e) {
+                updateActionHover(null, -1, 0);
+                table.setCursor(Cursor.getDefaultCursor());
+            }
+
+            @Override
             public void mouseClicked(MouseEvent e) {
                 int row = table.rowAtPoint(e.getPoint());
                 int col = table.columnAtPoint(e.getPoint());
@@ -468,6 +477,8 @@ public class InventoryPanel extends JPanel {
             public void mouseMoved(MouseEvent e) {
                 int row = table.rowAtPoint(e.getPoint());
                 int col = table.columnAtPoint(e.getPoint());
+                int action = getActionAt(table, e.getPoint(), actionColIndex);
+                updateActionHover(table, row, action);
 
                 // Hover over dedicated Barcode button column
                 if (row >= 0 && col == barcodeColIndex) {
@@ -477,27 +488,7 @@ public class InventoryPanel extends JPanel {
                 }
 
                 if (row >= 0 && col == actionColIndex) {
-                    Rectangle cellRect = table.getCellRect(row, col, false);
-                    int relX = e.getX() - cellRect.x;
-                    int relY = e.getY() - cellRect.y;
-                    int cellW = cellRect.width;
-
-                    int editW = 58;
-                    int restockW = 76;
-                    int gap = 8;
-                    int totalW = editW + gap + restockW;
-                    int startX = (cellW - totalW) / 2;
-
-                    int editX1 = startX;
-                    int editX2 = startX + editW;
-                    int restockX1 = startX + editW + gap;
-                    int restockX2 = startX + totalW;
-
-                    int pillH = 26;
-                    int btnY = (table.getRowHeight() - pillH) / 2;
-
-                    if (relY >= btnY - 2 && relY <= btnY + pillH + 2 &&
-                            ((relX >= editX1 && relX <= editX2) || (relX >= restockX1 && relX <= restockX2))) {
+                    if (action != 0) {
                         table.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                         return;
                     }
@@ -507,6 +498,42 @@ public class InventoryPanel extends JPanel {
                 table.setCursor(Cursor.getDefaultCursor());
             }
         });
+    }
+
+    private int getActionAt(JTable table, Point point, int actionColIndex) {
+        int row = table.rowAtPoint(point);
+        if (row < 0 || table.columnAtPoint(point) != actionColIndex) return 0;
+
+        Rectangle cellRect = table.getCellRect(row, actionColIndex, false);
+        int relX = point.x - cellRect.x;
+        int relY = point.y - cellRect.y;
+        int editW = 58;
+        int restockW = 76;
+        int gap = 8;
+        int startX = (cellRect.width - editW - gap - restockW) / 2;
+        int pillY = (table.getRowHeight() - 26) / 2;
+        if (relY < pillY || relY >= pillY + 26) return 0;
+        if (relX >= startX && relX < startX + editW) return 1;
+        if (relX >= startX + editW + gap && relX < startX + editW + gap + restockW) return 2;
+        return 0;
+    }
+
+    private void updateActionHover(JTable table, int row, int action) {
+        if (action == 0) {
+            table = null;
+            row = -1;
+        }
+        if (hoveredActionTable == table && hoveredActionRow == row && hoveredAction == action) return;
+
+        if (hoveredActionTable != null && hoveredActionRow >= 0) {
+            hoveredActionTable.repaint(hoveredActionTable.getCellRect(hoveredActionRow, 6, false));
+        }
+        hoveredActionTable = table;
+        hoveredActionRow = row;
+        hoveredAction = action;
+        if (hoveredActionTable != null && hoveredActionRow >= 0) {
+            hoveredActionTable.repaint(hoveredActionTable.getCellRect(hoveredActionRow, 6, false));
+        }
     }
 
     private JScrollPane createTableScrollPane(JTable table, String type) {
@@ -1329,7 +1356,7 @@ public class InventoryPanel extends JPanel {
      * - [Edit] pill: subtle slate border & text with pencil vector
      * - [Restock] pill: mint-green background & forest green text with plus icon
      */
-    private static class DualActionCellRenderer extends DefaultTableCellRenderer {
+    private class DualActionCellRenderer extends DefaultTableCellRenderer {
         private final SidebarIcon plusIcon = new SidebarIcon("plus", 10, AppTheme.FOREST_GREEN);
 
         @Override
@@ -1355,16 +1382,21 @@ public class InventoryPanel extends JPanel {
                     int pillH = 26;
                     int py = (h - pillH) / 2;
                     int startX = (w - totalW) / 2;
+                    boolean hoveringEdit = hoveredActionTable == t && hoveredActionRow == r && hoveredAction == 1;
+                    boolean hoveringRestock = hoveredActionTable == t && hoveredActionRow == r && hoveredAction == 2;
 
                     // 1. "Edit" Button Pill
                     int editX = startX;
-                    g2.setColor(new Color(248, 250, 252));
+                    Color editBg = new Color(239, 246, 255);
+                    Color editBorder = new Color(191, 219, 254);
+                    Color editText = new Color(29, 78, 216);
+                    g2.setColor(editBg);
                     g2.fillRoundRect(editX, py, editW, pillH, pillH, pillH);
-                    g2.setColor(new Color(226, 232, 240));
+                    g2.setColor(hoveringEdit ? editText : editBorder);
                     g2.drawRoundRect(editX, py, editW - 1, pillH - 1, pillH, pillH);
 
                     // Edit Icon (small pencil vector)
-                    g2.setColor(new Color(71, 85, 105));
+                    g2.setColor(editText);
                     g2.setStroke(new BasicStroke(1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                     int iconX = editX + 11;
                     int iconY = py + 7;
@@ -1372,23 +1404,24 @@ public class InventoryPanel extends JPanel {
                     g2.drawLine(iconX - 1, iconY + 11, iconX + 2, iconY + 11);
 
                     g2.setFont(AppTheme.font(Font.BOLD, 11));
-                    g2.setColor(new Color(51, 65, 85));
+                    g2.setColor(editText);
                     FontMetrics fm = g2.getFontMetrics();
                     int editTy = py + ((pillH - fm.getHeight()) / 2) + fm.getAscent();
                     g2.drawString("Edit", editX + 24, editTy);
 
                     // 2. "Restock" Button Pill
                     int restockX = startX + editW + gap;
-                    g2.setColor(new Color(240, 252, 244));
+                    g2.setColor(hoveringRestock ? new Color(220, 244, 230) : new Color(240, 252, 244));
                     g2.fillRoundRect(restockX, py, restockW, pillH, pillH, pillH);
-                    g2.setColor(AppTheme.BORDER_SAGE);
+                    g2.setColor(hoveringRestock ? AppTheme.FOREST_MID : AppTheme.BORDER_SAGE);
                     g2.drawRoundRect(restockX, py, restockW - 1, pillH - 1, pillH, pillH);
 
                     int plusSz = plusIcon.getIconWidth();
+                    plusIcon.setOverrideColor(hoveringRestock ? AppTheme.FOREST_DEEP : AppTheme.FOREST_GREEN);
                     plusIcon.paintIcon(this, g2, restockX + 8, py + (pillH - plusSz) / 2);
 
                     g2.setFont(AppTheme.font(Font.BOLD, 11));
-                    g2.setColor(AppTheme.FOREST_GREEN);
+                    g2.setColor(hoveringRestock ? AppTheme.FOREST_DEEP : AppTheme.FOREST_GREEN);
                     fm = g2.getFontMetrics();
                     int restockTy = py + ((pillH - fm.getHeight()) / 2) + fm.getAscent();
                     g2.drawString("Restock", restockX + 8 + plusSz + 4, restockTy);

@@ -5,13 +5,6 @@ import dao.BillingDAO;
 import dao.CategoryDAO;
 import dao.CustomerDAO;
 import dao.ProductDAO;
-import model.*;
-import util.AppIconUtil;
-import util.ProductImageUtil;
-import util.QrCodeGenerator;
-
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Path2D;
@@ -21,7 +14,13 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
+import javax.swing.*;
 import javax.swing.Timer;
+import javax.swing.border.EmptyBorder;
+import model.*;
+import util.AppIconUtil;
+import util.ProductImageUtil;
+import util.QrCodeGenerator;
 
 /**
  * Modern, Minimalist Customer Self-Checkout Terminal.
@@ -235,9 +234,11 @@ public class SelfCheckoutPanel extends JPanel {
         JLabel stationLbl = new JLabel("Self-Checkout");
         stationLbl.setFont(AppTheme.font(Font.BOLD, 12));
         stationLbl.setForeground(AppTheme.TEXT_PRIMARY);
+        stationLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JPanel subRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         subRow.setOpaque(false);
+        subRow.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel statusDot = new JLabel("●");
         statusDot.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 8));
@@ -845,7 +846,7 @@ public class SelfCheckoutPanel extends JPanel {
         if (categories == null || categories.isEmpty()) {
             categories = new ArrayList<>();
             categories.add(new Category(1, "Electronics", "Electronic gadgets"));
-            categories.add(new Category(2, "Accessories", "Mice, Keyboards, Cables"));
+            categories.add(new Category(2, "Accessories", "Mouse, Keyboards, Cables"));
             categories.add(new Category(3, "Stationery", "Office & paper"));
             categories.add(new Category(4, "Storage & Networking", "USB Drives & Adapters"));
         }

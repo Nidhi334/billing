@@ -247,11 +247,12 @@ public class BillingPanel extends JPanel {
         });
         heldBillsPanel.add(btnHistory);
 
-        JButton btnSelfCheckout = new JButton("🛒 Self Checkout");
+        JButton btnSelfCheckout = new JButton("Self Checkout", new SidebarIcon("cart", 14, Color.WHITE));
         btnSelfCheckout.setFont(new Font("Segoe UI", Font.BOLD, 11));
         btnSelfCheckout.setBackground(new Color(16, 185, 129));
         btnSelfCheckout.setForeground(Color.WHITE);
         btnSelfCheckout.setMargin(new Insets(2, 8, 2, 8));
+        btnSelfCheckout.setIconTextGap(4);
         btnSelfCheckout.setFocusable(false);
         btnSelfCheckout.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnSelfCheckout.setToolTipText("Launch Customer Self-Checkout Express");

@@ -1,14 +1,13 @@
 package ui;
 
 import dao.BillingDAO;
-import model.Sale;
-import model.SaleItem;
-
+import java.awt.*;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.util.List;
+import model.Sale;
+import model.SaleItem;
 
 public class ProductReturnDialog extends JDialog {
     private JTextField txtInvoiceSearch;

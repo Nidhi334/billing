@@ -67,7 +67,9 @@ public class AddStockDialog extends JDialog {
     private JTextField txtNewSellPrice;
     private JTextField txtNewCode;
     private JTextField txtNewBarcode;
+    private JLabel lblNewProductImagePreview;
     private JButton btnChooseImage;
+    private JButton btnRemoveNewProductImage;
 
     // UI Components - Shared Inputs
     private JComboBox<Supplier> cmbSuppliers;
@@ -204,10 +206,18 @@ public class AddStockDialog extends JDialog {
         // Header inside card
         JPanel pnlCardHeader = new JPanel(new BorderLayout());
         pnlCardHeader.setOpaque(false);
+        JPanel pnlCardTitle = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        pnlCardTitle.setOpaque(false);
+        lblNewProductImagePreview = new JLabel();
+        lblNewProductImagePreview.setPreferredSize(new Dimension(38, 30));
+        lblNewProductImagePreview.setHorizontalAlignment(SwingConstants.CENTER);
+        lblNewProductImagePreview.setBorder(BorderFactory.createLineBorder(AppTheme.BORDER_SAGE));
+        pnlCardTitle.add(lblNewProductImagePreview);
         JLabel lblCardTitle = new JLabel("New Catalog Item Details");
         lblCardTitle.setFont(AppTheme.font(Font.BOLD, 11));
         lblCardTitle.setForeground(AppTheme.FOREST_DEEP);
-        pnlCardHeader.add(lblCardTitle, BorderLayout.WEST);
+        pnlCardTitle.add(lblCardTitle);
+        pnlCardHeader.add(pnlCardTitle, BorderLayout.WEST);
 
         btnChooseImage = new JButton("+ Image (Optional)") {
             {
@@ -220,7 +230,26 @@ public class AddStockDialog extends JDialog {
                 addActionListener(e -> chooseNewProductImage());
             }
         };
-        pnlCardHeader.add(btnChooseImage, BorderLayout.EAST);
+        btnRemoveNewProductImage = new JButton("Remove") {
+            {
+                setFont(AppTheme.font(Font.BOLD, 10));
+                setForeground(AppTheme.STATUS_DANGER);
+                setContentAreaFilled(false);
+                setBorderPainted(false);
+                setFocusPainted(false);
+                setCursor(new Cursor(Cursor.HAND_CURSOR));
+                addActionListener(e -> {
+                    newSelectedImagePath = null;
+                    updateNewProductImagePreview();
+                });
+            }
+        };
+        JPanel pnlImageActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 2, 0));
+        pnlImageActions.setOpaque(false);
+        pnlImageActions.add(btnChooseImage);
+        pnlImageActions.add(btnRemoveNewProductImage);
+        pnlCardHeader.add(pnlImageActions, BorderLayout.EAST);
+        updateNewProductImagePreview();
         pnlNewProductFields.add(pnlCardHeader);
         pnlNewProductFields.add(Box.createVerticalStrut(8));
 
@@ -435,6 +464,8 @@ public class AddStockDialog extends JDialog {
             selectedExistingProduct = null;
             pnlProductStatus.setVisible(false);
             pnlNewProductFields.setVisible(false);
+            newSelectedImagePath = null;
+            updateNewProductImagePreview();
             setSize(520, 440);
             updateLiveMath();
             return;
@@ -567,6 +598,8 @@ public class AddStockDialog extends JDialog {
     private void selectExistingProduct(Product p) {
         this.selectedExistingProduct = p;
         this.isNewProduct = false;
+        newSelectedImagePath = null;
+        updateNewProductImagePreview();
 
         isUpdatingProgrammatically = true;
         txtProduct.setText(p.getName());
@@ -631,6 +664,8 @@ public class AddStockDialog extends JDialog {
 
         pnlProductStatus.setVisible(false);
         pnlNewProductFields.setVisible(false);
+        newSelectedImagePath = null;
+        updateNewProductImagePreview();
         setSize(520, 440);
 
         updateLiveMath();
@@ -656,8 +691,24 @@ public class AddStockDialog extends JDialog {
             String savedPath = ProductImageUtil.saveProductImage(file, code);
             if (savedPath != null) {
                 newSelectedImagePath = savedPath;
-                if (btnChooseImage != null) btnChooseImage.setText("Image Added ✓");
+                updateNewProductImagePreview();
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to save product image.", "Error", JOptionPane.ERROR_MESSAGE);
             }
+        }
+    }
+
+    private void updateNewProductImagePreview() {
+        if (lblNewProductImagePreview != null) {
+            String productName = txtProduct != null ? txtProduct.getText().trim() : "";
+            lblNewProductImagePreview.setIcon(ProductImageUtil.getProductIcon(
+                    newSelectedImagePath, "", productName, 34, 26));
+        }
+        if (btnChooseImage != null) {
+            btnChooseImage.setText(newSelectedImagePath == null ? "+ Image (Optional)" : "Change Image");
+        }
+        if (btnRemoveNewProductImage != null) {
+            btnRemoveNewProductImage.setVisible(newSelectedImagePath != null);
         }
     }
 
