@@ -5,6 +5,8 @@ import java.awt.*;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import model.Sale;
 import model.SaleItem;
@@ -17,6 +19,10 @@ public class ProductReturnDialog extends JDialog {
     private JTextField txtReason;
     private JLabel lblRefundAmount;
     private JButton btnProcessReturn;
+    private JPopupMenu invoiceSuggestionsPopup;
+    private Timer invoiceSuggestionTimer;
+    private int invoiceSuggestionRequestId;
+    private boolean selectingInvoiceSuggestion;
     private BillingDAO billingDAO = new BillingDAO();
     private Sale currentSale;
 
@@ -49,10 +55,26 @@ public class ProductReturnDialog extends JDialog {
         txtInvoiceSearch.setToolTipText("Enter Invoice No (e.g. INV-2026...)");
         searchBar.add(txtInvoiceSearch, BorderLayout.CENTER);
 
-        JButton btnSearch = new JButton("🔍 Find Bill");
-        btnSearch.setBackground(new Color(37, 99, 235));
-        btnSearch.setForeground(Color.WHITE);
-        btnSearch.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        invoiceSuggestionTimer = new Timer(250, e -> loadInvoiceSuggestions());
+        invoiceSuggestionTimer.setRepeats(false);
+        txtInvoiceSearch.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                scheduleInvoiceSuggestions();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                scheduleInvoiceSuggestions();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                scheduleInvoiceSuggestions();
+            }
+        });
+
+        JButton btnSearch = createActionButton("🔍 Find Bill", 10, new Color(37, 99, 235), false);
         searchBar.add(btnSearch, BorderLayout.EAST);
 
         root.add(searchBar, BorderLayout.NORTH);
@@ -109,13 +131,14 @@ public class ProductReturnDialog extends JDialog {
         JPanel actionBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionBtns.setOpaque(false);
 
-        btnProcessReturn = new JButton("✅ Approve Return & Restock");
-        btnProcessReturn.setBackground(new Color(16, 185, 129));
-        btnProcessReturn.setForeground(Color.WHITE);
-        btnProcessReturn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnProcessReturn = createActionButton("Approve Return & Restock", 12, AppTheme.FOREST_GREEN, true);
+        btnProcessReturn.setIcon(new SidebarIcon("check", 13, Color.WHITE));
+        btnProcessReturn.setIconTextGap(6);
+        btnProcessReturn.setPreferredSize(new Dimension(270, 36));
         btnProcessReturn.setEnabled(false);
 
-        JButton btnClose = new JButton("Close");
+        JButton btnClose = createSecondaryButton("Close");
+        btnClose.setPreferredSize(new Dimension(85, 36));
         btnClose.addActionListener(e -> dispose());
 
         actionBtns.add(btnProcessReturn);
@@ -141,7 +164,205 @@ public class ProductReturnDialog extends JDialog {
         btnProcessReturn.addActionListener(e -> executeReturn());
     }
 
+    private JButton createActionButton(String text, int fontSize) {
+        return createActionButton(text, fontSize, AppTheme.FOREST_GREEN, true);
+    }
+
+    private JButton createActionButton(String text, int fontSize, Color background, boolean pillShape) {
+        JButton button = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                Color fill = background;
+                if (!isEnabled()) {
+                    fill = new Color(100, 116, 139);
+                } else if (getModel().isPressed() && getModel().isArmed()) {
+                    fill = background.equals(AppTheme.FOREST_GREEN)
+                            ? AppTheme.FOREST_DEEP
+                            : darken(background, 32);
+                } else if (getModel().isRollover()) {
+                    fill = background.equals(AppTheme.FOREST_GREEN)
+                            ? AppTheme.FOREST_MID
+                            : darken(background, 18);
+                }
+                g2.setColor(fill);
+                int arc = pillShape ? getHeight() : 8;
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, arc, arc);
+                g2.dispose();
+
+                super.paintComponent(g);
+            }
+        };
+        button.setFont(new Font("Segoe UI", Font.BOLD, fontSize));
+        button.setForeground(Color.WHITE);
+        button.setMargin(new Insets(8, 14, 8, 14));
+        Dimension preferredSize = button.getPreferredSize();
+        button.setPreferredSize(new Dimension(preferredSize.width, 36));
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setRolloverEnabled(true);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private JButton createSecondaryButton(String text) {
+        JButton button = new JButton(text) {
+            private boolean hovered;
+
+            {
+                addMouseListener(new java.awt.event.MouseAdapter() {
+                    @Override
+                    public void mouseEntered(java.awt.event.MouseEvent e) {
+                        hovered = true;
+                        repaint();
+                    }
+
+                    @Override
+                    public void mouseExited(java.awt.event.MouseEvent e) {
+                        hovered = false;
+                        repaint();
+                    }
+                });
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                Color background = hovered
+                        ? new Color(Math.max(0, Color.WHITE.getRed() - 6),
+                                Math.max(0, Color.WHITE.getGreen() - 6),
+                                Math.max(0, Color.WHITE.getBlue() - 6))
+                        : Color.WHITE;
+                g2.setColor(background);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
+                g2.setColor(AppTheme.BORDER_SAGE);
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, getHeight(), getHeight());
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        button.setFont(AppTheme.font(Font.BOLD, 12));
+        button.setForeground(AppTheme.TEXT_SECONDARY);
+        button.setFocusPainted(false);
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private static Color darken(Color color, int amount) {
+        return new Color(
+                Math.max(0, color.getRed() - amount),
+                Math.max(0, color.getGreen() - amount),
+                Math.max(0, color.getBlue() - amount),
+                color.getAlpha());
+    }
+
+    private void scheduleInvoiceSuggestions() {
+        if (selectingInvoiceSuggestion) {
+            return;
+        }
+
+        invoiceSuggestionRequestId++;
+        if (txtInvoiceSearch.getText().trim().isEmpty()) {
+            invoiceSuggestionTimer.stop();
+            if (invoiceSuggestionsPopup != null) {
+                invoiceSuggestionsPopup.setVisible(false);
+            }
+            return;
+        }
+        invoiceSuggestionTimer.restart();
+    }
+
+    private void loadInvoiceSuggestions() {
+        String query = txtInvoiceSearch.getText().trim();
+        if (query.isEmpty()) {
+            return;
+        }
+
+        int requestId = invoiceSuggestionRequestId;
+        new SwingWorker<List<String>, Void>() {
+            @Override
+            protected List<String> doInBackground() throws Exception {
+                return billingDAO.getInvoiceSuggestions(query);
+            }
+
+            @Override
+            protected void done() {
+                if (isCancelled()
+                        || requestId != invoiceSuggestionRequestId
+                        || !query.equals(txtInvoiceSearch.getText().trim())) {
+                    return;
+                }
+
+                try {
+                    showInvoiceSuggestions(get());
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    JOptionPane.showMessageDialog(ProductReturnDialog.this,
+                            "Invoice suggestions were interrupted.", "Error", JOptionPane.ERROR_MESSAGE);
+                } catch (java.util.concurrent.ExecutionException ex) {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    JOptionPane.showMessageDialog(ProductReturnDialog.this,
+                            "Error loading invoice suggestions: " + cause.getMessage(),
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }.execute();
+    }
+
+    private void showInvoiceSuggestions(List<String> invoices) {
+        if (invoiceSuggestionsPopup == null) {
+            invoiceSuggestionsPopup = new JPopupMenu();
+            invoiceSuggestionsPopup.setFocusable(false);
+            invoiceSuggestionsPopup.setBackground(Color.WHITE);
+            invoiceSuggestionsPopup.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(AppTheme.BORDER_SAGE),
+                    new EmptyBorder(2, 2, 2, 2)
+            ));
+        }
+
+        invoiceSuggestionsPopup.removeAll();
+        if (invoices.isEmpty() || !txtInvoiceSearch.isShowing()) {
+            invoiceSuggestionsPopup.setVisible(false);
+            return;
+        }
+
+        for (String invoice : invoices) {
+            JMenuItem suggestion = new JMenuItem(invoice);
+            suggestion.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            suggestion.setForeground(AppTheme.TEXT_PRIMARY);
+            suggestion.setBackground(Color.WHITE);
+            suggestion.setPreferredSize(new Dimension(txtInvoiceSearch.getWidth(), 30));
+            suggestion.addActionListener(e -> selectInvoiceSuggestion(invoice));
+            invoiceSuggestionsPopup.add(suggestion);
+        }
+
+        invoiceSuggestionsPopup.show(txtInvoiceSearch, 0, txtInvoiceSearch.getHeight() + 2);
+    }
+
+    private void selectInvoiceSuggestion(String invoice) {
+        invoiceSuggestionTimer.stop();
+        invoiceSuggestionRequestId++;
+        invoiceSuggestionsPopup.setVisible(false);
+        selectingInvoiceSuggestion = true;
+        txtInvoiceSearch.setText(invoice);
+        selectingInvoiceSuggestion = false;
+        searchInvoice();
+    }
+
     private void searchInvoice() {
+        invoiceSuggestionTimer.stop();
+        invoiceSuggestionRequestId++;
+        if (invoiceSuggestionsPopup != null) {
+            invoiceSuggestionsPopup.setVisible(false);
+        }
+
         String inv = txtInvoiceSearch.getText().trim();
         if (inv.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please enter an invoice number to search.", "Input Required", JOptionPane.WARNING_MESSAGE);

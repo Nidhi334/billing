@@ -1,25 +1,25 @@
 package ui;
 
+import config.AppSettings;
 import dao.BillingDAO;
 import dao.CustomerDAO;
 import dao.ProductDAO;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.List;
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.plaf.basic.BasicButtonUI;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
 import model.Customer;
 import model.HeldBill;
 import model.Product;
 import model.Sale;
 import model.SaleItem;
-import config.AppSettings;
 import model.User;
 import util.ProductImageUtil;
-
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.awt.event.*;
-import java.util.ArrayList;
-import java.util.List;
 
 public class BillingPanel extends JPanel {
     private ProductDAO productDAO = new ProductDAO();
@@ -103,6 +103,7 @@ public class BillingPanel extends JPanel {
         setBorder(new EmptyBorder(10, 12, 10, 12));
 
         initComponents();
+        applyButtonRenderingFix(this);
         setupGlobalKeyShortcuts();
         loadCustomers();
         loadProductCache();
@@ -806,6 +807,66 @@ public class BillingPanel extends JPanel {
                 openUpiDialog();
             }
         });
+    }
+
+    private static void applyButtonRenderingFix(Container container) {
+        for (Component component : container.getComponents()) {
+            if (component instanceof JButton) {
+                JButton button = (JButton) component;
+                button.setUI(new RoundedHoverButtonUI());
+                button.setOpaque(false);
+                button.setContentAreaFilled(false);
+                button.setBorderPainted(false);
+                button.setRolloverEnabled(true);
+            }
+            if (component instanceof Container) {
+                applyButtonRenderingFix((Container) component);
+            }
+        }
+    }
+
+    private static class RoundedHoverButtonUI extends BasicButtonUI {
+        private static final int CORNER_RADIUS = 12;
+
+        @Override
+        public void update(Graphics graphics, JComponent component) {
+            JButton button = (JButton) component;
+            ButtonModel model = button.getModel();
+            Color background = button.getBackground();
+
+            if (!model.isEnabled()) {
+                background = blend(background, Color.WHITE, 0.4f);
+            } else if (model.isPressed() && model.isArmed()) {
+                background = blend(background, Color.BLACK, 0.14f);
+            } else if (model.isRollover()) {
+                background = blend(background, Color.WHITE, 0.14f);
+            }
+
+            Graphics2D g2 = (Graphics2D) graphics.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(background);
+            g2.fillRoundRect(0, 0, button.getWidth() - 1, button.getHeight() - 1,
+                    CORNER_RADIUS, CORNER_RADIUS);
+            g2.setColor(blend(button.getBackground(), Color.BLACK, 0.12f));
+            g2.drawRoundRect(0, 0, button.getWidth() - 1, button.getHeight() - 1,
+                    CORNER_RADIUS, CORNER_RADIUS);
+            if (button.isFocusPainted() && button.hasFocus()) {
+                g2.setColor(AppTheme.FOREST_MID);
+                g2.drawRoundRect(2, 2, button.getWidth() - 5, button.getHeight() - 5,
+                        CORNER_RADIUS - 2, CORNER_RADIUS - 2);
+            }
+            g2.dispose();
+
+            paint(graphics, component);
+        }
+
+        private static Color blend(Color color, Color target, float amount) {
+            return new Color(
+                    Math.round(color.getRed() * (1 - amount) + target.getRed() * amount),
+                    Math.round(color.getGreen() * (1 - amount) + target.getGreen() * amount),
+                    Math.round(color.getBlue() * (1 - amount) + target.getBlue() * amount),
+                    color.getAlpha());
+        }
     }
 
     private JLabel createWhiteLabel(String text) {
@@ -2005,6 +2066,8 @@ public class BillingPanel extends JPanel {
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
                 JComponent.WHEN_IN_FOCUSED_WINDOW
         );
+
+        applyButtonRenderingFix(dlg.getContentPane());
 
         SwingUtilities.invokeLater(() -> {
             if (prefillPhone != null && !prefillPhone.isEmpty()) {

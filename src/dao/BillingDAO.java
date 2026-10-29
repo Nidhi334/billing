@@ -184,6 +184,25 @@ public class BillingDAO {
         return list;
     }
 
+    public List<String> getInvoiceSuggestions(String prefix) throws SQLException {
+        List<String> suggestions = new ArrayList<>();
+        if (prefix == null || prefix.trim().isEmpty()) {
+            return suggestions;
+        }
+
+        String sql = "SELECT invoice_no FROM sales WHERE invoice_no LIKE ? ORDER BY id DESC LIMIT 8";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, prefix.trim() + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    suggestions.add(rs.getString("invoice_no"));
+                }
+            }
+        }
+        return suggestions;
+    }
+
     public Sale getSaleByInvoice(String invoiceNo) throws SQLException {
         String sql = "SELECT s.*, c.name AS customer_name, u.full_name AS cashier_name " +
                      "FROM sales s " +
