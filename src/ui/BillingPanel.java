@@ -47,6 +47,7 @@ public class BillingPanel extends JPanel {
     private JPopupMenu suggestionsPopup;
     private JList<Product> lstSuggestions;
     private DefaultListModel<Product> suggestionsModel;
+    private JScrollPane scrollSuggestions;
     private JLabel lblSuggestionsHeader;
     private JLabel lblSuggestionsFooter;
     private boolean isProgrammaticSearchUpdate = false;
@@ -977,12 +978,12 @@ public class BillingPanel extends JPanel {
         lblSuggestionsHeader.setPreferredSize(new Dimension(0, 22));
         popupContent.add(lblSuggestionsHeader, BorderLayout.NORTH);
 
-        // JList with custom renderer
+        // JList with compact custom renderer
         suggestionsModel = new DefaultListModel<>();
         lstSuggestions = new JList<>(suggestionsModel);
         lstSuggestions.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         lstSuggestions.setFocusable(false);
-        lstSuggestions.setFixedCellHeight(52);
+        lstSuggestions.setFixedCellHeight(42);
         lstSuggestions.setCellRenderer(new ProductSuggestionCellRenderer());
 
         // Mouse hover selection
@@ -1004,11 +1005,13 @@ public class BillingPanel extends JPanel {
             }
         });
 
-        JScrollPane scroll = new JScrollPane(lstSuggestions);
-        scroll.setBorder(BorderFactory.createLineBorder(new Color(241, 245, 249), 1));
-        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        scroll.getVerticalScrollBar().setUnitIncrement(14);
-        popupContent.add(scroll, BorderLayout.CENTER);
+        scrollSuggestions = new JScrollPane(lstSuggestions);
+        scrollSuggestions.setBorder(BorderFactory.createLineBorder(new Color(241, 245, 249), 1));
+        scrollSuggestions.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollSuggestions.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollSuggestions.getVerticalScrollBar().setUnitIncrement(42);
+        scrollSuggestions.getVerticalScrollBar().setPreferredSize(new Dimension(6, 0));
+        popupContent.add(scrollSuggestions, BorderLayout.CENTER);
 
         // Footer
         lblSuggestionsFooter = new JLabel("  💡 Use ↑ / ↓ arrow keys to select, press Enter to Add, Esc to close");
@@ -1077,7 +1080,7 @@ public class BillingPanel extends JPanel {
 
             if (exactOrPrefix || tokensMatch) {
                 result.add(p);
-                if (result.size() >= 12) break;
+                if (result.size() >= 8) break; // Limit to top 8 most relevant matches
             }
         }
         return result;
@@ -1106,10 +1109,19 @@ public class BillingPanel extends JPanel {
             lstSuggestions.setVisible(true);
             lstSuggestions.setSelectedIndex(0);
 
-            int visibleRows = Math.min(matches.size(), 5);
-            int height = 52 + (visibleRows * 54);
-            int width = Math.max(txtBarcode.getWidth(), 560);
+            // Compact dynamic sizing: up to 6 items fit with zero scrolling needed!
+            int visibleRows = Math.min(matches.size(), 6);
+            int cellH = 42;
+            int listH = visibleRows * cellH;
+            int height = 68 + listH;
+            int width = Math.max(txtBarcode.getWidth(), 580);
             suggestionsPopup.setPreferredSize(new Dimension(width, height));
+
+            if (scrollSuggestions != null) {
+                scrollSuggestions.setVerticalScrollBarPolicy(
+                        matches.size() > 6 ? ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED : ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
+                );
+            }
         }
 
         if (txtBarcode.isShowing()) {
@@ -1148,41 +1160,41 @@ public class BillingPanel extends JPanel {
         private JLabel lblActionPill = new JLabel();
 
         public ProductSuggestionCellRenderer() {
-            setLayout(new BorderLayout(10, 0));
-            setBorder(new EmptyBorder(6, 10, 6, 10));
+            setLayout(new BorderLayout(8, 0));
+            setBorder(new EmptyBorder(3, 8, 3, 8));
             setOpaque(true);
 
-            lblIcon.setPreferredSize(new Dimension(36, 36));
+            lblIcon.setPreferredSize(new Dimension(28, 28));
             add(lblIcon, BorderLayout.WEST);
 
             JPanel pnlCenter = new JPanel();
             pnlCenter.setLayout(new BoxLayout(pnlCenter, BoxLayout.Y_AXIS));
             pnlCenter.setOpaque(false);
 
-            lblName.setFont(new Font("Segoe UI", Font.BOLD, 13));
-            lblMeta.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+            lblName.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            lblMeta.setFont(new Font("Segoe UI", Font.PLAIN, 10));
             pnlCenter.add(lblName);
-            pnlCenter.add(Box.createVerticalStrut(2));
+            pnlCenter.add(Box.createVerticalStrut(1));
             pnlCenter.add(lblMeta);
             add(pnlCenter, BorderLayout.CENTER);
 
-            JPanel pnlRight = new JPanel(new GridLayout(2, 1, 2, 2));
+            JPanel pnlRight = new JPanel(new GridLayout(2, 1, 1, 1));
             pnlRight.setOpaque(false);
 
             JPanel rowTop = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
             rowTop.setOpaque(false);
-            lblPrice.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            lblPrice.setFont(new Font("Segoe UI", Font.BOLD, 13));
             lblPrice.setForeground(new Color(22, 101, 52));
             lblActionPill.setFont(new Font("Segoe UI", Font.BOLD, 10));
             lblActionPill.setOpaque(true);
-            lblActionPill.setBorder(new EmptyBorder(2, 8, 2, 8));
+            lblActionPill.setBorder(new EmptyBorder(1, 6, 1, 6));
             rowTop.add(lblPrice);
             rowTop.add(lblActionPill);
             pnlRight.add(rowTop);
 
             JPanel rowBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
             rowBottom.setOpaque(false);
-            lblStock.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            lblStock.setFont(new Font("Segoe UI", Font.BOLD, 10));
             rowBottom.add(lblStock);
             pnlRight.add(rowBottom);
 
@@ -1194,7 +1206,7 @@ public class BillingPanel extends JPanel {
                                                       boolean isSelected, boolean cellHasFocus) {
             if (p == null) return this;
 
-            lblIcon.setIcon(ProductImageUtil.getProductIcon(p, 34, 34));
+            lblIcon.setIcon(ProductImageUtil.getProductIcon(p, 28, 28));
 
             lblName.setText(p.getName());
             String cat = p.getCategoryName() != null && !p.getCategoryName().isEmpty() ? p.getCategoryName() : "General";
@@ -1223,8 +1235,8 @@ public class BillingPanel extends JPanel {
                 lblActionPill.setBackground(new Color(37, 99, 235));
                 lblActionPill.setForeground(Color.WHITE);
                 setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(0, 4, 0, 0, new Color(37, 99, 235)),
-                        new EmptyBorder(6, 6, 6, 10)
+                        BorderFactory.createMatteBorder(0, 3, 0, 0, new Color(37, 99, 235)),
+                        new EmptyBorder(3, 5, 3, 8)
                 ));
             } else {
                 setBackground(index % 2 == 0 ? Color.WHITE : new Color(248, 250, 252));
@@ -1233,7 +1245,7 @@ public class BillingPanel extends JPanel {
                 lblActionPill.setText("+ Add");
                 lblActionPill.setBackground(new Color(241, 245, 249));
                 lblActionPill.setForeground(new Color(71, 85, 105));
-                setBorder(new EmptyBorder(6, 10, 6, 10));
+                setBorder(new EmptyBorder(3, 8, 3, 8));
             }
 
             return this;
