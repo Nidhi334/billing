@@ -128,3 +128,21 @@ javac -cp "lib/*:src" -d bin src/config/*.java src/model/*.java src/dao/*.java s
 java -cp "bin:lib/*" App
 ```
 
+## Linux Desktop Package
+
+Build on the Debian or Ubuntu release and CPU architecture you intend to support, using a JDK that includes `jpackage` and the Debian `dpkg-deb` tool. The package's system-library dependencies are detected from the build environment.
+
+```bash
+./scripts/build-deb.sh
+```
+
+The package is written to `build/packages/`. Install it with:
+
+```bash
+sudo apt install "./build/packages/smartbilling-pro_1.0.0_$(dpkg --print-architecture).deb"
+```
+
+Launch **SmartBilling Pro** from the desktop applications menu. The package includes its Java runtime and required Java libraries, so users do not need to install Java or run Java commands. The launcher keeps settings and generated files in `~/.local/share/smartbilling-pro` (or `$XDG_DATA_HOME/smartbilling-pro`) and seeds the bundled assets there on first launch.
+
+MySQL is not bundled. A MySQL server must be reachable, and its connection details can be configured from the login screen. The application can initialize its database and schema automatically when the configured MySQL account has permission to create the database.
+

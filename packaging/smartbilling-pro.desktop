@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=SmartBilling Pro
+Comment=Billing and inventory management
+Exec=/usr/bin/smartbilling-pro
+Icon=smartbilling-pro
+Terminal=false
+Type=Application
+Categories=Office;Finance;
+StartupNotify=true
